@@ -1,0 +1,37 @@
+package com.zak.pressmark.feature.artist.vm
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.zak.pressmark.data.local.dao.ArtistDao
+import com.zak.pressmark.data.local.entity.AlbumEntity
+import com.zak.pressmark.data.repository.AlbumRepository
+import com.zak.pressmark.data.repository.ArtistRepository
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+
+class ArtistViewModel(
+    val artistId: Long,
+    private val albumRepository: AlbumRepository,
+    private val artistRepository: ArtistRepository,
+) : ViewModel() {
+
+    val artistName: StateFlow<String?> =
+        artistRepository.observeById(artistId)
+            .map { it?.displayName }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = null,
+            )
+
+    val albums: StateFlow<List<AlbumEntity>> =
+        // This was named albumRepo before, let's make it consistent
+        albumRepository.observeByArtistId(artistId)
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = emptyList(),
+            )
+}
