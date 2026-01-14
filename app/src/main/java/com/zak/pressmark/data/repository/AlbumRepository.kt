@@ -8,8 +8,7 @@ import java.util.UUID
 
 class AlbumRepository(
     private val dao: AlbumDao
-)
-{
+) {
     private data class SanitizedAlbumInput(
         val title: String,
         val artistId: Long?,
@@ -17,60 +16,15 @@ class AlbumRepository(
         val catalogNo: String?,
         val label: String?,
         val format: String?,
+        val notes: String?,
     )
 
-    private fun sanitizeAndValidate(
-        title: String,
-        artistId: Long?,
-        releaseYear: Int?,
-        catalogNo: String?,
-        label: String?,
-        format: String?,
-    ): SanitizedAlbumInput {
-        val cleanTitle = title.trim()
-        require(cleanTitle.isNotBlank()) { "Title is required" }
+    fun observeAllWithArtist(): Flow<List<AlbumWithArtistName>> = dao.observeAllWithArtist()
 
-        // Keep artist optional, but normalize “0”/negative to null (defensive)
-        val cleanArtistId = artistId?.takeIf { it > 0L }
+    fun observeByArtistId(artistId: Long): Flow<List<AlbumWithArtistName>> = dao.observeByArtistId(artistId)
 
-        // Optional sanity range: loose and future-proof
-        val cleanYear = releaseYear?.let { y ->
-            require(y in 1877..2100) { "Year looks invalid" }
-            y
-        }
+    suspend fun getByIdWithArtist(id: String): AlbumWithArtistName? = dao.getByIdWithArtist(id)
 
-        val cleanCatalog = catalogNo?.trim()?.takeIf { it.isNotBlank() }
-        val cleanLabel = label?.trim()?.takeIf { it.isNotBlank() }
-        val cleanFormat = format?.trim()?.takeIf { it.isNotBlank() }
-
-        return SanitizedAlbumInput(
-            title = cleanTitle,
-            artistId = cleanArtistId,
-            releaseYear = cleanYear,
-            catalogNo = cleanCatalog,
-            label = cleanLabel,
-            format = cleanFormat,
-        )
-    }
-
-    // Canonical reads for UI
-    fun observeAllWithArtistName(): Flow<List<AlbumWithArtistName>> =
-        dao.observeAllWithArtist()
-
-    fun observeByIdWithArtistName(id: String): Flow<AlbumWithArtistName?> =
-        dao.observeByIdWithArtist(id)
-
-    fun observeByArtistIdWithArtistName(artistId: Long): Flow<List<AlbumWithArtistName>> =
-        dao.observeByArtistIdWithArtist(artistId)
-
-    // Legacy reads (keep for now)
-    fun observeAll(): Flow<List<AlbumEntity>> = dao.observeAll()
-
-    fun observeById(id: String): Flow<AlbumEntity?> = dao.observeById(id)
-
-    suspend fun getById(id: String): AlbumEntity? = dao.getById(id)
-
-    // Writes (canonical: artistId, not artist string)
     suspend fun addAlbum(
         title: String,
         artistId: Long?,
@@ -78,92 +32,72 @@ class AlbumRepository(
         catalogNo: String?,
         label: String?,
         format: String?,
-    ) {
-        val s = sanitizeAndValidate(title, artistId, releaseYear, catalogNo, label, format)
+        notes: String?,
+    ): String {
+        val sanitized = sanitizeAlbumInput(
+            title = title,
+            artistId = artistId,
+            releaseYear = releaseYear,
+            catalogNo = catalogNo,
+            label = label,
+            format = format,
+            notes = notes,
+        )
 
+        val id = UUID.randomUUID().toString()
         dao.insert(
             AlbumEntity(
-                id = UUID.randomUUID().toString(),
-                title = s.title,
-                artistId = s.artistId,
-                releaseYear = s.releaseYear,
-                catalogNo = s.catalogNo,
-                label = s.label,
-                format = s.format,
-                coverUri = null,
-                discogsReleaseId = null,
-                addedAt = System.currentTimeMillis(),
+                id = id,
+                title = sanitized.title,
+                artistId = sanitized.artistId,
+                releaseYear = sanitized.releaseYear,
+                catalogNo = sanitized.catalogNo,
+                label = sanitized.label,
+                format = sanitized.format,
+                notes = sanitized.notes,
             )
         )
+        return id
     }
 
     suspend fun updateAlbum(
-        albumId: String,
+        id: String,
         title: String,
         artistId: Long?,
         releaseYear: Int?,
         catalogNo: String?,
         label: String?,
         format: String?,
+        notes: String?,
     ) {
-        val existing = dao.getById(albumId)
-            ?: throw IllegalStateException("Album not found")
-
-        val s = sanitizeAndValidate(title, artistId, releaseYear, catalogNo, label, format)
+        val sanitized = sanitizeAlbumInput(
+            title = title,
+            artistId = artistId,
+            releaseYear = releaseYear,
+            catalogNo = catalogNo,
+            label = label,
+            format = format,
+            notes = notes,
+        )
 
         dao.update(
-            existing.copy(
-                title = s.title,
-                artistId = s.artistId,
-                releaseYear = s.releaseYear,
-                catalogNo = s.catalogNo,
-                label = s.label,
-                format = s.format,
+            AlbumEntity(
+                id = id,
+                title = sanitized.title,
+                artistId = sanitized.artistId,
+                releaseYear = sanitized.releaseYear,
+                catalogNo = sanitized.catalogNo,
+                label = sanitized.label,
+                format = sanitized.format,
+                notes = sanitized.notes,
             )
         )
     }
 
-    suspend fun deleteAlbum(album: AlbumEntity) {
-        dao.delete(album)
+    suspend fun deleteAlbum(id: String) {
+        dao.deleteById(id)
     }
 
-    // -----------------------------
-    // Covers
-    // -----------------------------
-    suspend fun setLocalCover(albumId: String, coverUri: String?) {
-        setArtworkSelection(
-            albumId = albumId,
-            coverUrl = coverUri,
-            provider = null,
-            providerItemId = null,
-        )
-    }
-
-    suspend fun setDiscogsCover(
-        albumId: String,
-        coverUrl: String?,
-        discogsReleaseId: Long?,
-    ) {
-        setArtworkSelection(
-            albumId = albumId,
-            coverUrl = coverUrl,
-            provider = "discogs",
-            providerItemId = discogsReleaseId?.toString(),
-        )
-    }
-
-    suspend fun clearDiscogsCover(albumId: String) {
-        setArtworkSelection(
-            albumId = albumId,
-            coverUrl = null,
-            provider = null,
-            providerItemId = null,
-        )
-    }
-
-    suspend fun refreshFromDiscogs(albumId: String) {
-        // TODO: implement later
-    }
     suspend fun setArtworkSelection(
         albumId: String,
         coverUrl: String?,
@@ -187,4 +121,34 @@ class AlbumRepository(
         )
     }
 
+    private fun sanitizeAlbumInput(
+        title: String,
+        artistId: Long?,
+        releaseYear: Int?,
+        catalogNo: String?,
+        label: String?,
+        format: String?,
+        notes: String?,
+    ): SanitizedAlbumInput {
+        val cleanTitle = title.trim()
+        require(cleanTitle.isNotBlank()) { "Title required." }
+
+        val cleanYear = releaseYear?.let { y ->
+            // Basic sanity: allow null, or a plausible year
+            require(y in 1800..2100) { "Year looks invalid." }
+            y
+        }
+
+        fun cleanOptional(s: String?): String? = s?.trim()?.takeIf { it.isNotBlank() }
+
+        return SanitizedAlbumInput(
+            title = cleanTitle,
+            artistId = artistId,
+            releaseYear = cleanYear,
+            catalogNo = cleanOptional(catalogNo),
+            label = cleanOptional(label),
+            format = cleanOptional(format),
+            notes = cleanOptional(notes),
+        )
+    }
 }
