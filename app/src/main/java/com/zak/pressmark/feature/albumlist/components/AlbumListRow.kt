@@ -72,7 +72,8 @@ fun AlbumListRow(
     val spec = remember(rowDensity) { RowSpec.from(rowDensity) }
     var menuOpen by remember { mutableStateOf(false) }
 
-    val artistDisplay = remember(row.artistDisplayName, row.artistSortName) { row.artistDisplaySafe() }
+    val artistDisplay =
+        remember(row.artistDisplayName, row.artistSortName) { row.artistDisplaySafe() }
 
     val rowContainerColor =
         if (isSelected) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primaryContainer
@@ -171,7 +172,12 @@ fun AlbumListRow(
                     ) {
                         DropdownMenuItem(
                             text = { Text("Edit") },
-                            leadingIcon = { Icon(Icons.Default.EditNote, contentDescription = null) },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.EditNote,
+                                    contentDescription = null
+                                )
+                            },
                             onClick = {
                                 menuOpen = false
                                 onEdit()
@@ -184,7 +190,12 @@ fun AlbumListRow(
 
                         DropdownMenuItem(
                             text = { Text("Find cover") },
-                            leadingIcon = { Icon(Icons.Default.ImageSearch, contentDescription = null) },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.ImageSearch,
+                                    contentDescription = null
+                                )
+                            },
                             onClick = {
                                 menuOpen = false
                                 onFindCover()
@@ -212,20 +223,7 @@ fun AlbumListRow(
             }
         }
     }
-
-    if (showDivider) {
-        LeftFadeDivider(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = spec.dividerStartPadding)
-                .padding(vertical = 1.dp),
-            fadeEndFraction = 0.75f,
-            alpha = 0.85f,
-            thickness = 1.dp
-        )
-    }
 }
-
 @Immutable
 private data class RowSpec(
     val horizontalPadding: Dp,
@@ -253,7 +251,7 @@ private data class RowSpec(
                     artworkSize = 56.dp,
                     gapAfterLeading = 12.dp,
                     dividerStartPadding = 12.dp,
-                    outerVerticalPadding = 1.dp
+                    outerVerticalPadding = 2.dp
                 )
 
                 AlbumRowDensity.COMPACT -> RowSpec(
@@ -262,16 +260,16 @@ private data class RowSpec(
                     artworkSize = 36.dp,
                     gapAfterLeading = 12.dp,
                     dividerStartPadding = 12.dp,
-                    outerVerticalPadding = 0.dp
+                    outerVerticalPadding = 1.dp
                 )
 
                 AlbumRowDensity.TEXT_ONLY -> RowSpec(
                     horizontalPadding = 12.dp,
-                    verticalPadding = 0.dp,
+                    verticalPadding = 2.dp,
                     artworkSize = 0.dp,
                     gapAfterLeading = 0.dp,
                     dividerStartPadding = 12.dp,
-                    outerVerticalPadding = 0.dp
+                    outerVerticalPadding = 1.dp
                 )
             }
     }
@@ -321,29 +319,4 @@ private fun buildMetaLine(row: AlbumWithArtistName): String? {
     val catalog = album.catalogNo?.trim()?.takeIf { it.isNotBlank() }
     val parts = listOfNotNull(year, label, catalog)
     return parts.takeIf { it.isNotEmpty() }?.joinToString(" • ")
-}
-
-@Composable
-private fun LeftFadeDivider(
-    modifier: Modifier = Modifier,
-    fadeEndFraction: Float,
-    alpha: Float,
-    thickness: Dp,
-) {
-    val c = MaterialTheme.colorScheme.outlineVariant.copy(alpha = alpha)
-    val end = fadeEndFraction.coerceIn(0.05f, 1f)
-
-    Box(
-        modifier = modifier
-            .height(thickness)
-            .background(
-                brush = Brush.horizontalGradient(
-                    colorStops = arrayOf(
-                        0.00f to c,
-                        end to Color.Transparent,
-                        1.00f to Color.Transparent
-                    )
-                )
-            )
-    )
 }

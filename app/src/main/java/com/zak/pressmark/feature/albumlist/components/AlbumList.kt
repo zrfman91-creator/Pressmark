@@ -193,7 +193,6 @@ fun AlbumList(
                         },
                         onRefreshArtworkSelected = {
                             // Intentionally left as a hook (no-op like your original)
-                            selectedIds = selectedIds
                         },
                     )
                 },
