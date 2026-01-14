@@ -1,7 +1,7 @@
 /* =====================================================================================
  * FILE: app/src/main/java/com/zak/pressmark/ui/theme/Color.kt
  * ===================================================================================== */
-package com.zak.pressmark.core.theme
+package com.zak.pressmark.core.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

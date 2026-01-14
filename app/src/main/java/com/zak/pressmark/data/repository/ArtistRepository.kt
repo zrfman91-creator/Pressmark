@@ -1,9 +1,11 @@
 package com.zak.pressmark.data.repository
 
+import kotlinx.coroutines.flow.Flow
+
+import com.zak.pressmark.data.local.dao.MergeArtistsResult
+import com.zak.pressmark.core.util.Normalizer
 import com.zak.pressmark.data.local.dao.ArtistDao
 import com.zak.pressmark.data.local.entity.ArtistEntity
-import kotlinx.coroutines.flow.Flow
-import java.util.Locale
 
 class ArtistRepository(
     private val dao: ArtistDao
@@ -18,38 +20,44 @@ class ArtistRepository(
     fun observeById(artistId: Long): Flow<ArtistEntity?> =
         dao.observeById(artistId)
 
-    suspend fun getOrCreateArtistId(
-        displayName: String,
-        artistType: String = "Unknown"
-    ): Long {
-        val normalized = normalize(displayName)
-        val trimmed = displayName.trim()
-        val existing = dao.findByNormalizedName(normalized)
+    suspend fun getOrCreateArtistId(displayName: String): Long {
+        val key = Normalizer.artistKey(displayName)
+        val canon = Normalizer.artistDisplay(displayName)
+
+        val existing = dao.findByNormalizedName(key)
         if (existing != null) {
-            // If user entered a “better” name (casing/punctuation/etc), persist it
-            if (existing.displayName != trimmed || existing.sortName != trimmed) {
-                dao.updateNames(existing.id, trimmed, trimmed)
+            if (existing.displayName != canon || existing.sortName != canon) {
+                dao.updateNames(existing.id, canon, canon)
             }
             return existing.id
         }
-
         val entity = ArtistEntity(
-            displayName = displayName.trim(),
-            sortName = displayName.trim(),
-            nameNormalized = normalized,
-            artistType = artistType,
+            displayName = canon,
+            sortName = canon,
+            nameNormalized = key,
+            artistType = null
         )
-
-        // Insert is ABORT; if a race happens, the exception will be thrown.
-        // We handle that by re-checking.
         return try {
             dao.insert(entity)
         } catch (_: Throwable) {
-            dao.findByNormalizedName(normalized)?.id
+            dao.findByNormalizedName(key)?.id
                 ?: throw IllegalStateException("Failed to create artist record")
         }
     }
 
-    private fun normalize(name: String): String =
-        name.trim().lowercase(Locale.US).replace(Regex("\\s+"), " ")
+    suspend fun mergeArtists(duplicateId: Long, canonicalId: Long): MergeArtistsResult {
+        require(duplicateId > 0L) { "duplicateId must be > 0" }
+        require(canonicalId > 0L) { "canonicalId must be > 0" }
+        require(duplicateId != canonicalId) { "Cannot merge an artist into itself" }
+
+        // Safety: ensure both rows exist before we do anything destructive.
+        val dup = dao.getById(duplicateId)
+            ?: throw IllegalArgumentException("Duplicate artist not found: $duplicateId")
+
+        val canon = dao.getById(canonicalId)
+            ?: throw IllegalArgumentException("Canonical artist not found: $canonicalId")
+
+        // Optional extra safety: if canon is "hidden"/special later, you can block merges here.
+        return dao.mergeAndDeleteArtist(duplicateId = dup.id, canonicalId = canon.id)
+    }
 }

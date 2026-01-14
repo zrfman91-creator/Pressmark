@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.zak.pressmark.data.local.entity.AlbumEntity
 import com.zak.pressmark.data.local.model.AlbumWithArtistName
 import com.zak.pressmark.data.repository.AlbumRepository
+import com.zak.pressmark.data.repository.ArtistRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,6 +19,7 @@ data class AlbumListUiState(
 
 class AlbumListViewModel(
     private val albumRepository: AlbumRepository,
+    private val artistRepository: ArtistRepository,
 ) : ViewModel() {
 
     private val _ui = MutableStateFlow(AlbumListUiState())
@@ -48,12 +50,46 @@ class AlbumListViewModel(
             try {
                 albumRepository.refreshFromDiscogs(album.id)
             } catch (t: Throwable) {
-                _ui.value = _ui.value.copy(snackMessage = t.message ?: "Failed to refresh from Discogs.")
+                _ui.value =
+                    _ui.value.copy(snackMessage = t.message ?: "Failed to refresh from Discogs.")
             }
         }
     }
 
     fun dismissSnack() {
         _ui.value = _ui.value.copy(snackMessage = null)
+    }
+
+    fun updateAlbumFromList(
+        albumId: String, // ✅ String, because repo expects String
+        title: String,
+        artist: String,
+        releaseYear: Int?,
+        catalogNo: String?,
+        label: String?,
+        format: String?,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val artistId = artist.trim()
+                    .takeIf { it.isNotBlank() }
+                    ?.let { artistRepository.getOrCreateArtistId(it) } // ✅ resolves to Long?
+
+                // ✅ Match your repo’s expected parameter names (artistId/year/catalogNumber)
+                albumRepository.updateAlbum(
+                    albumId = albumId,
+                    title = title,
+                    artistId = artistId,
+                    releaseYear = releaseYear,
+                    catalogNo = catalogNo,
+                    label = label,
+                    format = format,
+                )
+            } catch (t: Throwable) {
+                _ui.value = _ui.value.copy(
+                    snackMessage = t.message ?: "Could not save changes."
+                )
+            }
+        }
     }
 }

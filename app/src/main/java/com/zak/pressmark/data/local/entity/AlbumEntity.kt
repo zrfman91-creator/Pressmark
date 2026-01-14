@@ -46,7 +46,10 @@ data class AlbumEntity(
     @ColumnInfo(name = Album.LAST_PLAYED_AT) val lastPlayedAt: Long? = null,
     @ColumnInfo(name = Album.MASTER_ID) val masterId: Long? = null,
     @ColumnInfo(name = Album.FORMAT) val format: String? = null,
-) {
+    @ColumnInfo(name = Album.ARTWORK_PROVIDER) val artworkProvider: String? = null,
+    @ColumnInfo(name = Album.ARTWORK_PROVIDER_ITEM_ID) val artworkProviderItemId: String? = null,
+
+    ) {
     @get:Ignore
     val persistedArtworkUrl: String?
         get() = coverUri?.trim()?.takeIf { it.isNotBlank() }

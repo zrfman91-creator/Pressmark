@@ -4,9 +4,13 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import kotlinx.coroutines.flow.Flow
+
 import com.zak.pressmark.data.local.db.DbSchema.Artist
 import com.zak.pressmark.data.local.entity.ArtistEntity
-import kotlinx.coroutines.flow.Flow
+import androidx.room.Transaction
+import com.zak.pressmark.data.local.db.DbSchema.Album
+
 
 @Dao
 interface ArtistDao {
@@ -55,4 +59,32 @@ interface ArtistDao {
     WHERE ${Artist.ID} = :id
 """)
     suspend fun updateNames(id: Long, displayName: String, sortName: String): Int
+
+    @Query("""
+    UPDATE ${Album.TABLE}
+    SET ${Album.ARTIST_ID} = :canonicalId
+    WHERE ${Album.ARTIST_ID} = :duplicateId
+""")
+    suspend fun reassignAlbumsArtist(duplicateId: Long, canonicalId: Long): Int
+
+    // Delete the duplicate artist row
+    @Query("""
+    DELETE FROM ${Artist.TABLE}
+    WHERE ${Artist.ID} = :duplicateId
+""")
+    suspend fun deleteById(duplicateId: Long): Int
+
+
+    //One atomic operation: repoint albums & delete duplicate artist
+    @Transaction
+    suspend fun mergeAndDeleteArtist(duplicateId: Long, canonicalId: Long): MergeArtistsResult {
+        val moved = reassignAlbumsArtist(duplicateId, canonicalId)
+        val deleted = deleteById(duplicateId)
+        return MergeArtistsResult(albumsMoved = moved, artistsDeleted = deleted)
+    }
 }
+
+data class MergeArtistsResult(
+    val albumsMoved: Int,
+    val artistsDeleted: Int
+)

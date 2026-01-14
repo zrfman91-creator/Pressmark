@@ -69,15 +69,15 @@ class AlbumDetailsViewModel(
         val t = title.trim()
         val a = artist.trim()
 
-        if (t.isBlank() || a.isBlank()) {
-            _ui.value = _ui.value.copy(snackMessage = "Title and Artist are required.")
+        if (t.isBlank()) {
+            _ui.value = _ui.value.copy(snackMessage = "Title is required")
             return
         }
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // Resolve canonical artist row (table is source of truth)
-                val artistId = artistRepo.getOrCreateArtistId(a)
+                // Artist optional: only resolve if user actually provided one
+                val artistId = if (a.isBlank()) null else artistRepo.getOrCreateArtistId(a)
 
                 repo.updateAlbum(
                     albumId = albumId,
@@ -92,11 +92,15 @@ class AlbumDetailsViewModel(
                 withContext(Dispatchers.Main.immediate) {
                     _ui.value = _ui.value.copy(editOpen = false)
                 }
+            } catch (e: IllegalArgumentException) {
+                // Repo validation (Title required, Year invalid, etc.)
+                reportError(e.message ?: "Invalid input")
             } catch (t: Throwable) {
                 reportError(t.message ?: "Failed to save changes.")
             }
         }
     }
+
 
     fun deleteAlbum() {
         val current = album.value?.album ?: run {

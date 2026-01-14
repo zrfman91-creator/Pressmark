@@ -39,41 +39,48 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.zak.pressmark.feature.albumdetails.components.AlbumArtworkOverflowMenu
 import com.zak.pressmark.feature.albumdetails.components.AlbumDetailsHero
 import com.zak.pressmark.feature.albumdetails.components.AlbumDetailsInfoSection
 import com.zak.pressmark.feature.albumdetails.components.AlbumDetailsMetaRow
 import com.zak.pressmark.feature.albumdetails.components.AlbumDetailsNotesSection
-import com.zak.pressmark.feature.albumdetails.components.EditAlbumDialog
-import com.zak.pressmark.feature.albumdetails.vm.AlbumDetailsViewModel
+import com.zak.pressmark.data.local.model.AlbumWithArtistName
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AlbumDetailsRoute(
-    vm: AlbumDetailsViewModel,
+fun AlbumDetailsScreen(
+    row: AlbumWithArtistName?,
+    snackMessage: String?,
+    onSnackShown: () -> Unit,
+    didDelete: Boolean,
+    onDeletedNavigatedAway: () -> Unit,
     onBack: () -> Unit,
     onOpenArtist: (artistId: Long) -> Unit,
+    onOpenEdit: () -> Unit,
+    onOpenDeleteConfirm: () -> Unit,
+    onRefreshCover: () -> Unit,
+    onClearCover: () -> Unit,
+    onSetDiscogsCover: (coverUrl: String?, discogsReleaseId: Long?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val row by vm.album.collectAsStateWithLifecycle()
-    val ui by vm.ui.collectAsStateWithLifecycle()
-
     val snackbarHostState = remember { SnackbarHostState() }
     var topBarMenuOpen by rememberSaveable { mutableStateOf(false) }
 
+    // Local cover URL dialog UI state (belongs to Screen)
     var showCoverUrlDialog by rememberSaveable { mutableStateOf(false) }
     var coverUrlText by rememberSaveable { mutableStateOf("") }
     var releaseIdText by rememberSaveable { mutableStateOf("") }
 
-    LaunchedEffect(ui.snackMessage) {
-        val msg = ui.snackMessage ?: return@LaunchedEffect
-        snackbarHostState.showSnackbar(msg)
-        vm.dismissSnack()
+    LaunchedEffect(snackMessage) {
+        snackMessage?.let { msg ->
+            snackbarHostState.showSnackbar(msg)
+            onSnackShown()
+        }
     }
 
-    LaunchedEffect(ui.didDelete) {
-        if (ui.didDelete) onBack()
+    LaunchedEffect(didDelete) {
+        if (didDelete) onDeletedNavigatedAway()
     }
 
     val container = MaterialTheme.colorScheme.background
@@ -110,14 +117,14 @@ fun AlbumDetailsRoute(
                                 text = { Text("Edit") },
                                 onClick = {
                                     topBarMenuOpen = false
-                                    vm.openEdit()
+                                    onOpenEdit()
                                 }
                             )
                             DropdownMenuItem(
                                 text = { Text("Delete") },
                                 onClick = {
                                     topBarMenuOpen = false
-                                    vm.openDeleteConfirm()
+                                    onOpenDeleteConfirm()
                                 }
                             )
                         }
@@ -148,8 +155,9 @@ fun AlbumDetailsRoute(
                 return@Scaffold
             }
 
-            val a = row!!.album
-            val artistName = row!!.artist
+            val a = row.album
+            val artistName = row.artist
+            val artistId = a.artistId
 
             Column(
                 modifier = Modifier
@@ -159,8 +167,6 @@ fun AlbumDetailsRoute(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                val artistId = a.artistId
-
                 AlbumDetailsHero(
                     title = a.title,
                     artist = artistName,
@@ -172,8 +178,8 @@ fun AlbumDetailsRoute(
                         size = 260.dp,
                         cornerRadius = 10.dp,
                         onFindCover = { showCoverUrlDialog = true },
-                        onRefreshCover = { vm.refreshDiscogsCover() },
-                        onClearCover = { vm.clearCover() },
+                        onRefreshCover = onRefreshCover,
+                        onClearCover = onClearCover,
                     )
                 }
 
@@ -192,48 +198,12 @@ fun AlbumDetailsRoute(
                     year = a.releaseYear,
                     label = a.label,
                     catalogNo = a.catalogNo,
-                    format = a.format
+                    format = a.format,
                 )
 
                 AlbumDetailsNotesSection(notes = null)
             }
         }
-    }
-
-    if (ui.editOpen && row != null) {
-        val a = row!!.album
-        val artistName = row!!.artist
-
-        EditAlbumDialog(
-            album = a,
-            artistDisplayName = artistName,
-            format = a.format, // ✅ FIX: pass format
-            onDismiss = { vm.closeEdit() },
-            onSave = { title, artistNameEdited, year, catalogNo, label, format ->
-                vm.saveEdits(
-                    title = title,
-                    artist = artistNameEdited,
-                    releaseYear = year,
-                    catalogNo = catalogNo,
-                    label = label,
-                    format = format,
-                )
-            },
-        )
-    }
-
-    if (ui.deleteConfirmOpen) {
-        AlertDialog(
-            onDismissRequest = { vm.closeDeleteConfirm() },
-            title = { Text("Delete album?") },
-            text = { Text("This cannot be undone.") },
-            confirmButton = {
-                TextButton(onClick = { vm.deleteAlbum() }) { Text("Delete") }
-            },
-            dismissButton = {
-                TextButton(onClick = { vm.closeDeleteConfirm() }) { Text("Cancel") }
-            },
-        )
     }
 
     if (showCoverUrlDialog) {
@@ -263,12 +233,7 @@ fun AlbumDetailsRoute(
                     onClick = {
                         val url = coverUrlText.trim().takeIf { it.isNotBlank() }
                         val rid = releaseIdText.trim().takeIf { it.isNotBlank() }?.toLongOrNull()
-
-                        vm.setDiscogsCover(
-                            coverUrl = url,
-                            discogsReleaseId = rid,
-                        )
-
+                        onSetDiscogsCover(url, rid)
                         showCoverUrlDialog = false
                     }
                 ) { Text("Apply") }

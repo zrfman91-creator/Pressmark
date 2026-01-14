@@ -44,5 +44,7 @@ object DbSchema {
         const val LAST_PLAYED_AT = "last_played_at"
         const val MASTER_ID = "master_id" // From Discogs
         const val FORMAT = "format"       // From Discogs
+        const val ARTWORK_PROVIDER = "artwork_provider"
+        const val ARTWORK_PROVIDER_ITEM_ID = "artwork_provider_item_id"
     }
 }

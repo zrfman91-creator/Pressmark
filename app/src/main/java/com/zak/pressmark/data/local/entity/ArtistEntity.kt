@@ -29,7 +29,7 @@ data class ArtistEntity(
     val nameNormalized: String,
 
     @ColumnInfo(name = Artist.ARTIST_TYPE)
-    val artistType: String = ArtistType.BAND.name,
+    val artistType: String? = ArtistType.BAND.name,
 )
 enum class ArtistType {
     PERSON,

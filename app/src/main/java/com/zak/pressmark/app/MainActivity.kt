@@ -6,7 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.remember
 import com.zak.pressmark.app.di.AppGraph
-import com.zak.pressmark.core.theme.PressmarkTheme
+import com.zak.pressmark.core.ui.theme.PressmarkTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {

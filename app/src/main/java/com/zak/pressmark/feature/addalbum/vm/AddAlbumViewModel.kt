@@ -77,10 +77,6 @@ class AddAlbumViewModel(
             viewModelScope.launch { _events.emit(AddAlbumEvent.ShowSnackbar("Title is required.")) }
             return
         }
-        if (cleanArtist.isBlank()) {
-            viewModelScope.launch { _events.emit(AddAlbumEvent.ShowSnackbar("Artist is required.")) }
-            return
-        }
 
         val yearText = form.releaseYear.trim()
         val year: Int? = if (yearText.isBlank()) null else yearText.toIntOrNull()
@@ -95,6 +91,11 @@ class AddAlbumViewModel(
         val cleanFormat = form.format.trim().takeIf { it.isNotBlank() }
 
         viewModelScope.launch(Dispatchers.IO) {
+            val artistId = when {
+                form.artistId != null -> form.artistId
+                cleanArtist.isBlank() -> null
+                else -> artistRepository.getOrCreateArtistId(cleanArtist) // ✅ suspend call inside coroutine
+            }
             try {
                 val artistId = form.artistId ?: artistRepository.getOrCreateArtistId(cleanArtist)
 

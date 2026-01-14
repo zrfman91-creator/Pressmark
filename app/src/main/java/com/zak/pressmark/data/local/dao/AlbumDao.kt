@@ -136,12 +136,21 @@ interface AlbumDao {
 
     @Query(
         """
-        UPDATE ${Album.TABLE} 
-        SET ${Album.COVER_URI} = :coverUri, ${Album.DISCOGS_RELEASE_ID} = :discogsReleaseId 
-        WHERE ${Album.ID} = :id
-        """
+    UPDATE ${Album.TABLE}
+    SET ${Album.COVER_URI} = :coverUri,
+        ${Album.DISCOGS_RELEASE_ID} = :discogsReleaseId,
+        ${Album.ARTWORK_PROVIDER} = :artworkProvider,
+        ${Album.ARTWORK_PROVIDER_ITEM_ID} = :artworkProviderItemId
+    WHERE ${Album.ID} = :id
+    """
     )
-    suspend fun updateCover(id: String, coverUri: String?, discogsReleaseId: Long?): Int
+    suspend fun updateCover(
+        id: String,
+        coverUri: String?,
+        discogsReleaseId: Long?,
+        artworkProvider: String?,
+        artworkProviderItemId: String?,
+    ): Int
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun linkGenresToAlbum(joins: List<AlbumGenreCrossRef>)

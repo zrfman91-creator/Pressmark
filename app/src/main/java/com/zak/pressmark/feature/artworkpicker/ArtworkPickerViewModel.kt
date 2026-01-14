@@ -1,4 +1,4 @@
-package com.zak.pressmark.feature.albumlist.coversearch.vm
+package com.zak.pressmark.feature.artworkpicker
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -16,10 +16,13 @@ data class CoverSearchState(
     val error: String? = null,
 )
 
+private data class CoverSearchRequest(
+    val albumId: String,
+    val artist: String,
+    val title: String,
+)
+
 class DiscogsCoverSearchViewModel(
-    private val albumId: String,
-    private val artist: String,
-    private val title: String,
     private val albumRepository: AlbumRepository,
     private val discogsApi: DiscogsApiService,
 ) : ViewModel() {
@@ -27,17 +30,38 @@ class DiscogsCoverSearchViewModel(
     private val _uiState = MutableStateFlow(CoverSearchState())
     val uiState = _uiState.asStateFlow()
 
-    init {
-        search()
+    private var currentRequest: CoverSearchRequest? = null
+
+    /**
+     * Call when opening the dialog (or when album/artist/title changes).
+     * This keeps the VM construction DI-only, and makes runtime state explicit.
+     */
+    fun start(
+        albumId: String,
+        artist: String,
+        title: String,
+    ) {
+        val request = CoverSearchRequest(
+            albumId = albumId,
+            artist = artist.trim(),
+            title = title.trim(),
+        )
+
+        // Avoid re-searching if nothing changed and we already have results/loading.
+        val sameRequest = currentRequest == request
+        if (sameRequest && (_uiState.value.isLoading || _uiState.value.results.isNotEmpty())) return
+
+        currentRequest = request
+        search(request)
     }
 
-    private fun search() {
+    private fun search(request: CoverSearchRequest) {
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = CoverSearchState(isLoading = true)
             try {
                 val response = discogsApi.searchReleases(
-                    artist = artist,
-                    releaseTitle = title,
+                    artist = request.artist.ifBlank { null },
+                    releaseTitle = request.title.ifBlank { null },
                     perPage = 20,
                 )
                 _uiState.value = CoverSearchState(results = response.results)
@@ -48,18 +72,21 @@ class DiscogsCoverSearchViewModel(
     }
 
     fun pickResult(result: DiscogsSearchResult) {
+        val request = currentRequest ?: return
+
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // 1. Save the chosen cover URL and Discogs ID
-                albumRepository.setDiscogsCover(
-                    albumId = albumId,
+                albumRepository.setArtworkSelection(
+                    albumId = request.albumId,
                     coverUrl = result.coverImage ?: result.thumb ?: "",
-                    discogsReleaseId = result.id
+                    provider = "discogs",
+                    providerItemId = result.id.toString(),
                 )
-                // 2. Trigger a full refresh to get all the other metadata
-                albumRepository.refreshFromDiscogs(albumId)
+                albumRepository.refreshFromDiscogs(request.albumId)
             } catch (t: Throwable) {
-                // Error handling can be enhanced here if needed
+                _uiState.value = _uiState.value.copy(
+                    error = t.message ?: "Failed to save cover"
+                )
             }
         }
     }

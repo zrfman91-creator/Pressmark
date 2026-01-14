@@ -1,4 +1,5 @@
-package com.zak.pressmark.feature.albumdetails.components
+// file: core/src/main/java/com/zak/pressmark/core/ui/dialog/AlbumEditDialog.kt
+package com.zak.pressmark.core.ui.dialog
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,49 +17,45 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.zak.pressmark.data.local.entity.AlbumEntity
+
+data class AlbumEditFields(
+    val title: String = "",
+    val artist: String = "",
+    val year: Int? = null,
+    val catalogNo: String? = null,
+    val label: String? = null,
+    val format: String? = null,
+)
 
 @Composable
-fun EditAlbumDialog(
-    album: AlbumEntity,
-    artistDisplayName: String,
+fun AlbumEditDialog(
+    initial: AlbumEditFields,
+    titleText: String = "Edit album",
     onDismiss: () -> Unit,
-    onSave: (title: String, artist: String, year: Int?, catalogNo: String?, label: String?) -> Unit,
+    onSave: (AlbumEditFields) -> Unit,
 ) {
-    EditAlbumDialog(
-        album = album,
-        artistDisplayName = artistDisplayName,
-        format = album.format,
-        onDismiss = onDismiss,
-        onSave = { title, artist, year, catalogNo, label, _ ->
-            onSave(title, artist, year, catalogNo, label)
-        }
-    )
-}
+    var title by remember { mutableStateOf(initial.title) }
+    var artist by remember { mutableStateOf(initial.artist) }
+    var yearText by remember { mutableStateOf(initial.year?.toString().orEmpty()) }
+    var catalogNo by remember { mutableStateOf(initial.catalogNo.orEmpty()) }
+    var label by remember { mutableStateOf(initial.label.orEmpty()) }
+    var formatText by remember { mutableStateOf(initial.format.orEmpty()) }
 
-@Composable
-fun EditAlbumDialog(
-    album: AlbumEntity,
-    artistDisplayName: String,
-    format: String?,
-    onDismiss: () -> Unit,
-    onSave: (title: String, artist: String, year: Int?, catalogNo: String?, label: String?, format: String?) -> Unit,
-) {
-    var title by remember { mutableStateOf(album.title) }
-    var artist by remember { mutableStateOf(artistDisplayName) }
-    var yearText by remember { mutableStateOf(album.releaseYear?.toString().orEmpty()) }
-    var catalogNo by remember { mutableStateOf(album.catalogNo.orEmpty()) }
-    var label by remember { mutableStateOf(album.label.orEmpty()) }
-    var formatText by remember { mutableStateOf(format.orEmpty()) }
-
-    LaunchedEffect(artistDisplayName) { artist = artistDisplayName }
-    LaunchedEffect(format) { formatText = format.orEmpty() }
+    // If caller recomposes with a new initial object, keep fields in sync.
+    LaunchedEffect(initial) {
+        title = initial.title
+        artist = initial.artist
+        yearText = initial.year?.toString().orEmpty()
+        catalogNo = initial.catalogNo.orEmpty()
+        label = initial.label.orEmpty()
+        formatText = initial.format.orEmpty()
+    }
 
     val year: Int? = yearText.trim().takeIf { it.isNotBlank() }?.toIntOrNull()
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Edit album") },
+        title = { Text(titleText) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
@@ -119,14 +116,15 @@ fun EditAlbumDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    // ✅ function type call must be positional args (no named args)
                     onSave(
-                        title.trim(),
-                        artist.trim(),
-                        year,
-                        catalogNo.trim().takeIf { it.isNotBlank() },
-                        label.trim().takeIf { it.isNotBlank() },
-                        formatText.trim().takeIf { it.isNotBlank() },
+                        AlbumEditFields(
+                            title = title.trim(),
+                            artist = artist.trim(),
+                            year = year,
+                            catalogNo = catalogNo.trim().takeIf { it.isNotBlank() },
+                            label = label.trim().takeIf { it.isNotBlank() },
+                            format = formatText.trim().takeIf { it.isNotBlank() },
+                        )
                     )
                 }
             ) { Text("Save") }

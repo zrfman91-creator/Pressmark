@@ -1,10 +1,13 @@
-package com.zak.pressmark.feature.albumlist.coversearch
+package com.zak.pressmark.core.artwork
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -12,18 +15,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import coil3.compose.AsyncImage
-import com.zak.pressmark.data.remote.discogs.DiscogsSearchResult
 
-/**
- * A dialog that displays a list of potential matches from Discogs
- * for the user to select a cover image.
- */
 @Composable
-fun DiscogsCoverSearchDialog(
+fun ArtworkPickerDialog(
     artist: String,
     title: String,
-    results: List<DiscogsSearchResult>,
-    onPick: (DiscogsSearchResult) -> Unit,
+    results: List<ArtworkCandidate>,
+    onPick: (ArtworkCandidate) -> Unit,
     onDismiss: () -> Unit,
 ) {
     Dialog(onDismissRequest = onDismiss) {
@@ -32,7 +30,7 @@ fun DiscogsCoverSearchDialog(
             tonalElevation = 6.dp,
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = 500.dp) // Constrain the height of the dialog
+                .heightIn(max = 500.dp)
         ) {
             Column {
                 Text(
@@ -41,16 +39,18 @@ fun DiscogsCoverSearchDialog(
                     modifier = Modifier.padding(16.dp)
                 )
                 HorizontalDivider()
+
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    items(results, key = { it.id }) { result ->
-                        // *** THIS IS THE KEY PART ***
-                        // Each item in the list is a row with artwork and text
-                        SearchResultRow(
-                            result = result,
-                            onClick = { onPick(result) }
+                    items(
+                        items = results,
+                        key = { "${it.provider}:${it.providerItemId}" }
+                    ) { candidate ->
+                        ArtworkCandidateRow(
+                            candidate = candidate,
+                            onClick = { onPick(candidate) }
                         )
                     }
                 }
@@ -60,12 +60,11 @@ fun DiscogsCoverSearchDialog(
 }
 
 @Composable
-private fun SearchResultRow(
-    result: DiscogsSearchResult,
+private fun ArtworkCandidateRow(
+    candidate: ArtworkCandidate,
     onClick: () -> Unit,
 ) {
-    // This helper property correctly finds the best available image URL.
-    val imageUrl = result.coverImage ?: result.thumb
+    val imageUrl = candidate.imageUrl ?: candidate.thumbUrl
 
     Row(
         modifier = Modifier
@@ -74,10 +73,9 @@ private fun SearchResultRow(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Use AsyncImage to load the artwork from the URL
         AsyncImage(
             model = imageUrl,
-            contentDescription = "Cover for ${result.title}",
+            contentDescription = "Cover for ${candidate.displayTitle}",
             modifier = Modifier.size(56.dp)
         )
 
@@ -85,14 +83,16 @@ private fun SearchResultRow(
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = result.title ?: "Unknown Title",
+                text = candidate.displayTitle.ifBlank { "Unknown Title" },
                 style = MaterialTheme.typography.bodyLarge,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            // Display year and label if available for better context
-            val subtitle = listOfNotNull(result.year, result.label?.firstOrNull())
-                .joinToString(" • ")
+
+            val subtitle = candidate.subtitle
+                ?: candidate.displayArtist
+                ?: providerLabel(candidate.provider)
+
             if (subtitle.isNotBlank()) {
                 Text(
                     text = subtitle,
@@ -105,3 +105,9 @@ private fun SearchResultRow(
         }
     }
 }
+
+private fun providerLabel(provider: ArtworkProviderId): String =
+    when (provider) {
+        ArtworkProviderId.DISCOGS -> "Discogs"
+        ArtworkProviderId.MUSICBRAINZ -> "MusicBrainz"
+    }

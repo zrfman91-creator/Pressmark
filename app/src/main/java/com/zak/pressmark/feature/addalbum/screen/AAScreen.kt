@@ -142,7 +142,7 @@ fun AddAlbumScreen(
                             val a = artistSuggestions[i]
                             ListItem(
                                 headlineContent = { Text(a.displayName) },
-                                supportingContent = { Text(a.artistType) },
+                                supportingContent = { Text(a.artistType.orEmpty()) },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {

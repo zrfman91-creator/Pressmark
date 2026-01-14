@@ -35,7 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.zak.pressmark.core.theme.AppTypography
+import com.zak.pressmark.core.ui.theme.AppTypography
 import com.zak.pressmark.data.local.model.AlbumWithArtistName
 import java.util.Locale
 

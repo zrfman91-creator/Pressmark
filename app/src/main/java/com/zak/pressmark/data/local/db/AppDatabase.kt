@@ -18,7 +18,7 @@ import com.zak.pressmark.data.local.entity.GenreEntity
         GenreEntity::class,
         AlbumGenreCrossRef::class
     ],
-    version = 5,
+    version = 7,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {

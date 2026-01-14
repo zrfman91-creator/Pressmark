@@ -1,4 +1,4 @@
-package com.zak.pressmark.core.theme
+package com.zak.pressmark.core.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle

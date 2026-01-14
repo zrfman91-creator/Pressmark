@@ -1,7 +1,7 @@
 /* =====================================================================================
  * FILE: app/src/main/java/com/zak/pressmark/ui/theme/Theme.kt
  * ===================================================================================== */
-package com.zak.pressmark.core.theme
+package com.zak.pressmark.core.ui.theme
 
 import android.app.Activity
 import android.os.Build
