@@ -19,24 +19,16 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.zak.pressmark.data.local.entity.AlbumEntity
 import com.zak.pressmark.feature.artist.components.ArtistAlbumList
-import com.zak.pressmark.feature.artist.vm.ArtistViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ArtistRoute(
-    vm: ArtistViewModel,
+fun ArtistScreen(
+    artistName: String,
+    albums: List<AlbumEntity>,
     onBack: () -> Unit,
 ) {
-    // vm.albums is canonical (AlbumWithArtistName)
-    val albumsWithArtist = vm.albums.collectAsStateWithLifecycle().value
-
-    // Adapter: keep existing ArtistAlbumList working if it still expects AlbumEntity
-    val albums = albumsWithArtist.map { it.album }
-
-    val artistName = vm.artistName.collectAsStateWithLifecycle().value ?: "Artist"
-
     val container = MaterialTheme.colorScheme.background
     val topBarColor = MaterialTheme.colorScheme.primaryContainer
 
@@ -45,7 +37,7 @@ fun ArtistRoute(
             containerColor = container,
             topBar = {
                 TopAppBar(
-                    title = { Text(artistName) },
+                    title = { Text(artistName.ifBlank { "Artist" }) },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = topBarColor),
                     navigationIcon = {
                         IconButton(onClick = onBack) {
