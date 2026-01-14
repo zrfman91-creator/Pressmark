@@ -152,6 +152,19 @@ interface AlbumDao {
         artworkProviderItemId: String?,
     ): Int
 
+    @Query(
+        """
+    UPDATE ${com.zak.pressmark.data.local.db.DbSchema.Album.TABLE}
+    SET ${com.zak.pressmark.data.local.db.DbSchema.Album.ARTWORK_PROVIDER} = 'discogs',
+        ${com.zak.pressmark.data.local.db.DbSchema.Album.ARTWORK_PROVIDER_ITEM_ID} =
+            CAST(${com.zak.pressmark.data.local.db.DbSchema.Album.DISCOGS_RELEASE_ID} AS TEXT)
+    WHERE ${com.zak.pressmark.data.local.db.DbSchema.Album.ARTWORK_PROVIDER} IS NULL
+      AND ${com.zak.pressmark.data.local.db.DbSchema.Album.DISCOGS_RELEASE_ID} IS NOT NULL
+    """
+    )
+    suspend fun backfillArtworkProviderFromLegacyDiscogs(): Int
+
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun linkGenresToAlbum(joins: List<AlbumGenreCrossRef>)
 

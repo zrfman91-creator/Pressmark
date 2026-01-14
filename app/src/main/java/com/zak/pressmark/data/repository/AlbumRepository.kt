@@ -87,6 +87,10 @@ class AlbumRepository(
         )
     }
 
+    suspend fun backfillArtworkProviderFromLegacyDiscogs(): Int {
+        return dao.backfillArtworkProviderFromLegacyDiscogs()
+    }
+
     suspend fun deleteAlbum(album: AlbumEntity) {
         dao.delete(album)
     }
