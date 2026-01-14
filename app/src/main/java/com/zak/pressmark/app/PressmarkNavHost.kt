@@ -70,6 +70,17 @@ fun PressmarkNavHost(
             AddAlbumRoute(
                 vm = vm,
                 onNavigateUp = { navController.popBackStack() },
+                onAlbumSaved = { albumId, artist, title ->
+                    // Save → Cover Picker (single flow)
+                    navController.navigate(
+                        PressmarkRoutes.coverSearch(
+                            albumId = albumId,
+                            artist = artist,
+                            title = title,
+                            origin = PressmarkRoutes.COVER_ORIGIN_DETAILS,
+                        )
+                    )
+                },
             )
         }
 
@@ -110,6 +121,10 @@ fun PressmarkNavHost(
                     type = NavType.StringType
                     defaultValue = ""
                 },
+                navArgument(PressmarkRoutes.ARG_COVER_ORIGIN) {
+                    type = NavType.StringType
+                    defaultValue = PressmarkRoutes.COVER_ORIGIN_BACK
+                },
             ),
         ) { backStackEntry ->
             val albumId =
@@ -118,13 +133,27 @@ fun PressmarkNavHost(
                 backStackEntry.arguments?.getString(PressmarkRoutes.ARG_COVER_ARTIST).orEmpty()
             val title =
                 backStackEntry.arguments?.getString(PressmarkRoutes.ARG_COVER_TITLE).orEmpty()
+            val origin =
+                backStackEntry.arguments?.getString(PressmarkRoutes.ARG_COVER_ORIGIN)
+                    ?: PressmarkRoutes.COVER_ORIGIN_BACK
 
             CoverSearchRoute(
                 graph = graph,
                 albumId = albumId,
                 artist = artist,
                 title = title,
-                onClose = { navController.popBackStack() },
+                onClose = {
+                    when (origin) {
+                        PressmarkRoutes.COVER_ORIGIN_DETAILS -> {
+                            // Drop Cover Search (+ Add) from back stack and land on Details.
+                            navController.navigate(PressmarkRoutes.details(albumId)) {
+                                popUpTo(PressmarkRoutes.LIST) { inclusive = false }
+                            }
+                        }
+
+                        else -> navController.popBackStack()
+                    }
+                },
             )
         }
 

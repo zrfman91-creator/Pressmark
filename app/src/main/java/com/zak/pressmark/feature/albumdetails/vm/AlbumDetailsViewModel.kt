@@ -1,6 +1,3 @@
-// =======================================================
-// file: app/src/main/java/com/zak/pressmark/feature/albumdetails/vm/AlbumDetailsViewModel.kt
-// =======================================================
 package com.zak.pressmark.feature.albumdetails.vm
 
 import androidx.lifecycle.ViewModel
@@ -30,17 +27,12 @@ class AlbumDetailsViewModel(
     private val artistRepo: ArtistRepository,
 ) : ViewModel() {
 
-    // ✅ Canonical: includes artist name from Artist table
     val album: StateFlow<AlbumWithArtistName?> =
         repo.observeByIdWithArtistName(albumId)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     private val _ui = MutableStateFlow(AlbumDetailsUiState())
     val ui: StateFlow<AlbumDetailsUiState> = _ui.asStateFlow()
-
-    fun dismissSnack() {
-        _ui.value = _ui.value.copy(snackMessage = null)
-    }
 
     fun openEdit() {
         _ui.value = _ui.value.copy(editOpen = true)
@@ -101,7 +93,6 @@ class AlbumDetailsViewModel(
         }
     }
 
-
     fun deleteAlbum() {
         val current = album.value?.album ?: run {
             _ui.value = _ui.value.copy(snackMessage = "Album not found.")
@@ -123,7 +114,12 @@ class AlbumDetailsViewModel(
     fun clearCover() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                repo.clearDiscogsCover(albumId)
+                repo.setArtworkSelection(
+                    albumId = albumId,
+                    coverUrl = null,
+                    provider = null,
+                    providerItemId = null,
+                )
             } catch (t: Throwable) {
                 reportError(t.message ?: "Failed to clear cover.")
             }
@@ -133,7 +129,13 @@ class AlbumDetailsViewModel(
     fun refreshDiscogsCover() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                repo.clearDiscogsCover(albumId)
+                // For now: clear and show message (actual refresh/search is handled by cover search flow)
+                repo.setArtworkSelection(
+                    albumId = albumId,
+                    coverUrl = null,
+                    provider = null,
+                    providerItemId = null,
+                )
                 withContext(Dispatchers.Main.immediate) {
                     _ui.value = _ui.value.copy(
                         snackMessage = "Cover cleared. Next: we’ll wire Discogs refresh/search here."
@@ -151,15 +153,20 @@ class AlbumDetailsViewModel(
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                repo.setDiscogsCover(
+                repo.setArtworkSelection(
                     albumId = albumId,
                     coverUrl = coverUrl,
-                    discogsReleaseId = discogsReleaseId,
+                    provider = "discogs",
+                    providerItemId = discogsReleaseId?.toString(),
                 )
             } catch (t: Throwable) {
-                reportError(t.message ?: "Failed to save cover.")
+                reportError(t.message ?: "Failed to set Discogs cover.")
             }
         }
+    }
+
+    fun dismissSnack() {
+        _ui.value = _ui.value.copy(snackMessage = null)
     }
 
     private fun reportError(message: String) {

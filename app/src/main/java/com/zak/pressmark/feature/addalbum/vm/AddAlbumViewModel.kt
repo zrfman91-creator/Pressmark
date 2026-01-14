@@ -25,6 +25,11 @@ import kotlinx.coroutines.withContext
 sealed interface AddAlbumEvent {
     data object NavigateUp : AddAlbumEvent
     data class ShowSnackbar(val message: String) : AddAlbumEvent
+    data class AlbumSaved(
+        val albumId: String,
+        val artist: String,
+        val title: String,
+    ) : AddAlbumEvent
 }
 
 class AddAlbumViewModel(
@@ -91,24 +96,31 @@ class AddAlbumViewModel(
         val cleanFormat = form.format.trim().takeIf { it.isNotBlank() }
 
         viewModelScope.launch(Dispatchers.IO) {
-            val artistId = when {
-                form.artistId != null -> form.artistId
-                cleanArtist.isBlank() -> null
-                else -> artistRepository.getOrCreateArtistId(cleanArtist) // ✅ suspend call inside coroutine
-            }
             try {
-                val artistId = form.artistId ?: artistRepository.getOrCreateArtistId(cleanArtist)
+                val resolvedArtistId: Long? = when {
+                    form.artistId != null -> form.artistId
+                    cleanArtist.isBlank() -> null
+                    else -> artistRepository.getOrCreateArtistId(cleanArtist)
+                }
 
-                albumRepository.addAlbum(
+                val albumId = albumRepository.addAlbumReturningId(
                     title = cleanTitle,
-                    artistId = artistId,
+                    artistId = resolvedArtistId,
                     releaseYear = year,
                     label = cleanLabel,
                     catalogNo = cleanCatalogNo,
                     format = cleanFormat,
                 )
 
-                withContext(Dispatchers.Main) { _events.emit(AddAlbumEvent.NavigateUp) }
+                withContext(Dispatchers.Main) {
+                    _events.emit(
+                        AddAlbumEvent.AlbumSaved(
+                            albumId = albumId,
+                            artist = cleanArtist,
+                            title = cleanTitle,
+                        )
+                    )
+                }
             } catch (t: Throwable) {
                 withContext(Dispatchers.Main) {
                     _events.emit(AddAlbumEvent.ShowSnackbar(t.message ?: "Failed to save album."))

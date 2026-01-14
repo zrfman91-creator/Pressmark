@@ -43,11 +43,37 @@ class AlbumRepository(
         label: String?,
         format: String?,
     ) {
+        // Kept for API compatibility with existing call sites.
+        addAlbumReturningId(
+            title = title,
+            artistId = artistId,
+            releaseYear = releaseYear,
+            catalogNo = catalogNo,
+            label = label,
+            format = format,
+        )
+    }
+
+    /**
+     * Creates a new album and returns its generated albumId.
+     *
+     * Use this for flows that need to immediately navigate using the saved albumId
+     * (e.g., Save → Cover Picker → Details).
+     */
+    suspend fun addAlbumReturningId(
+        title: String,
+        artistId: Long?,
+        releaseYear: Int?,
+        catalogNo: String?,
+        label: String?,
+        format: String?,
+    ): String {
         val s = sanitizeAndValidate(title, artistId, releaseYear, catalogNo, label, format)
 
+        val id = UUID.randomUUID().toString()
         dao.insert(
             AlbumEntity(
-                id = UUID.randomUUID().toString(),
+                id = id,
                 title = s.title,
                 artistId = s.artistId,
                 releaseYear = s.releaseYear,
@@ -59,6 +85,7 @@ class AlbumRepository(
                 addedAt = System.currentTimeMillis(),
             )
         )
+        return id
     }
 
     suspend fun updateAlbum(

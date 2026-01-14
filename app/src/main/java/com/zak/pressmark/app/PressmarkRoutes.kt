@@ -28,12 +28,23 @@ object PressmarkRoutes {
     const val COVER_SEARCH = "cover_search"
     const val ARG_COVER_ARTIST = "artist"
     const val ARG_COVER_TITLE = "title"
-    const val COVER_SEARCH_PATTERN =
-        "$COVER_SEARCH/{$ARG_ALBUM_ID}?$ARG_COVER_ARTIST={$ARG_COVER_ARTIST}&$ARG_COVER_TITLE={$ARG_COVER_TITLE}"
+    const val ARG_COVER_ORIGIN = "origin"
 
-    fun coverSearch(albumId: String, artist: String, title: String): String {
+    // Where should Cover Search return?
+    const val COVER_ORIGIN_BACK = "back"       // default: just popBackStack()
+    const val COVER_ORIGIN_DETAILS = "details" // after closing, go to Album Details
+    const val COVER_SEARCH_PATTERN =
+        "$COVER_SEARCH/{$ARG_ALBUM_ID}?$ARG_COVER_ARTIST={$ARG_COVER_ARTIST}&$ARG_COVER_TITLE={$ARG_COVER_TITLE}&$ARG_COVER_ORIGIN={$ARG_COVER_ORIGIN}"
+
+    fun coverSearch(
+        albumId: String,
+        artist: String,
+        title: String,
+        origin: String = COVER_ORIGIN_BACK,
+    ): String {
         val a = Uri.encode(artist)
         val t = Uri.encode(title)
-        return "$COVER_SEARCH/$albumId?$ARG_COVER_ARTIST=$a&$ARG_COVER_TITLE=$t"
+        val o = Uri.encode(origin)
+        return "$COVER_SEARCH/$albumId?$ARG_COVER_ARTIST=$a&$ARG_COVER_TITLE=$t&$ARG_COVER_ORIGIN=$o"
     }
 }

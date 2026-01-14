@@ -144,7 +144,7 @@ fun AlbumListRow(
                             )
                         }
 
-                        if (!selectionActive && album.discogsReleaseId == -1L) {
+                        if (!selectionActive && album.artworkNotFound) {
                             Text(
                                 text = "Artwork not found",
                                 style = MaterialTheme.typography.bodySmall,

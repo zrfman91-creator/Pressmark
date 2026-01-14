@@ -19,6 +19,7 @@ import com.zak.pressmark.feature.addalbum.vm.AddAlbumViewModel
 fun AddAlbumRoute(
     vm: AddAlbumViewModel,
     onNavigateUp: () -> Unit,
+    onAlbumSaved: (albumId: String, artist: String, title: String) -> Unit,
 ) {
     var form by rememberSaveable(stateSaver = AddAlbumFormStateSaver) {
         mutableStateOf(AddAlbumFormState())
@@ -33,6 +34,7 @@ fun AddAlbumRoute(
             when (event) {
                 is AddAlbumEvent.NavigateUp -> onNavigateUp()
                 is AddAlbumEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
+                is AddAlbumEvent.AlbumSaved -> onAlbumSaved(event.albumId, event.artist, event.title)
             }
         }
     }
