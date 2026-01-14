@@ -1,5 +1,5 @@
 // =======================================================
-// file: app/src/main/java/com/zak/pressmark/ui/albumlist/components/AlbumListRow.kt
+// file: app/src/main/java/com/zak/pressmark/feature/albumlist/components/AlbumListRow.kt
 // =======================================================
 package com.zak.pressmark.feature.albumlist.components
 
@@ -18,10 +18,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.ImageSearch
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -48,38 +47,36 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.zak.pressmark.data.local.entity.AlbumEntity
-import com.zak.pressmark.feature.albumlist.format.ArtistNameFormatter
+import com.zak.pressmark.data.local.model.AlbumWithArtistName
 
 enum class AlbumRowDensity { SPACIOUS, STANDARD, COMPACT, TEXT_ONLY }
 
+private fun AlbumWithArtistName.artistDisplaySafe(): String =
+    artistDisplayName?.trim().takeUnless { it.isNullOrBlank() } ?: "Unknown Artist"
+
 @Composable
 fun AlbumListRow(
-    album: AlbumEntity,
+    row: AlbumWithArtistName,
     isSelected: Boolean,
     selectionActive: Boolean,
     onClick: () -> Unit,
     onLongPress: () -> Unit,
     onDelete: () -> Unit,
-    onEdit: () -> Unit,
     showDivider: Boolean,
     onFindCover: () -> Unit,
+    onEdit: () -> Unit,
     modifier: Modifier = Modifier,
-    rowDensity: AlbumRowDensity = AlbumRowDensity.SPACIOUS,
+    rowDensity: AlbumRowDensity = AlbumRowDensity.STANDARD,
 ) {
+    val album = row.album
     val spec = remember(rowDensity) { RowSpec.from(rowDensity) }
     var menuOpen by remember { mutableStateOf(false) }
 
-    val hasArtwork = !album.persistedArtworkUrl.isNullOrBlank()
-    val showRefreshAction = !hasArtwork && album.discogsReleaseId != null
+    val artistDisplay = remember(row.artistDisplayName, row.artistSortName) { row.artistDisplaySafe() }
 
-    val artistDisplay = remember(album.artist) { ArtistNameFormatter.displayForList(album.artist) }
-
-    // ✅ Row background colors (change these to match your “paper” look)
     val rowContainerColor =
         if (isSelected) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primaryContainer
 
-    // ✅ Dropdown menu background
     val menuContainerColor = MaterialTheme.colorScheme.secondaryContainer
 
     Column(
@@ -90,7 +87,7 @@ fun AlbumListRow(
         Surface(
             color = rowContainerColor,
             shape = RoundedCornerShape(6.dp),
-            shadowElevation = 1.dp,  // adjust if you want subtle depth
+            shadowElevation = 1.dp,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = spec.outerVerticalPadding)
@@ -105,7 +102,7 @@ fun AlbumListRow(
                 if (rowDensity != AlbumRowDensity.TEXT_ONLY) {
                     AlbumArtwork(
                         artworkUrl = album.persistedArtworkUrl,
-                        contentDescription = "${album.artist} — ${album.title}",
+                        contentDescription = "$artistDisplay — ${album.title}",
                         modifier = Modifier.size(spec.artworkSize)
                     )
                     Spacer(Modifier.width(spec.gapAfterLeading))
@@ -137,7 +134,7 @@ fun AlbumListRow(
                             overflow = TextOverflow.Ellipsis
                         )
 
-                        buildMetaLine(album)?.let { meta ->
+                        buildMetaLine(row)?.let { meta ->
                             Text(
                                 text = meta,
                                 style = MaterialTheme.typography.bodySmall,
@@ -168,13 +165,13 @@ fun AlbumListRow(
                     DropdownMenu(
                         expanded = menuOpen,
                         onDismissRequest = { menuOpen = false },
-                        containerColor = menuContainerColor, // ✅ menu background
+                        containerColor = menuContainerColor,
                         shadowElevation = 6.dp,
-                        shape = MaterialTheme.shapes.large)
-                    {
+                        shape = MaterialTheme.shapes.large
+                    ) {
                         DropdownMenuItem(
                             text = { Text("Edit") },
-                            leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null) },
+                            leadingIcon = { Icon(Icons.Default.EditNote, contentDescription = null) },
                             onClick = {
                                 menuOpen = false
                                 onEdit()
@@ -184,20 +181,19 @@ fun AlbumListRow(
                                 leadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         )
+
                         DropdownMenuItem(
                             text = { Text("Find cover") },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.ImageSearch,
-                                    contentDescription = null)
-                            },
+                            leadingIcon = { Icon(Icons.Default.ImageSearch, contentDescription = null) },
                             onClick = {
                                 menuOpen = false
                                 onFindCover()
                             },
                             colors = MenuDefaults.itemColors(
                                 textColor = MaterialTheme.colorScheme.onSurface,
-                                leadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant))
+                                leadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        )
 
                         DropdownMenuItem(
                             text = { Text("Delete") },
@@ -208,25 +204,27 @@ fun AlbumListRow(
                             },
                             colors = MenuDefaults.itemColors(
                                 textColor = MaterialTheme.colorScheme.onSurface,
-                                leadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant))
+                                leadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        )
                     }
                 }
             }
         }
     }
-        if (showDivider) {
-            LeftFadeDivider(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = spec.dividerStartPadding)
-                    .padding(vertical = 1.dp),
-                fadeEndFraction = 0.75f,
-                alpha = 0.85f,
-                thickness = 1.dp
-            )
-        }
-    }
 
+    if (showDivider) {
+        LeftFadeDivider(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = spec.dividerStartPadding)
+                .padding(vertical = 1.dp),
+            fadeEndFraction = 0.75f,
+            alpha = 0.85f,
+            thickness = 1.dp
+        )
+    }
+}
 
 @Immutable
 private data class RowSpec(
@@ -316,7 +314,8 @@ private fun buildTextOnlyLine(
     }
 }
 
-private fun buildMetaLine(album: AlbumEntity): String? {
+private fun buildMetaLine(row: AlbumWithArtistName): String? {
+    val album = row.album
     val year = album.releaseYear?.takeIf { it > 0 }?.toString()
     val label = album.label?.trim()?.takeIf { it.isNotBlank() }
     val catalog = album.catalogNo?.trim()?.takeIf { it.isNotBlank() }

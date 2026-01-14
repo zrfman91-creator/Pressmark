@@ -5,10 +5,10 @@ import coil3.ImageLoader
 import com.zak.pressmark.BuildConfig
 import com.zak.pressmark.data.local.db.AppDatabase
 import com.zak.pressmark.data.local.db.DatabaseProvider
-import com.zak.pressmark.data.remote.discogs.DiscogsApiProvider // Assuming you have a provider for the API
+import com.zak.pressmark.data.remote.discogs.DiscogsApiProvider
 import com.zak.pressmark.data.remote.discogs.DiscogsApiService
 import com.zak.pressmark.data.repository.AlbumRepository
-import com.zak.pressmark.data.repository.ArtistRepository // Assuming you have this
+import com.zak.pressmark.data.repository.ArtistRepository
 import com.zak.pressmark.feature.albumlist.imageloading.AppImageLoader
 import okhttp3.Cache
 import okhttp3.OkHttpClient
@@ -33,31 +33,20 @@ class AppGraph(
         buildOkHttp(appContext)
     }
 
-    // --- API Service Singleton ---
-    // Create the Discogs API service here to be injected into the repository
-    internal val discogsApiService: DiscogsApiService by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
-        // We assume you have a provider like this. If not, the DiscogsClient.create can be used.
-        // This is cleaner as it centralizes API creation.
+    // --- API Service Singleton (keep for cover search feature) ---
+    val discogsApiService: DiscogsApiService by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         DiscogsApiProvider.create(
             token = BuildConfig.DISCOGS_TOKEN.trim(),
             baseClient = okHttpClient,
         )
     }
 
-    // --- Repositories ---
+    // --- Repositories (MUST MATCH repo constructors) ---
     val albumRepository: AlbumRepository by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
-        // *** THE FIX IS HERE ***
-        // Provide all four required dependencies to the constructor.
-        AlbumRepository(
-            albumDao = database.albumDao(),
-            artistDao = database.artistDao(),
-            genreDao = database.genreDao(),
-            discogsApi = discogsApiService
-        )
+        // ✅ AlbumRepository(dao: AlbumDao)
+        AlbumRepository(database.albumDao())
     }
 
-    // Assuming you have an ArtistRepository, it would be created like this.
-    // If you don't have one yet, this can be removed.
     val artistRepository: ArtistRepository by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         ArtistRepository(database.artistDao())
     }
@@ -66,9 +55,6 @@ class AppGraph(
     val imageLoader: ImageLoader by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         AppImageLoader.get(appContext)
     }
-
-    private fun userAgent(): String =
-        "Pressmark/${BuildConfig.VERSION_NAME} (${BuildConfig.APPLICATION_ID})"
 }
 
 private fun buildOkHttp(context: Context): OkHttpClient {
@@ -82,23 +68,4 @@ private fun buildOkHttp(context: Context): OkHttpClient {
         .writeTimeout(20, TimeUnit.SECONDS)
         .callTimeout(30, TimeUnit.SECONDS)
         .build()
-}
-
-// NOTE: I've moved NoopDiscogsArtworkRepository out as it's not directly used here.
-// I also created a placeholder for DiscogsApiProvider.
-object DiscogsApiProvider {
-    fun create(token: String, baseClient: OkHttpClient): DiscogsApiService {
-        // This should contain your Retrofit client creation logic
-        // For example:
-        // return Retrofit.Builder()
-        //     .client(baseClient)
-        //     .baseUrl("https://api.discogs.com/")
-        //     .addConverterFactory(GsonConverterFactory.create())
-        //     .build()
-        //     .create(DiscogsApiService::class.java)
-
-        // Using a placeholder to satisfy the compiler for now
-        // You should replace this with your actual Retrofit client implementation
-        TODO("Implement actual Retrofit client creation for DiscogsApiService")
-    }
 }

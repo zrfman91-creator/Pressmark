@@ -2,19 +2,17 @@ package com.zak.pressmark.feature.albumlist.vm
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.zak.pressmark.app.di.AppGraph
+import com.zak.pressmark.data.repository.AlbumRepository
 
 class AlbumListViewModelFactory(
-    private val graph: AppGraph,
+    private val repo: AlbumRepository,
 ) : ViewModelProvider.Factory {
+
+    @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(AlbumListViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return AlbumListViewModel(
-                // Pass the public repository from the graph
-                albumRepository = graph.albumRepository
-            ) as T
+        if (!modelClass.isAssignableFrom(AlbumListViewModel::class.java)) {
+            throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
         }
-        throw IllegalArgumentException("Unknown ViewModel class")
+        return AlbumListViewModel(albumRepository = repo) as T
     }
 }

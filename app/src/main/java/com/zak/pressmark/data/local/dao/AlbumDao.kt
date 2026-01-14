@@ -1,24 +1,96 @@
 // file: app/src/main/java/com/zak/pressmark/data/local/dao/AlbumDao.kt
 package com.zak.pressmark.data.local.dao
 
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Update
 import com.zak.pressmark.data.local.db.DbSchema.Album
 import com.zak.pressmark.data.local.db.DbSchema.Artist
 import com.zak.pressmark.data.local.entity.AlbumEntity
 import com.zak.pressmark.data.local.entity.AlbumGenreCrossRef
+import com.zak.pressmark.data.local.model.AlbumWithArtistName
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface AlbumDao {
 
+    // ==========================================================
+    // Canonical reads (UI should use these)
+    // ==========================================================
+
+    @Query(
+        """
+        SELECT 
+            ${Album.TABLE}.*,
+            ${Artist.TABLE}.${Artist.DISPLAY_NAME} AS artistDisplayName,
+            ${Artist.TABLE}.${Artist.SORT_NAME} AS artistSortName
+        FROM ${Album.TABLE}
+        LEFT JOIN ${Artist.TABLE} 
+            ON ${Artist.TABLE}.${Artist.ID} = ${Album.TABLE}.${Album.ARTIST_ID}
+        ORDER BY 
+            COALESCE(${Artist.TABLE}.${Artist.SORT_NAME}, ${Artist.TABLE}.${Artist.DISPLAY_NAME}, '') COLLATE NOCASE,
+            ${Album.TABLE}.${Album.TITLE} COLLATE NOCASE
+        """
+    )
+    fun observeAllWithArtist(): Flow<List<AlbumWithArtistName>>
+
+    @Query(
+        """
+        SELECT 
+            ${Album.TABLE}.*,
+            ${Artist.TABLE}.${Artist.DISPLAY_NAME} AS artistDisplayName,
+            ${Artist.TABLE}.${Artist.SORT_NAME} AS artistSortName
+        FROM ${Album.TABLE}
+        LEFT JOIN ${Artist.TABLE} 
+            ON ${Artist.TABLE}.${Artist.ID} = ${Album.TABLE}.${Album.ARTIST_ID}
+        WHERE ${Album.TABLE}.${Album.ID} = :id
+        LIMIT 1
+        """
+    )
+    fun observeByIdWithArtist(id: String): Flow<AlbumWithArtistName?>
+
+    @Query(
+        """
+        SELECT 
+            ${Album.TABLE}.*,
+            ${Artist.TABLE}.${Artist.DISPLAY_NAME} AS artistDisplayName,
+            ${Artist.TABLE}.${Artist.SORT_NAME} AS artistSortName
+        FROM ${Album.TABLE}
+        LEFT JOIN ${Artist.TABLE} 
+            ON ${Artist.TABLE}.${Artist.ID} = ${Album.TABLE}.${Album.ARTIST_ID}
+        WHERE ${Album.TABLE}.${Album.ID} = :id
+        LIMIT 1
+        """
+    )
+    suspend fun getByIdWithArtist(id: String): AlbumWithArtistName?
+
+    @Query(
+        """
+        SELECT 
+            ${Album.TABLE}.*,
+            ${Artist.TABLE}.${Artist.DISPLAY_NAME} AS artistDisplayName,
+            ${Artist.TABLE}.${Artist.SORT_NAME} AS artistSortName
+        FROM ${Album.TABLE}
+        LEFT JOIN ${Artist.TABLE} 
+            ON ${Artist.TABLE}.${Artist.ID} = ${Album.TABLE}.${Album.ARTIST_ID}
+        WHERE ${Album.TABLE}.${Album.ARTIST_ID} = :artistId
+        ORDER BY ${Album.TABLE}.${Album.RELEASE_YEAR} IS NULL, ${Album.TABLE}.${Album.RELEASE_YEAR}, ${Album.TABLE}.${Album.TITLE} COLLATE NOCASE
+        """
+    )
+    fun observeByArtistIdWithArtist(artistId: Long): Flow<List<AlbumWithArtistName>>
+
+    // ==========================================================
+    // Legacy reads (keep temporarily for older UI code)
+    // ==========================================================
+
     @Query(
         """
         SELECT ${Album.TABLE}.*
         FROM ${Album.TABLE}
-        LEFT JOIN ${Artist.TABLE} ON ${Artist.TABLE}.${Artist.ID} = ${Album.TABLE}.${Album.ARTIST_ID}
-        ORDER BY 
-            COALESCE(${Artist.TABLE}.${Artist.SORT_NAME}, ${Album.TABLE}.${Album.ARTIST}) COLLATE NOCASE,
-            ${Album.TABLE}.${Album.TITLE} COLLATE NOCASE
+        ORDER BY ${Album.TABLE}.${Album.TITLE} COLLATE NOCASE
         """
     )
     fun observeAll(): Flow<List<AlbumEntity>>
@@ -28,6 +100,19 @@ interface AlbumDao {
 
     @Query("SELECT * FROM ${Album.TABLE} WHERE ${Album.ID} = :id LIMIT 1")
     suspend fun getById(id: String): AlbumEntity?
+
+    @Query(
+        """
+        SELECT * FROM ${Album.TABLE}
+        WHERE ${Album.ARTIST_ID} = :artistId
+        ORDER BY ${Album.RELEASE_YEAR} IS NULL, ${Album.RELEASE_YEAR}, ${Album.TITLE} COLLATE NOCASE
+        """
+    )
+    fun observeByArtistId(artistId: Long): Flow<List<AlbumEntity>>
+
+    // ==========================================================
+    // Writes
+    // ==========================================================
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(album: AlbumEntity)
@@ -51,21 +136,11 @@ interface AlbumDao {
 
     @Query(
         """
-        SELECT * FROM ${Album.TABLE}
-        WHERE ${Album.ARTIST_ID} = :artistId
-        ORDER BY ${Album.RELEASE_YEAR} IS NULL, ${Album.RELEASE_YEAR}, ${Album.TITLE} COLLATE NOCASE
-        """
-    )
-    fun observeByArtistId(artistId: Long): Flow<List<AlbumEntity>>
-
-    @Query(
-        """
         UPDATE ${Album.TABLE} 
         SET ${Album.COVER_URI} = :coverUri, ${Album.DISCOGS_RELEASE_ID} = :discogsReleaseId 
         WHERE ${Album.ID} = :id
         """
     )
-
     suspend fun updateCover(id: String, coverUri: String?, discogsReleaseId: Long?): Int
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)

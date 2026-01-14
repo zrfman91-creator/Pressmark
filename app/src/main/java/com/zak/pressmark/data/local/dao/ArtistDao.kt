@@ -1,4 +1,3 @@
-// file: app/src/main/java/com/zak/pressmark/data/local/dao/ArtistDao.kt
 package com.zak.pressmark.data.local.dao
 
 import androidx.room.Dao
@@ -12,42 +11,48 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ArtistDao {
 
-    @Query("SELECT * FROM ${Artist.TABLE} ORDER BY ${Artist.SORT_NAME} COLLATE NOCASE")
-    fun observeAll(): Flow<List<ArtistEntity>>
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insert(entity: ArtistEntity): Long
 
+    // Canonical lookup (used by ArtistRepository.getOrCreateArtistId)
+    @Query("SELECT * FROM ${Artist.TABLE} WHERE ${Artist.NAME_NORMALIZED} = :normalized LIMIT 1")
+    suspend fun findByNormalizedName(normalized: String): ArtistEntity?
+
+    // Needed by ArtistRepository.observeById() and ArtistViewModel
     @Query("SELECT * FROM ${Artist.TABLE} WHERE ${Artist.ID} = :id LIMIT 1")
     fun observeById(id: Long): Flow<ArtistEntity?>
 
+    // Optional convenience (sometimes helpful)
     @Query("SELECT * FROM ${Artist.TABLE} WHERE ${Artist.ID} = :id LIMIT 1")
     suspend fun getById(id: Long): ArtistEntity?
 
-    @Query("SELECT * FROM ${Artist.TABLE} WHERE ${Artist.NAME_NORMALIZED} = :normalized LIMIT 1")
-    suspend fun getByNormalized(normalized: String): ArtistEntity?
-
-    @Query("SELECT ${Artist.ID} FROM ${Artist.TABLE} WHERE ${Artist.NAME_NORMALIZED} = :normalized LIMIT 1")
-    suspend fun getIdByNormalized(normalized: String): Long?
-
-    /**
-     * Returns:
-     * - new rowId if inserted
-     * - -1 if ignored due to unique constraint
-     */
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertOrIgnore(artist: ArtistEntity): Long
-
-    /**
-     * Optional helper for autocomplete, etc.
-     */
+    // “Top artists” list — uses sortName (NOT playCount; you don’t have that column)
     @Query(
         """
         SELECT * FROM ${Artist.TABLE}
-        WHERE ${Artist.NAME_NORMALIZED} LIKE :normalizedPrefix || '%'
         ORDER BY ${Artist.SORT_NAME} COLLATE NOCASE
         LIMIT :limit
         """
     )
-    suspend fun searchByNormalizedPrefix(
-        normalizedPrefix: String,
-        limit: Int = 20,
-    ): List<ArtistEntity>
+    fun observeTopArtists(limit: Int): Flow<List<ArtistEntity>>
+
+    // Suggestions — search display + sort (no legacy fields)
+    @Query(
+        """
+        SELECT * FROM ${Artist.TABLE}
+        WHERE ${Artist.DISPLAY_NAME} LIKE '%' || :query || '%'
+           OR ${Artist.SORT_NAME} LIKE '%' || :query || '%'
+        ORDER BY ${Artist.SORT_NAME} COLLATE NOCASE
+        LIMIT :limit
+        """
+    )
+    fun searchByName(query: String, limit: Int): Flow<List<ArtistEntity>>
+
+    @Query("""
+    UPDATE ${Artist.TABLE}
+    SET ${Artist.DISPLAY_NAME} = :displayName,
+        ${Artist.SORT_NAME} = :sortName
+    WHERE ${Artist.ID} = :id
+""")
+    suspend fun updateNames(id: Long, displayName: String, sortName: String): Int
 }

@@ -2,8 +2,7 @@ package com.zak.pressmark.feature.artist.vm
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.zak.pressmark.data.local.dao.ArtistDao
-import com.zak.pressmark.data.local.entity.AlbumEntity
+import com.zak.pressmark.data.local.model.AlbumWithArtistName
 import com.zak.pressmark.data.repository.AlbumRepository
 import com.zak.pressmark.data.repository.ArtistRepository
 import kotlinx.coroutines.flow.SharingStarted
@@ -26,9 +25,8 @@ class ArtistViewModel(
                 initialValue = null,
             )
 
-    val albums: StateFlow<List<AlbumEntity>> =
-        // This was named albumRepo before, let's make it consistent
-        albumRepository.observeByArtistId(artistId)
+    val albums: StateFlow<List<AlbumWithArtistName>> =
+        albumRepository.observeByArtistIdWithArtistName(artistId)
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000),

@@ -18,6 +18,7 @@ class AlbumDetailsViewModelFactory(
         return AlbumDetailsViewModel(
             albumId = albumId,
             repo = graph.albumRepository,
+            artistRepo = graph.artistRepository,
         ) as T
     }
 }

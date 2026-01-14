@@ -12,6 +12,9 @@ data class AddAlbumFormState(
     val releaseYear: String = "",
     val label: String = "",
     val catalogNo: String = "",
+
+    // ✅ NEW
+    val format: String = "",
 )
 
 val AddAlbumFormStateSaver: Saver<AddAlbumFormState, Any> = mapSaver(
@@ -23,6 +26,9 @@ val AddAlbumFormStateSaver: Saver<AddAlbumFormState, Any> = mapSaver(
             "releaseYear" to state.releaseYear,
             "label" to state.label,
             "catalogNo" to state.catalogNo,
+
+            // ✅ NEW
+            "format" to state.format,
         )
     },
     restore = { restored ->
@@ -31,9 +37,13 @@ val AddAlbumFormStateSaver: Saver<AddAlbumFormState, Any> = mapSaver(
         AddAlbumFormState(
             title = map["title"] as? String ?: "",
             artist = map["artist"] as? String ?: "",
+            artistId = map["artistId"] as? Long,
             releaseYear = map["releaseYear"] as? String ?: "",
             label = map["label"] as? String ?: "",
             catalogNo = map["catalogNo"] as? String ?: "",
+
+            // ✅ NEW
+            format = map["format"] as? String ?: "",
         )
     }
 )

@@ -1,9 +1,13 @@
+// =======================================================
+// file: app/src/main/java/com/zak/pressmark/feature/albumdetails/vm/AlbumDetailsViewModel.kt
+// =======================================================
 package com.zak.pressmark.feature.albumdetails.vm
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.zak.pressmark.data.local.entity.AlbumEntity
+import com.zak.pressmark.data.local.model.AlbumWithArtistName
 import com.zak.pressmark.data.repository.AlbumRepository
+import com.zak.pressmark.data.repository.ArtistRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -23,82 +27,68 @@ data class AlbumDetailsUiState(
 class AlbumDetailsViewModel(
     private val albumId: String,
     private val repo: AlbumRepository,
+    private val artistRepo: ArtistRepository,
 ) : ViewModel() {
 
-    // This is correct. The repository has this function.
-    val album: StateFlow<AlbumEntity?> = repo.observeById(albumId)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+    // ✅ Canonical: includes artist name from Artist table
+    val album: StateFlow<AlbumWithArtistName?> =
+        repo.observeByIdWithArtistName(albumId)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     private val _ui = MutableStateFlow(AlbumDetailsUiState())
     val ui: StateFlow<AlbumDetailsUiState> = _ui.asStateFlow()
 
-    init {
-        // This is correct. The repository has these functions.
-        viewModelScope.launch(Dispatchers.IO) {
-            val a = repo.getById(albumId) ?: return@launch
-            if (a.artistId == null && a.artist.isNotBlank()) {
-                runCatching { repo.ensureArtistMasterLink(a) }
-            }
-        }
+    fun dismissSnack() {
+        _ui.value = _ui.value.copy(snackMessage = null)
     }
 
-    // --- FIX: ADD THE MISSING VIEWMODEL FUNCTIONS ---
-    fun refreshFromDiscogs() {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                repo.refreshFromDiscogs(albumId)
-            } catch (t: Throwable) {
-                reportError("Failed to refresh from Discogs: ${t.message}")
-            }
-        }
+    fun openEdit() {
+        _ui.value = _ui.value.copy(editOpen = true)
     }
 
-    fun clearCover() {
-        viewModelScope.launch(Dispatchers.IO) {
-            repo.clearDiscogsCover(albumId)
-        }
+    fun closeEdit() {
+        _ui.value = _ui.value.copy(editOpen = false)
     }
 
-    fun setDiscogsCover(coverUrl: String, releaseId: Long) {
-        viewModelScope.launch(Dispatchers.IO) {
-            repo.setDiscogsCover(albumId, coverUrl, releaseId)
-        }
+    fun openDeleteConfirm() {
+        _ui.value = _ui.value.copy(deleteConfirmOpen = true)
     }
 
-    fun dismissSnack() { _ui.value = _ui.value.copy(snackMessage = null) }
-    fun openEdit() { _ui.value = _ui.value.copy(editOpen = true) }
-    fun closeEdit() { _ui.value = _ui.value.copy(editOpen = false) }
-    fun openDeleteConfirm() { _ui.value = _ui.value.copy(deleteConfirmOpen = true) }
-    fun closeDeleteConfirm() { _ui.value = _ui.value.copy(deleteConfirmOpen = false) }
+    fun closeDeleteConfirm() {
+        _ui.value = _ui.value.copy(deleteConfirmOpen = false)
+    }
 
-    // --- FIX: UPDATE THE saveEdits FUNCTION SIGNATURE ---
     fun saveEdits(
         title: String,
         artist: String,
         releaseYear: Int?,
         catalogNo: String?,
         label: String?,
-        //notes: String?,
-        //tracklist: String?,
+        format: String?,
     ) {
         val t = title.trim()
         val a = artist.trim()
+
         if (t.isBlank() || a.isBlank()) {
             _ui.value = _ui.value.copy(snackMessage = "Title and Artist are required.")
             return
         }
+
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                // Resolve canonical artist row (table is source of truth)
+                val artistId = artistRepo.getOrCreateArtistId(a)
+
                 repo.updateAlbum(
                     albumId = albumId,
                     title = t,
-                    artist = a,
+                    artistId = artistId,
                     releaseYear = releaseYear,
                     catalogNo = catalogNo,
                     label = label,
-                    //notes = notes,
-                    //tracklist = tracklist,
+                    format = format,
                 )
+
                 withContext(Dispatchers.Main.immediate) {
                     _ui.value = _ui.value.copy(editOpen = false)
                 }
@@ -109,7 +99,11 @@ class AlbumDetailsViewModel(
     }
 
     fun deleteAlbum() {
-        val current = album.value ?: return
+        val current = album.value?.album ?: run {
+            _ui.value = _ui.value.copy(snackMessage = "Album not found.")
+            return
+        }
+
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 repo.deleteAlbum(current)
@@ -122,8 +116,50 @@ class AlbumDetailsViewModel(
         }
     }
 
-    private suspend fun reportError(message: String) {
-        withContext(Dispatchers.Main.immediate) {
+    fun clearCover() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                repo.clearDiscogsCover(albumId)
+            } catch (t: Throwable) {
+                reportError(t.message ?: "Failed to clear cover.")
+            }
+        }
+    }
+
+    fun refreshDiscogsCover() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                repo.clearDiscogsCover(albumId)
+                withContext(Dispatchers.Main.immediate) {
+                    _ui.value = _ui.value.copy(
+                        snackMessage = "Cover cleared. Next: we’ll wire Discogs refresh/search here."
+                    )
+                }
+            } catch (t: Throwable) {
+                reportError(t.message ?: "Failed to refresh cover.")
+            }
+        }
+    }
+
+    fun setDiscogsCover(
+        coverUrl: String?,
+        discogsReleaseId: Long?,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                repo.setDiscogsCover(
+                    albumId = albumId,
+                    coverUrl = coverUrl,
+                    discogsReleaseId = discogsReleaseId,
+                )
+            } catch (t: Throwable) {
+                reportError(t.message ?: "Failed to save cover.")
+            }
+        }
+    }
+
+    private fun reportError(message: String) {
+        viewModelScope.launch(Dispatchers.Main.immediate) {
             _ui.value = _ui.value.copy(snackMessage = message)
         }
     }

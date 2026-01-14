@@ -53,7 +53,7 @@ class CachingDiscogsArtworkRepository(
 
     private data class CacheKey(
         val title: String,
-        val artist: String?,
+        val artistId: String?,
         val year: Int?,
         val label: String?,
         val catno: String?
@@ -61,13 +61,13 @@ class CachingDiscogsArtworkRepository(
         companion object {
             fun from(album: AlbumEntity): CacheKey {
                 val title = album.title.trim()
-                val artist = album.artist.trim().takeIf { it.isNotBlank() }
+                val artist = album.artistId?.takeIf { it > 0L }?.toString()
                 val label = album.label?.trim()?.takeIf { it.isNotBlank() }
                 val catno = album.catalogNo?.trim()?.takeIf { it.isNotBlank() }
 
                 return CacheKey(
                     title = title,
-                    artist = artist,
+                    artistId = artist,
                     year = album.releaseYear,
                     label = label,
                     catno = catno

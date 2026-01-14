@@ -1,6 +1,3 @@
-// =======================================================
-// file: app/src/main/java/com/zak/pressmark/feature/albumdetails/screen/AlbumDetailsRoute.kt
-// =======================================================
 package com.zak.pressmark.feature.albumdetails.screen
 
 import androidx.compose.foundation.layout.Arrangement
@@ -59,10 +56,12 @@ fun AlbumDetailsRoute(
     onOpenArtist: (artistId: Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val album by vm.album.collectAsStateWithLifecycle()
+    val row by vm.album.collectAsStateWithLifecycle()
     val ui by vm.ui.collectAsStateWithLifecycle()
+
     val snackbarHostState = remember { SnackbarHostState() }
     var topBarMenuOpen by rememberSaveable { mutableStateOf(false) }
+
     var showCoverUrlDialog by rememberSaveable { mutableStateOf(false) }
     var coverUrlText by rememberSaveable { mutableStateOf("") }
     var releaseIdText by rememberSaveable { mutableStateOf("") }
@@ -72,6 +71,7 @@ fun AlbumDetailsRoute(
         snackbarHostState.showSnackbar(msg)
         vm.dismissSnack()
     }
+
     LaunchedEffect(ui.didDelete) {
         if (ui.didDelete) onBack()
     }
@@ -96,7 +96,10 @@ fun AlbumDetailsRoute(
                         }
                     },
                     actions = {
-                        IconButton(onClick = { topBarMenuOpen = true }, enabled = album != null) {
+                        IconButton(
+                            onClick = { topBarMenuOpen = true },
+                            enabled = row != null
+                        ) {
                             Icon(Icons.Filled.MoreVert, contentDescription = "More")
                         }
                         DropdownMenu(
@@ -108,7 +111,8 @@ fun AlbumDetailsRoute(
                                 onClick = {
                                     topBarMenuOpen = false
                                     vm.openEdit()
-                                })
+                                }
+                            )
                             DropdownMenuItem(
                                 text = { Text("Delete") },
                                 onClick = {
@@ -121,12 +125,32 @@ fun AlbumDetailsRoute(
                 )
             },
         ) { padding ->
-            if (album == null) {
-                // ... (Error display is fine)
+            if (row == null) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        text = "Album not found",
+                        style = MaterialTheme.typography.titleLarge,
+                    )
+                    Text(
+                        text = "It may have been deleted or the ID is invalid.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Button(onClick = onBack) { Text("Back") }
+                }
                 return@Scaffold
             }
 
-            val a = album!!
+            val a = row!!.album
+            val artistName = row!!.artist
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -136,61 +160,63 @@ fun AlbumDetailsRoute(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 val artistId = a.artistId
+
                 AlbumDetailsHero(
                     title = a.title,
-                    artist = a.artist,
+                    artist = artistName,
                     onArtistClick = artistId?.let { { onOpenArtist(it) } },
                 ) {
-                    // *** FIX #1: Call the correct ViewModel functions ***
                     AlbumArtworkOverflowMenu(
                         artworkUrl = a.coverUri,
-                        contentDescription = "${a.artist} — ${a.title}",
+                        contentDescription = "$artistName — ${a.title}",
                         size = 260.dp,
                         cornerRadius = 10.dp,
                         onFindCover = { showCoverUrlDialog = true },
-                        onRefreshCover = { vm.refreshFromDiscogs() },
+                        onRefreshCover = { vm.refreshDiscogsCover() },
                         onClearCover = { vm.clearCover() },
                     )
                 }
+
                 AlbumDetailsMetaRow(
                     year = a.releaseYear,
                     label = a.label,
                     catalogNo = a.catalogNo,
                 )
+
                 HorizontalDivider(
                     thickness = 2.dp,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
                 )
-                // *** FIX #2: Pass the format parameter ***
+
                 AlbumDetailsInfoSection(
                     year = a.releaseYear,
                     label = a.label,
                     catalogNo = a.catalogNo,
-                    format = a.format, // Pass the format from the album entity
+                    format = a.format
                 )
-                // *** FIX #3: Pass the notes parameter ***
-                AlbumDetailsNotesSection(
-                    notes = a.notes, // Pass the notes from the album entity
-                )
+
+                AlbumDetailsNotesSection(notes = null)
             }
         }
     }
 
-    if (ui.editOpen && album != null) {
-        // *** FIX #4: Update the onSave lambda to match the ViewModel ***
-        // You will also need to update your `EditAlbumDialog` to have fields for notes and tracklist
+    if (ui.editOpen && row != null) {
+        val a = row!!.album
+        val artistName = row!!.artist
+
         EditAlbumDialog(
-            album = album!!,
+            album = a,
+            artistDisplayName = artistName,
+            format = a.format, // ✅ FIX: pass format
             onDismiss = { vm.closeEdit() },
-            onSave = { title, artist, year, catalogNo, label  ->
+            onSave = { title, artistNameEdited, year, catalogNo, label, format ->
                 vm.saveEdits(
                     title = title,
-                    artist = artist,
+                    artist = artistNameEdited,
                     releaseYear = year,
                     catalogNo = catalogNo,
                     label = label,
-                    //notes = notes, // Pass notes
-                    //tracklist = tracklist, // Pass tracklist
+                    format = format,
                 )
             },
         )
@@ -238,13 +264,10 @@ fun AlbumDetailsRoute(
                         val url = coverUrlText.trim().takeIf { it.isNotBlank() }
                         val rid = releaseIdText.trim().takeIf { it.isNotBlank() }?.toLongOrNull()
 
-                        // *** FIX #5: Call the correct ViewModel function ***
-                        if (url != null && rid != null) {
-                            vm.setDiscogsCover(
-                                coverUrl = url,
-                                releaseId = rid,
-                            )
-                        }
+                        vm.setDiscogsCover(
+                            coverUrl = url,
+                            discogsReleaseId = rid,
+                        )
 
                         showCoverUrlDialog = false
                     }

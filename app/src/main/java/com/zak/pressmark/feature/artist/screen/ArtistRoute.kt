@@ -23,13 +23,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.zak.pressmark.feature.artist.components.ArtistAlbumList
 import com.zak.pressmark.feature.artist.vm.ArtistViewModel
 
-@ExperimentalMaterial3Api
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ArtistRoute(
     vm: ArtistViewModel,
     onBack: () -> Unit,
 ) {
-    val albums = vm.albums.collectAsStateWithLifecycle().value
+    // vm.albums is canonical (AlbumWithArtistName)
+    val albumsWithArtist = vm.albums.collectAsStateWithLifecycle().value
+
+    // Adapter: keep existing ArtistAlbumList working if it still expects AlbumEntity
+    val albums = albumsWithArtist.map { it.album }
+
     val artistName = vm.artistName.collectAsStateWithLifecycle().value ?: "Artist"
 
     val container = MaterialTheme.colorScheme.background

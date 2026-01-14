@@ -1,12 +1,12 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 3,
-    "identityHash": "d72bdd4938c919393ca00b6e7f12179b",
+    "version": 5,
+    "identityHash": "b091eeccdfba0d5ef494633e0aa26f8d",
     "entities": [
       {
         "tableName": "albums",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `title` TEXT NOT NULL, `artist_id` INTEGER NOT NULL, `release_year` INTEGER, `catalog_no` TEXT, `label` TEXT, `cover_uri` TEXT, `discogs_release_id` INTEGER, `genre` TEXT, `styles` TEXT, `notes` TEXT, `tracklist` TEXT, `rating` INTEGER, `added_at` INTEGER NOT NULL, `last_played_at` INTEGER, `master_id` INTEGER, `format` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`artist_id`) REFERENCES `artists`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `title` TEXT NOT NULL, `artist_id` INTEGER, `release_year` INTEGER, `catalog_no` TEXT, `label` TEXT, `cover_uri` TEXT, `discogs_release_id` INTEGER, `genre` TEXT, `styles` TEXT, `notes` TEXT, `tracklist` TEXT, `rating` INTEGER, `added_at` INTEGER NOT NULL, `last_played_at` INTEGER, `master_id` INTEGER, `format` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`artist_id`) REFERENCES `artists`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
         "fields": [
           {
             "fieldPath": "id",
@@ -23,8 +23,7 @@
           {
             "fieldPath": "artistId",
             "columnName": "artist_id",
-            "affinity": "INTEGER",
-            "notNull": true
+            "affinity": "INTEGER"
           },
           {
             "fieldPath": "releaseYear",
@@ -290,7 +289,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'd72bdd4938c919393ca00b6e7f12179b')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'b091eeccdfba0d5ef494633e0aa26f8d')"
     ]
   }
 }

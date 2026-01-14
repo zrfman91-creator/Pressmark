@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -29,7 +28,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.zak.pressmark.data.local.entity.ArtistEntity
@@ -69,8 +67,6 @@ fun AddAlbumScreen(
 
     val effectiveOnArtistChange: (String) -> Unit =
         onArtistChange ?: { text ->
-            // Default behavior if caller doesn't provide autocomplete wiring:
-            // typing clears selection.
             onStateChange(state.copy(artist = text, artistId = null))
         }
 
@@ -153,21 +149,12 @@ fun AddAlbumScreen(
                                         if (onArtistSuggestionClick != null) {
                                             onArtistSuggestionClick(a)
                                         } else {
-                                            // fallback: lock selection locally
                                             onStateChange(state.copy(artist = a.displayName, artistId = a.id))
                                         }
                                     }
                             )
                             if (i != max - 1) HorizontalDivider()
                         }
-                    }
-                    if (state.artistId != null) {
-                        Text(
-                            text = "Selected from library",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(start = 12.dp, top = 2.dp)
-                        )
                     }
                 }
             }
@@ -179,9 +166,8 @@ fun AddAlbumScreen(
                 isError = yearError,
                 supportingText = { if (yearError) Text("Numbers only (e.g. 1984)") },
                 colors = textFieldColors,
-                modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth()
             )
 
             OutlinedTextField(
@@ -197,6 +183,16 @@ fun AddAlbumScreen(
                 value = state.catalogNo,
                 onValueChange = { onStateChange(state.copy(catalogNo = it)) },
                 label = { Text("Catalog #") },
+                colors = textFieldColors,
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // ✅ NEW: Format
+            OutlinedTextField(
+                value = state.format,
+                onValueChange = { onStateChange(state.copy(format = it)) },
+                label = { Text("Format") },
                 colors = textFieldColors,
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()

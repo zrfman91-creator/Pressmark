@@ -51,7 +51,7 @@ class DefaultMusicBrainzArtworkRepository(
 
         val result = api.findCover(
             title = title,
-            artist = album.artist.trim().takeIf { it.isNotBlank() },
+            artist = null,
             year = album.releaseYear,
             catno = album.catalogNo?.trim().takeIf { !it.isNullOrBlank() },
             label = album.label?.trim().takeIf { !it.isNullOrBlank() },

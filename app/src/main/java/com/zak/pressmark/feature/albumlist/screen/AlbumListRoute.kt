@@ -21,16 +21,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.zak.pressmark.feature.albumlist.components.AlbumList
-import com.zak.pressmark.feature.albumlist.components.TopAppBar
-import com.zak.pressmark.feature.albumlist.vm.AlbumListViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.zak.pressmark.app.di.AppGraph
-import com.zak.pressmark.data.local.entity.AlbumEntity
+import com.zak.pressmark.data.local.model.AlbumWithArtistName
+import com.zak.pressmark.feature.albumdetails.components.EditAlbumDialog
+import com.zak.pressmark.feature.albumdetails.vm.AlbumDetailsViewModel
+import com.zak.pressmark.feature.albumdetails.vm.AlbumDetailsViewModelFactory
+import com.zak.pressmark.feature.albumlist.components.AlbumList
+import com.zak.pressmark.feature.albumlist.components.TopAppBar
 import com.zak.pressmark.feature.albumlist.coversearch.DiscogsCoverSearchDialog
 import com.zak.pressmark.feature.albumlist.coversearch.vm.DiscogsCoverSearchViewModel
 import com.zak.pressmark.feature.albumlist.coversearch.vm.DiscogsCoverSearchViewModelFactory
-import com.zak.pressmark.feature.albumdetails.components.EditAlbumDialog
+import com.zak.pressmark.feature.albumlist.vm.AlbumListViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+
 
 
 
@@ -43,12 +48,17 @@ fun AlbumListRoute(
     onAddAlbum: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val albums by vm.albums.collectAsStateWithLifecycle()
+    // ✅ Use the canonical read model (JOINed artist name)
+    // Rename this property if your VM uses a different name.
+    val albums by vm.albumsWithArtistName.collectAsStateWithLifecycle()
+
     val uiState by vm.ui.collectAsStateWithLifecycle()
 
-    var albumToSearch by remember { mutableStateOf<AlbumEntity?>(null) }
+    var rowToSearch by remember { mutableStateOf<AlbumWithArtistName?>(null) }
     var showCoverSearchDialog by remember { mutableStateOf(false) }
-    var albumToEdit by remember { mutableStateOf<AlbumEntity?>(null) }
+
+    var rowToEdit by remember { mutableStateOf<AlbumWithArtistName?>(null) }
+    var showEditDialog by remember { mutableStateOf(false) }
 
     val screenContainerColor = MaterialTheme.colorScheme.background
     val topBarContainerColor = MaterialTheme.colorScheme.primaryContainer
@@ -85,60 +95,79 @@ fun AlbumListRoute(
             AlbumList(
                 contentPadding = padding,
                 albums = albums,
-                onAlbumClick = { album -> onOpenAlbum(album.id) },
-                onDelete = { album -> vm.deleteAlbum(album) },
-                onEdit = { album -> albumToEdit = album },
-                onFindCover = { album ->
-                    showCoverSearchDialog = false
-                    albumToSearch = null
-
-                    albumToSearch = album
-                    showCoverSearchDialog = true }
+                onAlbumClick = { row -> onOpenAlbum(row.album.id) },
+                onDelete = { row -> vm.deleteAlbum(row.album) },
+                onFindCover = { row ->
+                    rowToSearch = row
+                    showCoverSearchDialog = true},
+                onEdit = { row ->
+                    rowToEdit = row
+                    showEditDialog = true
+                },
             )
         }
     }
-    // The dialog is now only shown if the boolean flag is true.
+
     if (showCoverSearchDialog) {
-        val album = albumToSearch!!
-        val factory = remember(graph, album) {
-            DiscogsCoverSearchViewModelFactory(graph, album.id, album.artist, album.title)
+        val row = rowToSearch ?: return
+        val album = row.album
+        val artist = row.artistDisplayName?.trim().orEmpty()
+
+        val factory = remember(graph, album.id, artist, album.title) {
+            DiscogsCoverSearchViewModelFactory(graph, album.id, artist, album.title)
         }
-        val searchVm: DiscogsCoverSearchViewModel = viewModel(key = "cover_search_${album.id}", factory = factory)
+        val searchVm: DiscogsCoverSearchViewModel = viewModel(factory = factory)
         val searchState by searchVm.uiState.collectAsStateWithLifecycle()
 
         DiscogsCoverSearchDialog(
-            artist = album.artist,
+            artist = artist,
             title = album.title,
             results = searchState.results,
             onPick = { result ->
                 searchVm.pickResult(result)
-                showCoverSearchDialog = false // Close dialog
-                albumToSearch = null
+                showCoverSearchDialog = false
             },
             onDismiss = {
-                showCoverSearchDialog = false // Close dialog
-                albumToSearch = null
+                showCoverSearchDialog = false
             }
         )
     }
-    val editing = albumToEdit
-    if (editing != null) {
+    if (showEditDialog) {
+        val row = rowToEdit ?: return
+        val albumId = row.album.id
+
+        val factory = remember(graph, albumId) {
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    return AlbumDetailsViewModel(
+                        albumId = albumId,
+                        repo = graph.albumRepository,
+                        artistRepo = graph.artistRepository,
+                    ) as T
+                }
+            }
+        }
+
+        val editVm: AlbumDetailsViewModel = viewModel(
+            key = "edit_$albumId",
+            factory = factory
+        )
+
+        val joined by editVm.album.collectAsStateWithLifecycle()
+        val joinedRow = joined ?: return
+        val album = joinedRow.album
+        val artistDisplay = joinedRow.artistDisplayName?.trim().orEmpty()
+
         EditAlbumDialog(
-            album = editing,
-            onDismiss = { albumToEdit = null },
-            onSave = { title, artist, year, catalogNo, label ->
-                vm.updateAlbum(
-                    albumId = editing.id,
-                    title = title,
-                    artist = artist,
-                    releaseYear = year,
-                    catalogNo = catalogNo,
-                    label = label,
-                    //tracklist = tracklist,
-                    //notes = notes,
-                    onError = { /* optional: vm could set snack, or call snackbar directly */ },
-                )
-                albumToEdit = null
+            album = album,
+            artistDisplayName = artistDisplay,
+            format = album.format,
+            onDismiss = { showEditDialog = false },
+            onSave = { title, artist, year, catalogNo, label, format ->
+                // ✅ call the canonical saver (includes artistId resolve + format)
+                editVm.saveEdits(title, artist, year, catalogNo, label, format)
+                showEditDialog = false
             }
         )
     }

@@ -1,5 +1,5 @@
 // =======================================================
-// file: app/src/main/java/com/zak/pressmark/ui/albumlist/components/AlbumList.kt
+// file: app/src/main/java/com/zak/pressmark/feature/albumlist/components/AlbumList.kt
 // =======================================================
 package com.zak.pressmark.feature.albumlist.components
 
@@ -26,7 +26,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,9 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.zak.pressmark.core.theme.AppTypography
-import com.zak.pressmark.data.local.entity.AlbumEntity
-import com.zak.pressmark.feature.albumlist.format.ArtistNameFormatter
-import kotlinx.coroutines.delay
+import com.zak.pressmark.data.local.model.AlbumWithArtistName
 import java.util.Locale
 
 private enum class AlbumSort { ARTIST_AZ, TITLE_AZ, YEAR_DESC }
@@ -59,14 +56,22 @@ private val DensityOptions = listOf(
     CommandOption(id = "text_only", label = "Text Only"),
 )
 
+private fun AlbumWithArtistName.artistDisplaySafe(): String =
+    artistDisplayName?.trim().takeUnless { it.isNullOrBlank() } ?: "Unknown Artist"
+
+private fun AlbumWithArtistName.artistSortKey(): String =
+    artistSortName?.trim().takeUnless { it.isNullOrBlank() }
+        ?: artistDisplayName?.trim().takeUnless { it.isNullOrBlank() }
+        ?: ""
+
 @Composable
 fun AlbumList(
     contentPadding: PaddingValues,
-    albums: List<AlbumEntity>,
-    onAlbumClick: (AlbumEntity) -> Unit,
-    onDelete: (AlbumEntity) -> Unit,
-    onFindCover: (AlbumEntity) -> Unit,
-    onEdit: (AlbumEntity) -> Unit,
+    albums: List<AlbumWithArtistName>,
+    onAlbumClick: (AlbumWithArtistName) -> Unit,
+    onDelete: (AlbumWithArtistName) -> Unit,
+    onFindCover: (AlbumWithArtistName) -> Unit,
+    onEdit: (AlbumWithArtistName) -> Unit,
     modifier: Modifier = Modifier,
     selectedAlbumId: String? = null,
     selectionEnabled: Boolean = true,
@@ -84,29 +89,30 @@ fun AlbumList(
         val filtered = if (q.isBlank()) {
             albums
         } else {
-            albums.filter { a ->
-                a.title.contains(q, ignoreCase = true) || a.artist.contains(q, ignoreCase = true)
+            albums.filter { row ->
+                row.album.title.contains(q, ignoreCase = true) ||
+                        row.artistDisplaySafe().contains(q, ignoreCase = true)
             }
         }
 
         when (sort) {
             AlbumSort.ARTIST_AZ ->
                 filtered.sortedWith(
-                    compareBy<AlbumEntity> { ArtistNameFormatter.sortKeyForList(it.artist) }
-                        .thenBy { it.title.norm() }
+                    compareBy<AlbumWithArtistName> { it.artistSortKey().norm() }
+                        .thenBy { it.album.title.norm() }
                 )
 
             AlbumSort.TITLE_AZ ->
                 filtered.sortedWith(
-                    compareBy<AlbumEntity> { it.title.norm() }
-                        .thenBy { ArtistNameFormatter.sortKeyForList(it.artist) }
+                    compareBy<AlbumWithArtistName> { it.album.title.norm() }
+                        .thenBy { it.artistSortKey().norm() }
                 )
 
             AlbumSort.YEAR_DESC ->
                 filtered.sortedWith(
-                    compareByDescending<AlbumEntity> { it.releaseYear ?: Int.MIN_VALUE }
-                        .thenBy { ArtistNameFormatter.sortKeyForList(it.artist) }
-                        .thenBy { it.title.norm() }
+                    compareByDescending<AlbumWithArtistName> { it.album.releaseYear ?: Int.MIN_VALUE }
+                        .thenBy { it.artistSortKey().norm() }
+                        .thenBy { it.album.title.norm() }
                 )
         }
     }
@@ -138,9 +144,6 @@ fun AlbumList(
         AlbumRowDensity.COMPACT -> "compact"
         AlbumRowDensity.TEXT_ONLY -> "text_only"
     }
-
-    // ✅ Styling knobs (paper-safe, no tint overlays here)
-    val screenBg = MaterialTheme.colorScheme.background
 
     Box(
         modifier = modifier
@@ -182,15 +185,15 @@ fun AlbumList(
                     SelectionBar(
                         selectedCount = selectedIds.size,
                         onClear = { selectedIds = emptySet() },
-                        onSelectAll = { selectedIds = filteredSorted.map { it.id }.toSet() },
+                        onSelectAll = { selectedIds = filteredSorted.map { it.album.id }.toSet() },
                         onDeleteSelected = {
-                            val byId = albums.associateBy { it.id }
+                            val byId = albums.associateBy { it.album.id }
                             selectedIds.forEach { id -> byId[id]?.let(onDelete) }
                             selectedIds = emptySet()
                         },
                         onRefreshArtworkSelected = {
-                            val byId = albums.associateBy { it.id }
-                            selectedIds.forEach { id -> byId[id]?.let{/*   */} }
+                            // Intentionally left as a hook (no-op like your original)
+                            selectedIds = selectedIds
                         },
                     )
                 },
@@ -219,37 +222,31 @@ fun AlbumList(
                 ) {
                     itemsIndexed(
                         items = filteredSorted,
-                        key = { _, a -> a.id },
-                    ) { index, album ->
+                        key = { _, row -> row.album.id },
+                    ) { index, row ->
+                        val album = row.album
+
                         val normalizedCover = album.coverUri?.trim().takeIf { !it.isNullOrBlank() }
-                        val shouldAutoFetch = normalizedCover == null && album.discogsReleaseId == null
-
-                       /* LaunchedEffect(album.id, shouldAutoFetch) {
-                            if (!shouldAutoFetch) return@LaunchedEffect
-                            delay(350)
-                            onRequestArtwork(album)
-                        }*/
-
                         val isSelected =
                             (selectionEnabled && selectedIds.contains(album.id)) || (selectedAlbumId == album.id)
 
                         AlbumListRow(
-                            album = album,
+                            row = row,
                             isSelected = isSelected,
                             selectionActive = selectionActive,
                             onClick = {
                                 if (selectionActive) selectedIds = toggleId(selectedIds, album.id)
-                                else onAlbumClick(album)
+                                else onAlbumClick(row)
                             },
                             onLongPress = {
                                 if (!selectionEnabled) return@AlbumListRow
                                 selectedIds = toggleId(selectedIds, album.id)
                             },
-                            onDelete = { onDelete(album) },
-                            onEdit = { onEdit(album) },
-                            onFindCover = { onFindCover(album) },
+                            onDelete = { onDelete(row) },
+                            onFindCover = { onFindCover(row) },
                             showDivider = index != filteredSorted.lastIndex,
                             rowDensity = density,
+                            onEdit = { onEdit(row) },
                         )
                     }
                 }
