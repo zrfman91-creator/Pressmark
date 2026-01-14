@@ -32,10 +32,6 @@ class DiscogsCoverSearchViewModel(
 
     private var currentRequest: CoverSearchRequest? = null
 
-    /**
-     * Call when opening the dialog (or when album/artist/title changes).
-     * This keeps the VM construction DI-only, and makes runtime state explicit.
-     */
     fun start(
         albumId: String,
         artist: String,
@@ -47,18 +43,23 @@ class DiscogsCoverSearchViewModel(
             title = title.trim(),
         )
 
-        // Avoid re-searching if nothing changed and we already have results/loading.
         val sameRequest = currentRequest == request
         if (sameRequest && (_uiState.value.isLoading || _uiState.value.results.isNotEmpty())) return
 
         currentRequest = request
+        search(request)
+    }
 
+    private fun search(request: CoverSearchRequest) {
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = CoverSearchState(isLoading = true)
             try {
-                val q = buildQuery(request.artist, request.title)
-                val results = discogsApi.searchReleases(q)
-                _uiState.value = CoverSearchState(results = results)
+                val response = discogsApi.searchReleases(
+                    artist = request.artist.ifBlank { null },
+                    releaseTitle = request.title.ifBlank { null },
+                    perPage = 20,
+                )
+                _uiState.value = CoverSearchState(results = response.results)
             } catch (t: Throwable) {
                 _uiState.value = CoverSearchState(error = t.message ?: "Search failed")
             }
@@ -76,23 +77,12 @@ class DiscogsCoverSearchViewModel(
                     provider = "discogs",
                     providerItemId = result.id.toString(),
                 )
-                // No refresh call needed: DB update drives UI updates.
+                // ✅ Removed: albumRepository.refreshFromDiscogs(...)
             } catch (t: Throwable) {
                 _uiState.value = _uiState.value.copy(
                     error = t.message ?: "Failed to save cover"
                 )
             }
-        }
-    }
-
-    private fun buildQuery(artist: String, title: String): String {
-        val a = artist.trim()
-        val t = title.trim()
-        return when {
-            a.isNotBlank() && t.isNotBlank() -> "$a $t"
-            a.isNotBlank() -> a
-            t.isNotBlank() -> t
-            else -> ""
         }
     }
 }
