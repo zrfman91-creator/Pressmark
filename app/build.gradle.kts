@@ -1,6 +1,5 @@
 // File: app/build.gradle.kts
 
-import com.google.firebase.appdistribution.gradle.firebaseAppDistribution
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Properties
 
@@ -40,8 +39,11 @@ android {
         applicationId = "com.zak.pressmark"
         minSdk = 26
         targetSdk = 36
+
+        // ✅ For “official” alpha cadence: bump this for every distributed build
         versionCode = 1
         versionName = "0.1.0"
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         val discogsToken = (localProps["DISCOGS_TOKEN"] as String?)?.trim().orEmpty()
@@ -61,23 +63,25 @@ android {
         create("alpha") {
             initWith(getByName("release"))
             signingConfig = signingConfigs.getByName("debug")
+
             applicationIdSuffix = ".alpha"
-            versionNameSuffix = "-alpha01"
+            versionNameSuffix = "-alpha"
+
             isDebuggable = false
             matchingFallbacks += listOf("release")
+
             // ✅ Firebase App Distribution config for Alpha
             firebaseAppDistribution {
-                // Choose ONE approach:
-
-                // Option A (recommended): distribute to a Firebase tester GROUP
+                // Option A: distribute to a Firebase tester GROUP
                 groups = "internal"
 
                 // Option B: distribute directly to emails (comma-separated)
                 // testers = "wanderingbogeygrips@gmail.com"
 
-                releaseNotes = "Pressmark alpha build"
-                // Or use a file instead:
+                releaseNotes = "Pressmark 0.1.0-alpha01"
+                // Or use a file:
                 // releaseNotesFile = "release-notes-alpha.txt"
+            }
         }
 
         release {
@@ -143,6 +147,12 @@ dependencies {
     implementation(libs.coil3.compose)
     implementation(libs.coil3.network.okhttp)
 
+    // CameraX
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
+
     // Unit tests
     testImplementation(libs.junit)
     testImplementation(kotlin("test"))
@@ -152,23 +162,10 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
-
-    //Camera
-    implementation(libs.androidx.camera.core)
-    implementation(libs.androidx.camera.camera2)
-    implementation(libs.androidx.camera.lifecycle)
-    implementation(libs.androidx.camera.view)
-
 }
 
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
     arg("room.incremental", "true")
     arg("room.expandProjection", "true")
-    }
-}
-dependencies {
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.foundation.layout)
-    implementation(libs.androidx.ui.graphics)
 }
