@@ -35,7 +35,7 @@ fun ArtworkPickerDialog(
             Column {
                 Text(
                     text = "Results for '$title'",
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(16.dp)
                 )
                 HorizontalDivider()

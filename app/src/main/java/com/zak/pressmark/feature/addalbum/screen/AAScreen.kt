@@ -26,8 +26,16 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.zak.pressmark.data.local.entity.ArtistEntity
@@ -38,6 +46,8 @@ import com.zak.pressmark.feature.addalbum.model.AddAlbumFormState
 fun AddAlbumScreen(
     state: AddAlbumFormState,
     onStateChange: (AddAlbumFormState) -> Unit,
+
+    showValidationErrors: Boolean = false,
 
     // NEW (autocomplete)
     artistSuggestions: List<ArtistEntity> = emptyList(),
@@ -52,7 +62,8 @@ fun AddAlbumScreen(
     val artistError = state.artist.isBlank()
     val yearText = state.releaseYear.trim()
     val yearError = yearText.isNotEmpty() && yearText.toIntOrNull() == null
-    val canSave = !titleError && !artistError && !yearError
+    // We allow save attempts even when invalid so the user can trigger validation feedback.
+    // (e.g. required fields only turn red after a save attempt.)
 
     val textFieldColors = OutlinedTextFieldDefaults.colors(
         focusedContainerColor = Color.Transparent,
@@ -75,6 +86,14 @@ fun AddAlbumScreen(
                 state.artist.isNotBlank() &&
                 artistSuggestions.isNotEmpty()
 
+    val focusManager = LocalFocusManager.current
+    val titleFocus = remember { FocusRequester() }
+    val artistFocus = remember { FocusRequester() }
+    val yearFocus = remember { FocusRequester() }
+    val labelFocus = remember { FocusRequester() }
+    val catalogFocus = remember { FocusRequester() }
+    val formatFocus = remember { FocusRequester() }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -85,7 +104,7 @@ fun AddAlbumScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onSave, enabled = canSave) {
+                    IconButton(onClick = onSave) {
                         Icon(Icons.Filled.Save, contentDescription = "Save Album")
                     }
                 }
@@ -112,22 +131,38 @@ fun AddAlbumScreen(
                 value = state.title,
                 onValueChange = { onStateChange(state.copy(title = it)) },
                 label = { Text("Title *") },
-                isError = titleError,
-                supportingText = { if (titleError) Text("Required") },
+                isError = showValidationErrors && titleError,
+                supportingText = { if (showValidationErrors && titleError) Text("Required") },
                 colors = textFieldColors,
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Next,
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { artistFocus.requestFocus() }
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(titleFocus)
             )
 
             OutlinedTextField(
                 value = state.artist,
                 onValueChange = effectiveOnArtistChange,
                 label = { Text("Artist *") },
-                isError = artistError,
-                supportingText = { if (artistError) Text("Required") },
+                isError = showValidationErrors && artistError,
+                supportingText = { if (showValidationErrors && artistError) Text("Required") },
                 colors = textFieldColors,
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Next,
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { yearFocus.requestFocus() }
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(artistFocus)
             )
 
             if (showSuggestions) {
@@ -167,7 +202,16 @@ fun AddAlbumScreen(
                 supportingText = { if (yearError) Text("Numbers only (e.g. 1984)") },
                 colors = textFieldColors,
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Next,
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { labelFocus.requestFocus() }
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(yearFocus)
             )
 
             OutlinedTextField(
@@ -176,7 +220,15 @@ fun AddAlbumScreen(
                 label = { Text("Label") },
                 colors = textFieldColors,
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Next,
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { catalogFocus.requestFocus() }
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(labelFocus)
             )
 
             OutlinedTextField(
@@ -185,7 +237,15 @@ fun AddAlbumScreen(
                 label = { Text("Catalog #") },
                 colors = textFieldColors,
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Next,
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { formatFocus.requestFocus() }
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(catalogFocus)
             )
 
             // ✅ NEW: Format
@@ -195,7 +255,15 @@ fun AddAlbumScreen(
                 label = { Text("Format") },
                 colors = textFieldColors,
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Done,
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = { focusManager.clearFocus() }
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(formatFocus)
             )
         }
     }

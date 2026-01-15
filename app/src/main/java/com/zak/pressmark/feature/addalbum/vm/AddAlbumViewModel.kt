@@ -83,6 +83,11 @@ class AddAlbumViewModel(
             return
         }
 
+        if (cleanArtist.isBlank()) {
+            viewModelScope.launch { _events.emit(AddAlbumEvent.ShowSnackbar("Artist is required.")) }
+            return
+        }
+
         val yearText = form.releaseYear.trim()
         val year: Int? = if (yearText.isBlank()) null else yearText.toIntOrNull()
 
@@ -99,7 +104,6 @@ class AddAlbumViewModel(
             try {
                 val resolvedArtistId: Long? = when {
                     form.artistId != null -> form.artistId
-                    cleanArtist.isBlank() -> null
                     else -> artistRepository.getOrCreateArtistId(cleanArtist)
                 }
 

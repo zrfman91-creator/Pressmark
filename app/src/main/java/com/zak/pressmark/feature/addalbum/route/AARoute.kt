@@ -25,6 +25,9 @@ fun AddAlbumRoute(
         mutableStateOf(AddAlbumFormState())
     }
 
+    // Only show required-field errors after the user tries to save.
+    var hasAttemptedSave by rememberSaveable { mutableStateOf(false) }
+
     val snackbarHostState = remember { SnackbarHostState() }
 
     val suggestions by vm.artistSuggestions.collectAsStateWithLifecycle()
@@ -43,6 +46,8 @@ fun AddAlbumRoute(
         state = form,
         onStateChange = { form = it },
 
+        showValidationErrors = hasAttemptedSave,
+
         artistSuggestions = suggestions,
         onArtistChange = { text ->
             form = form.copy(artist = text, artistId = null)
@@ -54,6 +59,9 @@ fun AddAlbumRoute(
 
         snackbarHostState = snackbarHostState,
         onNavigateUp = onNavigateUp,
-        onSave = { vm.saveAlbum(form) }
+        onSave = {
+            hasAttemptedSave = true
+            vm.saveAlbum(form)
+        }
     )
 }

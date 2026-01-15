@@ -22,18 +22,19 @@ class ArtistRepository(
 
     suspend fun getOrCreateArtistId(displayName: String): Long {
         val key = Normalizer.artistKey(displayName)
-        val canon = Normalizer.artistDisplay(displayName)
+        val canonDisplay = Normalizer.artistDisplay(displayName)
+        val canonSort = Normalizer.artistSortNameFromDisplay(canonDisplay)
 
         val existing = dao.findByNormalizedName(key)
         if (existing != null) {
-            if (existing.displayName != canon || existing.sortName != canon) {
-                dao.updateNames(existing.id, canon, canon)
+            if (existing.displayName != canonDisplay || existing.sortName != canonSort) {
+                dao.updateNames(existing.id, canonDisplay, canonSort)
             }
             return existing.id
         }
         val entity = ArtistEntity(
-            displayName = canon,
-            sortName = canon,
+            displayName = canonDisplay,
+            sortName = canonSort,
             nameNormalized = key,
             artistType = null
         )
