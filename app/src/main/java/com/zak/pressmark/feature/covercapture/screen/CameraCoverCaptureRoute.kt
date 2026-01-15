@@ -1,7 +1,11 @@
 package com.zak.pressmark.feature.covercapture.screen
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
@@ -10,17 +14,22 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -40,15 +49,20 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.File
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 /**
  * Simple CameraX capture screen:
+ * - requests CAMERA permission (runtime)
  * - shows preview
  * - takes photo
  * - returns file:// Uri
  *
- * Alpha-safe: no cropping yet, no barcode/OCR yet.
+ * This fixes the common "black preview" issue caused by missing permission or binding before
+ * a surface provider is ready.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,20 +75,55 @@ fun CameraCoverCaptureRoute(
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
 
-    val previewView = remember { PreviewView(context) }
+    val hasPermission = remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
+                    PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    val errorText = remember { mutableStateOf<String?>(null) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { granted ->
+            hasPermission.value = granted
+            if (!granted) {
+                errorText.value = "Camera permission is required to take a cover photo."
+            } else {
+                errorText.value = null
+            }
+        }
+    )
+
+    // If we don't have permission, request it once on entry.
+    LaunchedEffect(Unit) {
+        if (!hasPermission.value) {
+            permissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    val previewView = remember {
+        PreviewView(context).apply {
+            // More reliable across devices than PERFORMANCE for some OEMs.
+            implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+            scaleType = PreviewView.ScaleType.FILL_CENTER
+        }
+    }
+
     val imageCapture = remember {
         ImageCapture.Builder()
             .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
             .build()
     }
 
-    val errorText = remember { mutableStateOf<String?>(null) }
+    // Bind/unbind camera only when permission is granted.
+    LaunchedEffect(hasPermission.value, lifecycleOwner) {
+        if (!hasPermission.value) return@LaunchedEffect
 
-    // Bind camera once when composable enters
-    LaunchedEffect(Unit) {
-        val provider = getCameraProvider(context)
-        val preview = Preview.Builder().build().also {
-            it.surfaceProvider = previewView.surfaceProvider
+        val provider = awaitCameraProvider(context)
+        val preview = Preview.Builder().build().also { p ->
+            p.setSurfaceProvider(previewView.surfaceProvider)
         }
 
         try {
@@ -85,17 +134,18 @@ fun CameraCoverCaptureRoute(
                 preview,
                 imageCapture,
             )
+            errorText.value = null
         } catch (t: Throwable) {
             errorText.value = t.message ?: "Failed to start camera."
         }
     }
 
-    // Clean up on exit
-    DisposableEffect(Unit) {
+    DisposableEffect(hasPermission.value) {
         onDispose {
-            runCatching {
-                val provider = ProcessCameraProvider.getInstance(context).get()
-                provider.unbindAll()
+            if (hasPermission.value) {
+                runCatching {
+                    ProcessCameraProvider.getInstance(context).get().unbindAll()
+                }
             }
         }
     }
@@ -118,19 +168,22 @@ fun CameraCoverCaptureRoute(
                 )
             },
             floatingActionButton = {
-                FloatingActionButton(
-                    onClick = {
-                        scope.launch {
-                            takePhoto(
-                                context = context,
-                                imageCapture = imageCapture,
-                                onSuccess = onCaptured,
-                                onError = { msg -> errorText.value = msg },
-                            )
+                // Only show shutter when camera is actually available.
+                if (hasPermission.value && errorText.value == null) {
+                    FloatingActionButton(
+                        onClick = {
+                            scope.launch {
+                                takePhoto(
+                                    context = context,
+                                    imageCapture = imageCapture,
+                                    onSuccess = onCaptured,
+                                    onError = { msg -> errorText.value = msg },
+                                )
+                            }
                         }
+                    ) {
+                        Icon(Icons.Filled.CameraAlt, contentDescription = "Shutter")
                     }
-                ) {
-                    Icon(Icons.Filled.CameraAlt, contentDescription = "Shutter")
                 }
             }
         ) { padding ->
@@ -140,12 +193,21 @@ fun CameraCoverCaptureRoute(
                     .padding(padding),
                 contentAlignment = Alignment.Center,
             ) {
-                AndroidView(
-                    factory = { previewView },
-                    modifier = Modifier.fillMaxSize(),
-                )
+                if (hasPermission.value) {
+                    AndroidView(
+                        factory = { previewView },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    PermissionGate(
+                        message = errorText.value ?: "Camera permission is required.",
+                        onRequest = { permissionLauncher.launch(Manifest.permission.CAMERA) },
+                        onCancel = onBack,
+                    )
+                }
 
                 errorText.value?.let { msg ->
+                    // Show errors even on top of the preview.
                     Row(
                         modifier = Modifier
                             .align(Alignment.TopCenter)
@@ -160,6 +222,25 @@ fun CameraCoverCaptureRoute(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun PermissionGate(
+    message: String,
+    onRequest: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(text = message, style = MaterialTheme.typography.bodyMedium)
+        Spacer(modifier = Modifier.height(16.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedButton(onClick = onCancel) { Text("Cancel") }
+            Button(onClick = onRequest) { Text("Grant") }
         }
     }
 }
@@ -189,6 +270,18 @@ private fun takePhoto(
     )
 }
 
-private fun getCameraProvider(context: Context): ProcessCameraProvider {
-    return ProcessCameraProvider.getInstance(context).get()
+private suspend fun awaitCameraProvider(context: Context): ProcessCameraProvider {
+    val future = ProcessCameraProvider.getInstance(context)
+    return suspendCancellableCoroutine { cont ->
+        future.addListener(
+            {
+                try {
+                    cont.resume(future.get())
+                } catch (t: Throwable) {
+                    cont.resumeWithException(t)
+                }
+            },
+            ContextCompat.getMainExecutor(context)
+        )
+    }
 }
