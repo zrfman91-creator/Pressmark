@@ -5,18 +5,21 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Save
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -56,7 +59,8 @@ fun AddAlbumScreen(
 
     snackbarHostState: SnackbarHostState,
     onNavigateUp: () -> Unit,
-    onSave: () -> Unit,
+    onSaveAndExit: () -> Unit,
+    onAddAnother: () -> Unit,
 ) {
     val titleError = state.title.isBlank()
     val artistError = state.artist.isBlank()
@@ -103,14 +107,35 @@ fun AddAlbumScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
-                actions = {
-                    IconButton(onClick = onSave) {
-                        Icon(Icons.Filled.Save, contentDescription = "Save Album")
-                    }
-                }
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        bottomBar = {
+            Surface(
+                modifier = Modifier.navigationBarsPadding(),
+                tonalElevation = 3.dp
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    OutlinedButton(
+                        onClick = onAddAnother,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Add Another")
+                    }
+                    Button(
+                        onClick = onSaveAndExit,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Save & Exit")
+                    }
+                }
+            }
+        }
     ) { padding ->
         Column(
             modifier = Modifier

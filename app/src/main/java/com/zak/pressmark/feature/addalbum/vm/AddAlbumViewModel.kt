@@ -25,11 +25,15 @@ import kotlinx.coroutines.withContext
 sealed interface AddAlbumEvent {
     data object NavigateUp : AddAlbumEvent
     data class ShowSnackbar(val message: String) : AddAlbumEvent
-    data class AlbumSaved(
+    data class SaveResult(
         val albumId: String,
-        val artist: String,
-        val title: String,
+        val intent: SaveIntent,
     ) : AddAlbumEvent
+}
+
+enum class SaveIntent {
+    AddAnother,
+    SaveAndExit,
 }
 
 class AddAlbumViewModel(
@@ -74,7 +78,7 @@ class AddAlbumViewModel(
     // -----------------------------
     // Save
     // -----------------------------
-    fun saveAlbum(form: AddAlbumFormState) {
+    fun saveAlbum(form: AddAlbumFormState, intent: SaveIntent) {
         val cleanTitle = form.title.trim()
         val cleanArtist = form.artist.trim()
 
@@ -118,10 +122,9 @@ class AddAlbumViewModel(
 
                 withContext(Dispatchers.Main) {
                     _events.emit(
-                        AddAlbumEvent.AlbumSaved(
+                        AddAlbumEvent.SaveResult(
                             albumId = albumId,
-                            artist = cleanArtist,
-                            title = cleanTitle,
+                            intent = intent,
                         )
                     )
                 }

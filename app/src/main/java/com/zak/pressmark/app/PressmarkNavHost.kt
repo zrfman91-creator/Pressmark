@@ -3,6 +3,7 @@ package com.zak.pressmark.app
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -44,6 +45,13 @@ fun PressmarkNavHost(
                 )
             }
             val vm: AlbumListViewModel = viewModel(factory = listFactory)
+            val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
+            val savedAlbumIdFlow = remember(savedStateHandle) {
+                savedStateHandle?.savedAlbumIdFlow()
+            }
+            val savedAlbumId = savedAlbumIdFlow
+                ?.collectAsStateWithLifecycle(initialValue = null)
+                ?.value
 
             AlbumListRoute(
                 vm = vm,
@@ -55,6 +63,8 @@ fun PressmarkNavHost(
                 onOpenCoverSearch = { albumId, artist, title ->
                     navController.navigate(PressmarkRoutes.coverSearch(albumId, artist, title))
                 },
+                savedAlbumId = savedAlbumId,
+                onAlbumSavedConsumed = { savedStateHandle?.clearSavedAlbumId() },
             )
         }
 
@@ -70,16 +80,11 @@ fun PressmarkNavHost(
             AddAlbumRoute(
                 vm = vm,
                 onNavigateUp = { navController.popBackStack() },
-                onAlbumSaved = { albumId, artist, title ->
-                    // Save → Cover Picker (single flow)
-                    navController.navigate(
-                        PressmarkRoutes.coverSearch(
-                            albumId = albumId,
-                            artist = artist,
-                            title = title,
-                            origin = PressmarkRoutes.COVER_ORIGIN_DETAILS,
-                        )
-                    )
+                onAlbumSaved = { albumId ->
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.setSavedAlbumId(albumId)
+                    navController.popBackStack()
                 },
             )
         }
