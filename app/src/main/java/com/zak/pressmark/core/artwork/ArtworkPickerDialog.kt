@@ -4,6 +4,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -22,6 +24,8 @@ fun ArtworkPickerDialog(
     title: String,
     results: List<ArtworkCandidate>,
     onPick: (ArtworkCandidate) -> Unit,
+    onSkip: (() -> Unit)? = null,
+    onTakePhoto: (() -> Unit)? = null,
     onDismiss: () -> Unit,
 ) {
     Dialog(onDismissRequest = onDismiss) {
@@ -33,11 +37,31 @@ fun ArtworkPickerDialog(
                 .heightIn(max = 500.dp)
         ) {
             Column {
-                Text(
-                    text = "Results for '$title'",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(16.dp)
-                )
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Results for '$title'",
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+
+                    if (onSkip != null || onTakePhoto != null) {
+                        Spacer(Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                        ) {
+                            if (onTakePhoto != null) {
+                                OutlinedButton(onClick = onTakePhoto) {
+                                    Text("Take Photo")
+                                }
+                            }
+                            if (onSkip != null) {
+                                Button(onClick = onSkip) {
+                                    Text("Skip")
+                                }
+                            }
+                        }
+                    }
+                }
                 HorizontalDivider()
 
                 LazyColumn(

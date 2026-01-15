@@ -33,7 +33,8 @@ object PressmarkRoutes {
     // Where should Cover Search return?
     const val COVER_ORIGIN_BACK = "back"       // default: just popBackStack()
     const val COVER_ORIGIN_DETAILS = "details" // after closing, go to Album Details
-    const val COVER_ORIGIN_LIST_SUCCESS = "list_success" // after closing, return to Album List and show success
+    const val COVER_ORIGIN_LIST_SUCCESS = "list_success" // after closing, go to Album List + success dialog
+    const val COVER_ORIGIN_ADD_ANOTHER = "add_another"   // after closing, go back to Add Album and clear form
     const val COVER_SEARCH_PATTERN =
         "$COVER_SEARCH/{$ARG_ALBUM_ID}?$ARG_COVER_ARTIST={$ARG_COVER_ARTIST}&$ARG_COVER_TITLE={$ARG_COVER_TITLE}&$ARG_COVER_ORIGIN={$ARG_COVER_ORIGIN}"
 
@@ -47,5 +48,17 @@ object PressmarkRoutes {
         val t = Uri.encode(title)
         val o = Uri.encode(origin)
         return "$COVER_SEARCH/$albumId?$ARG_COVER_ARTIST=$a&$ARG_COVER_TITLE=$t&$ARG_COVER_ORIGIN=$o"
+    }
+
+    // Camera capture (local cover)
+    const val COVER_CAPTURE = "cover_capture"
+    const val COVER_CAPTURE_PATTERN = "$COVER_CAPTURE/{$ARG_ALBUM_ID}?$ARG_COVER_ORIGIN={$ARG_COVER_ORIGIN}"
+
+    fun coverCapture(
+        albumId: String,
+        origin: String,
+    ): String {
+        val o = Uri.encode(origin)
+        return "$COVER_CAPTURE/$albumId?$ARG_COVER_ORIGIN=$o"
     }
 }

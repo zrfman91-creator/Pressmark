@@ -20,7 +20,14 @@ import com.zak.pressmark.feature.addalbum.vm.SaveIntent
 fun AddAlbumRoute(
     vm: AddAlbumViewModel,
     onNavigateUp: () -> Unit,
-    onAlbumSaved: (albumId: String, artist: String, title: String) -> Unit,
+    clearFormRequested: Boolean,
+    onClearFormConsumed: () -> Unit,
+    onAlbumSaved: (
+        albumId: String,
+        artist: String,
+        title: String,
+        intent: SaveIntent,
+    ) -> Unit,
 ) {
     var form by rememberSaveable(stateSaver = AddAlbumFormStateSaver) {
         mutableStateOf(AddAlbumFormState())
@@ -33,27 +40,29 @@ fun AddAlbumRoute(
 
     val suggestions by vm.artistSuggestions.collectAsStateWithLifecycle()
 
+    LaunchedEffect(clearFormRequested) {
+        if (clearFormRequested) {
+            form = AddAlbumFormState()
+            hasAttemptedSave = false
+            vm.onArtistQueryChanged("")
+            onClearFormConsumed()
+        }
+    }
+
     LaunchedEffect(Unit) {
         vm.events.collect { event ->
             when (event) {
                 is AddAlbumEvent.NavigateUp -> onNavigateUp()
                 is AddAlbumEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
                 is AddAlbumEvent.SaveResult -> {
-                    when (event.intent) {
-                        SaveIntent.AddAnother -> {
-                            form = AddAlbumFormState()
-                            hasAttemptedSave = false
-                            vm.onArtistQueryChanged("")
-                        }
-
-                        SaveIntent.SaveAndExit -> onAlbumSaved(
-                            event.albumId,
-                            form.artist,
-                            form.title,
-                        )
-                    }
+                    // Always move into cover selection after save.
+                    onAlbumSaved(
+                        event.albumId,
+                        form.artist,
+                        form.title,
+                        event.intent,
+                    )
                 }
-
             }
         }
     }

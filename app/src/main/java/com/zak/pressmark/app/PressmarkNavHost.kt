@@ -24,7 +24,9 @@ import com.zak.pressmark.feature.artist.route.ArtistRoute
 import com.zak.pressmark.feature.artist.vm.ArtistViewModel
 import com.zak.pressmark.feature.artist.vm.ArtistViewModelFactory
 import com.zak.pressmark.feature.artworkpicker.route.CoverSearchRoute
+import com.zak.pressmark.feature.covercapture.screen.CameraCoverCaptureRoute
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalCoroutinesApi::class)
 @Composable
@@ -69,6 +71,14 @@ fun PressmarkNavHost(
         }
 
         composable(PressmarkRoutes.ADD) {
+            val addSavedStateHandle = navController.currentBackStackEntry?.savedStateHandle
+            val clearAddFormFlow = remember(addSavedStateHandle) {
+                addSavedStateHandle?.clearAddAlbumFormFlow()
+            }
+            val clearAddForm = clearAddFormFlow
+                ?.collectAsStateWithLifecycle(initialValue = false)
+                ?.value ?: false
+
             val factory = remember(graph) {
                 AddAlbumViewModelFactory(
                     albumRepository = graph.albumRepository,
@@ -80,16 +90,22 @@ fun PressmarkNavHost(
             AddAlbumRoute(
                 vm = vm,
                 onNavigateUp = { navController.popBackStack() },
-                onAlbumSaved = { albumId, artist, title ->
+                clearFormRequested = clearAddForm,
+                onClearFormConsumed = { addSavedStateHandle?.consumeClearAddAlbumForm() },
+                onAlbumSaved = { albumId, artist, title, intent ->
+                    val origin = when (intent) {
+                        com.zak.pressmark.feature.addalbum.vm.SaveIntent.SaveAndExit -> PressmarkRoutes.COVER_ORIGIN_LIST_SUCCESS
+                        com.zak.pressmark.feature.addalbum.vm.SaveIntent.AddAnother -> PressmarkRoutes.COVER_ORIGIN_ADD_ANOTHER
+                    }
                     navController.navigate(
                         PressmarkRoutes.coverSearch(
                             albumId = albumId,
                             artist = artist,
                             title = title,
-                            origin = PressmarkRoutes.COVER_ORIGIN_LIST_SUCCESS,
-                        ),
+                            origin = origin,
+                        )
                     )
-                },
+                }
             )
         }
 
@@ -146,35 +162,111 @@ fun PressmarkNavHost(
                 backStackEntry.arguments?.getString(PressmarkRoutes.ARG_COVER_ORIGIN)
                     ?: PressmarkRoutes.COVER_ORIGIN_BACK
 
+            fun closeCoverFlow() {
+                when (origin) {
+                    PressmarkRoutes.COVER_ORIGIN_DETAILS -> {
+                        // Drop Cover Search (+ Add) from back stack and land on Details.
+                        navController.navigate(PressmarkRoutes.details(albumId)) {
+                            popUpTo(PressmarkRoutes.LIST) { inclusive = false }
+                        }
+                    }
+
+                    PressmarkRoutes.COVER_ORIGIN_LIST_SUCCESS -> {
+                        // Return to List and show success dialog.
+                        runCatching {
+                            navController.getBackStackEntry(PressmarkRoutes.LIST)
+                                .savedStateHandle
+                                .setSavedAlbumId(albumId)
+                        }
+                        navController.popBackStack(PressmarkRoutes.LIST, false)
+                    }
+
+                    PressmarkRoutes.COVER_ORIGIN_ADD_ANOTHER -> {
+                        // Return to Add Album and clear form exactly once.
+                        navController.previousBackStackEntry
+                            ?.savedStateHandle
+                            ?.requestClearAddAlbumForm()
+                        navController.popBackStack()
+                    }
+
+                    else -> navController.popBackStack()
+                }
+            }
+
             CoverSearchRoute(
                 graph = graph,
                 albumId = albumId,
                 artist = artist,
                 title = title,
-                onClose = {
-                    when (origin) {
-                        PressmarkRoutes.COVER_ORIGIN_DETAILS -> {
-                            // Drop Cover Search (+ Add) from back stack and land on Details.
-                            navController.navigate(PressmarkRoutes.details(albumId)) {
-                                popUpTo(PressmarkRoutes.LIST) { inclusive = false }
-                            }
-                        }
+                onTakePhoto = {
+                    navController.navigate(
+                        PressmarkRoutes.coverCapture(
+                            albumId = albumId,
+                            origin = origin,
+                        )
+                    )
+                },
+                onClose = ::closeCoverFlow,
+            )
+        }
 
-                        PressmarkRoutes.COVER_ORIGIN_LIST_SUCCESS -> {
-                            // Return to Album List and show the success dialog.
+        composable(
+            route = PressmarkRoutes.COVER_CAPTURE_PATTERN,
+            arguments = listOf(
+                navArgument(PressmarkRoutes.ARG_ALBUM_ID) { type = NavType.StringType },
+                navArgument(PressmarkRoutes.ARG_COVER_ORIGIN) {
+                    type = NavType.StringType
+                    defaultValue = PressmarkRoutes.COVER_ORIGIN_BACK
+                },
+            ),
+        ) { backStackEntry ->
+            val albumId = backStackEntry.arguments?.getString(PressmarkRoutes.ARG_ALBUM_ID).orEmpty()
+            val origin = backStackEntry.arguments?.getString(PressmarkRoutes.ARG_COVER_ORIGIN)
+                ?: PressmarkRoutes.COVER_ORIGIN_BACK
+
+            val scope = androidx.compose.runtime.rememberCoroutineScope()
+
+            fun closeAfterCapture() {
+                when (origin) {
+                    PressmarkRoutes.COVER_ORIGIN_DETAILS -> {
+                        navController.navigate(PressmarkRoutes.details(albumId)) {
+                            popUpTo(PressmarkRoutes.LIST) { inclusive = false }
+                        }
+                    }
+
+                    PressmarkRoutes.COVER_ORIGIN_LIST_SUCCESS -> {
+                        runCatching {
                             navController.getBackStackEntry(PressmarkRoutes.LIST)
                                 .savedStateHandle
                                 .setSavedAlbumId(albumId)
-
-                            navController.navigate(PressmarkRoutes.LIST) {
-                                popUpTo(PressmarkRoutes.LIST) { inclusive = false }
-                                launchSingleTop = true
-                            }
                         }
-
-                        else -> navController.popBackStack()
+                        navController.popBackStack(PressmarkRoutes.LIST, false)
                     }
-                },
+
+                    PressmarkRoutes.COVER_ORIGIN_ADD_ANOTHER -> {
+                        runCatching {
+                            navController.getBackStackEntry(PressmarkRoutes.ADD)
+                                .savedStateHandle
+                                .requestClearAddAlbumForm()
+                        }
+                        navController.popBackStack(PressmarkRoutes.ADD, false)
+                    }
+
+                    else -> {
+                        navController.popBackStack()
+                        navController.popBackStack()
+                    }
+                }
+            }
+
+            CameraCoverCaptureRoute(
+                onBack = { navController.popBackStack() },
+                onCaptured = { uri ->
+                    scope.launch {
+                        graph.albumRepository.setLocalCover(albumId, uri.toString())
+                        closeAfterCapture()
+                    }
+                }
             )
         }
 

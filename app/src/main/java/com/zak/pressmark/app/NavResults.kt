@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 object NavResultKeys {
     const val SavedAlbumId: String = "saved_album_id"
+    const val ClearAddAlbumForm: String = "clear_add_album_form"
 }
 
 fun SavedStateHandle.savedAlbumIdFlow(): StateFlow<String?> =
@@ -16,4 +17,15 @@ fun SavedStateHandle.setSavedAlbumId(albumId: String) {
 
 fun SavedStateHandle.clearSavedAlbumId() {
     set<String?>(NavResultKeys.SavedAlbumId, null)
+}
+
+fun SavedStateHandle.clearAddAlbumFormFlow(): StateFlow<Boolean> =
+    getStateFlow(NavResultKeys.ClearAddAlbumForm, false)
+
+fun SavedStateHandle.requestClearAddAlbumForm() {
+    set(NavResultKeys.ClearAddAlbumForm, true)
+}
+
+fun SavedStateHandle.consumeClearAddAlbumForm() {
+    set(NavResultKeys.ClearAddAlbumForm, false)
 }

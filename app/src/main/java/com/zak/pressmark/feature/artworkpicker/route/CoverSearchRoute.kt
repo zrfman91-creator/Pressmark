@@ -19,6 +19,7 @@ fun CoverSearchRoute(
     albumId: String,
     artist: String,
     title: String,
+    onTakePhoto: () -> Unit,
     onClose: () -> Unit,
 ) {
     val factory = remember(graph) {
@@ -75,6 +76,8 @@ fun CoverSearchRoute(
             }
             onClose()
         },
+        onSkip = onClose,
+        onTakePhoto = onTakePhoto,
         onDismiss = onClose,
     )
 }
