@@ -1,9 +1,14 @@
 package com.zak.pressmark.feature.artworkpicker.route
 
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.zak.pressmark.app.di.AppGraph
@@ -12,13 +17,17 @@ import com.zak.pressmark.core.artwork.ArtworkPickerDialog
 import com.zak.pressmark.core.artwork.ArtworkProviderId
 import com.zak.pressmark.feature.artworkpicker.ArtworkPickerViewModelFactory
 import com.zak.pressmark.feature.artworkpicker.DiscogsCoverSearchViewModel
+import com.zak.pressmark.feature.artworkpicker.components.DiscogsConfirmDetailsSheet
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CoverSearchRoute(
     graph: AppGraph,
     albumId: String,
     artist: String,
     title: String,
+    shouldPromptAutofill: Boolean,
     onTakePhoto: () -> Unit,
     onClose: () -> Unit,
 ) {
@@ -35,6 +44,7 @@ fun CoverSearchRoute(
     )
 
     val state by vm.uiState.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
 
     // Kick off / update search when inputs change
     LaunchedEffect(albumId, artist, title) {
@@ -66,15 +76,144 @@ fun CoverSearchRoute(
         }
     }
 
+    data class AutofillCandidate(
+        val releaseYear: Int?,
+        val catalogNo: String?,
+        val label: String?,
+        val format: String?,
+    )
+
+    fun Any.getPropOrNull(name: String): Any? {
+        // Try getter first (Kotlin data class property -> getX())
+        val getter = "get" + name.replaceFirstChar { it.uppercaseChar() }
+        runCatching { return this::class.java.methods.firstOrNull { it.name == getter }?.invoke(this) }.getOrNull()
+        // Fallback: raw method by name
+        runCatching { return this::class.java.methods.firstOrNull { it.name == name }?.invoke(this) }.getOrNull()
+        return null
+    }
+
+    fun Any.extractAutofillCandidate(): AutofillCandidate {
+        val yearAny = getPropOrNull("year")
+        val catAny = getPropOrNull("catno") ?: getPropOrNull("catalogNo") ?: getPropOrNull("catalog_no")
+        val labelAny = getPropOrNull("label")
+        val formatAny = getPropOrNull("format")
+
+        fun asInt(v: Any?): Int? = when (v) {
+            is Int -> v
+            is Long -> v.toInt()
+            is String -> v.toIntOrNull()
+            else -> null
+        }
+
+        fun firstString(v: Any?): String? = when (v) {
+            is String -> v.trim().takeIf { it.isNotBlank() }
+            is List<*> -> v.firstOrNull { it is String }?.let { (it as String).trim() }?.takeIf { it.isNotBlank() }
+            is Array<*> -> v.firstOrNull { it is String }?.let { (it as String).trim() }?.takeIf { it.isNotBlank() }
+            else -> null
+        }
+
+        fun joinStrings(v: Any?): String? = when (v) {
+            is String -> v.trim().takeIf { it.isNotBlank() }
+            is List<*> -> v.filterIsInstance<String>().map { it.trim() }.filter { it.isNotBlank() }
+                .takeIf { it.isNotEmpty() }?.joinToString(", ")
+            is Array<*> -> v.filterIsInstance<String>().map { it.trim() }.filter { it.isNotBlank() }
+                .takeIf { it.isNotEmpty() }?.joinToString(", ")
+            else -> null
+        }
+
+        return AutofillCandidate(
+            releaseYear = asInt(yearAny),
+            catalogNo = firstString(catAny),
+            label = firstString(labelAny),
+            format = joinStrings(formatAny),
+        )
+    }
+
+    fun computeWillFillLabels(
+        existingReleaseYear: Int?,
+        existingCatalogNo: String?,
+        existingLabel: String?,
+        existingFormat: String?,
+        candidate: AutofillCandidate,
+    ): List<String> = buildList {
+        if (existingReleaseYear == null && candidate.releaseYear != null) add("Year: ${candidate.releaseYear}")
+        if (existingCatalogNo.isNullOrBlank() && !candidate.catalogNo.isNullOrBlank()) add("Catalog #: ${candidate.catalogNo}")
+        if (existingLabel.isNullOrBlank() && !candidate.label.isNullOrBlank()) add("Label: ${candidate.label}")
+        if (existingFormat.isNullOrBlank() && !candidate.format.isNullOrBlank()) add("Format: ${candidate.format}")
+    }
+
+    var pendingCandidate by remember { mutableStateOf<AutofillCandidate?>(null) }
+    var willFillLabels by remember { mutableStateOf<List<String>>(emptyList()) }
+
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    fun closeAndReset() {
+        pendingCandidate = null
+        willFillLabels = emptyList()
+        onClose()
+    }
+
+    if (pendingCandidate != null) {
+        DiscogsConfirmDetailsSheet(
+            sheetState = sheetState,
+            willFillLabels = willFillLabels,
+            onUseDiscogsFillMissing = {
+                val c = pendingCandidate ?: return@DiscogsConfirmDetailsSheet
+                scope.launch {
+                    graph.albumRepository.fillMissingFields(
+                        albumId = albumId,
+                        releaseYear = c.releaseYear,
+                        catalogNo = c.catalogNo,
+                        label = c.label,
+                        format = c.format,
+                    )
+                    closeAndReset()
+                }
+            },
+            onKeepMyEntry = { closeAndReset() },
+            onDismiss = { closeAndReset() },
+        )
+    }
+
     ArtworkPickerDialog(
         artist = artist,
         title = title,
         results = candidates,
         onPick = { candidate ->
             discogsById[candidate.providerItemId]?.let { picked ->
+                // Always set the cover selection first.
                 vm.pickResult(picked)
-            }
-            onClose()
+
+                // Batch E: only prompt in Save & Exit flow (list success origin).
+                if (!shouldPromptAutofill) {
+                    onClose()
+                    return@ArtworkPickerDialog
+                }
+
+                scope.launch {
+                    val album = graph.albumRepository.getById(albumId)
+                    if (album == null) {
+                        onClose()
+                        return@launch
+                    }
+
+                    val extracted = (picked as Any).extractAutofillCandidate()
+                    val labels = computeWillFillLabels(
+                        existingReleaseYear = album.releaseYear,
+                        existingCatalogNo = album.catalogNo,
+                        existingLabel = album.label,
+                        existingFormat = album.format,
+                        candidate = extracted,
+                    )
+
+                    if (labels.isEmpty()) {
+                        onClose()
+                    } else {
+                        pendingCandidate = extracted
+                        willFillLabels = labels
+                    }
+                }
+            } ?: onClose()
         },
         onSkip = onClose,
         onTakePhoto = onTakePhoto,

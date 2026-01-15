@@ -164,6 +164,28 @@ interface AlbumDao {
     )
     suspend fun backfillArtworkProviderFromLegacyDiscogs(): Int
 
+    @Query(
+        """
+    UPDATE ${Album.TABLE}
+    SET
+        ${Album.RELEASE_YEAR} =
+            CASE WHEN ${Album.RELEASE_YEAR} IS NULL THEN :releaseYear ELSE ${Album.RELEASE_YEAR} END,
+        ${Album.CATALOG_NO} =
+            CASE WHEN ${Album.CATALOG_NO} IS NULL OR ${Album.CATALOG_NO} = '' THEN :catalogNo ELSE ${Album.CATALOG_NO} END,
+        ${Album.LABEL} =
+            CASE WHEN ${Album.LABEL} IS NULL OR ${Album.LABEL} = '' THEN :label ELSE ${Album.LABEL} END,
+        ${Album.FORMAT} =
+            CASE WHEN ${Album.FORMAT} IS NULL OR ${Album.FORMAT} = '' THEN :format ELSE ${Album.FORMAT} END
+    WHERE ${Album.ID} = :id
+    """
+    )
+    suspend fun fillMissingFields(
+        id: String,
+        releaseYear: Int?,
+        catalogNo: String?,
+        label: String?,
+        format: String?,
+    ): Int
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun linkGenresToAlbum(joins: List<AlbumGenreCrossRef>)

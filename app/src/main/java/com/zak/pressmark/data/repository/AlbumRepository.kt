@@ -181,6 +181,22 @@ class AlbumRepository(
         )
     }
 
+    suspend fun fillMissingFields(
+        albumId: String,
+        releaseYear: Int?,
+        catalogNo: String?,
+        label: String?,
+        format: String?,
+    ): Int {
+        return dao.fillMissingFields(
+            id = albumId,
+            releaseYear = releaseYear,
+            catalogNo = catalogNo,
+            label = label,
+            format = format,
+        )
+    }
+
     private fun sanitizeAndValidate(
         title: String,
         artistId: Long?,

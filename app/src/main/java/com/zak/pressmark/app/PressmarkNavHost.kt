@@ -198,6 +198,7 @@ fun PressmarkNavHost(
                 albumId = albumId,
                 artist = artist,
                 title = title,
+                shouldPromptAutofill = (origin == PressmarkRoutes.COVER_ORIGIN_LIST_SUCCESS),
                 onTakePhoto = {
                     navController.navigate(
                         PressmarkRoutes.coverCapture(

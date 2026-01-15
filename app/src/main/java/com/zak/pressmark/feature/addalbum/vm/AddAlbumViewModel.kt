@@ -21,6 +21,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.zak.pressmark.feature.addalbum.state.AlbumAutofillDetails
+import com.zak.pressmark.feature.addalbum.state.DiscogsAutofillUi
 
 sealed interface AddAlbumEvent {
     data object NavigateUp : AddAlbumEvent
