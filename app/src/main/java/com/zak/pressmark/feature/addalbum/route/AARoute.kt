@@ -14,12 +14,13 @@ import com.zak.pressmark.feature.addalbum.model.AddAlbumFormStateSaver
 import com.zak.pressmark.feature.addalbum.screen.AddAlbumScreen
 import com.zak.pressmark.feature.addalbum.vm.AddAlbumEvent
 import com.zak.pressmark.feature.addalbum.vm.AddAlbumViewModel
+import com.zak.pressmark.feature.addalbum.vm.SaveIntent
 
 @Composable
 fun AddAlbumRoute(
     vm: AddAlbumViewModel,
     onNavigateUp: () -> Unit,
-    onAlbumSaved: (albumId: String, artist: String, title: String) -> Unit,
+    onAlbumSaved: (albumId: String) -> Unit,
 ) {
     var form by rememberSaveable(stateSaver = AddAlbumFormStateSaver) {
         mutableStateOf(AddAlbumFormState())
@@ -37,7 +38,17 @@ fun AddAlbumRoute(
             when (event) {
                 is AddAlbumEvent.NavigateUp -> onNavigateUp()
                 is AddAlbumEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
-                is AddAlbumEvent.AlbumSaved -> onAlbumSaved(event.albumId, event.artist, event.title)
+                is AddAlbumEvent.SaveResult -> {
+                    when (event.intent) {
+                        SaveIntent.AddAnother -> {
+                            form = AddAlbumFormState()
+                            hasAttemptedSave = false
+                            vm.onArtistQueryChanged("")
+                        }
+
+                        SaveIntent.SaveAndExit -> onAlbumSaved(event.albumId)
+                    }
+                }
             }
         }
     }
@@ -59,9 +70,13 @@ fun AddAlbumRoute(
 
         snackbarHostState = snackbarHostState,
         onNavigateUp = onNavigateUp,
-        onSave = {
+        onSaveAndExit = {
             hasAttemptedSave = true
-            vm.saveAlbum(form)
-        }
+            vm.saveAlbum(form, SaveIntent.SaveAndExit)
+        },
+        onAddAnother = {
+            hasAttemptedSave = true
+            vm.saveAlbum(form, SaveIntent.AddAnother)
+        },
     )
 }
