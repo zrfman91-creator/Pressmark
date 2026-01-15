@@ -49,6 +49,7 @@ fun PressmarkNavHost(
             val vm: AlbumListViewModel = viewModel(factory = listFactory)
             val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
             val savedAlbumIdFlow = remember(savedStateHandle) {
+                savedStateHandle?.savedAlbumIdFlow()
                 savedStateHandle?.getStateFlow(SAVED_ALBUM_ID_KEY, null)
             }
             val savedAlbumId = savedAlbumIdFlow
