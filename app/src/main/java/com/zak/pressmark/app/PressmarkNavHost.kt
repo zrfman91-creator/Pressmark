@@ -50,7 +50,6 @@ fun PressmarkNavHost(
             val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
             val savedAlbumIdFlow = remember(savedStateHandle) {
                 savedStateHandle?.savedAlbumIdFlow()
-                savedStateHandle?.getStateFlow(SAVED_ALBUM_ID_KEY, null)
             }
             val savedAlbumId = savedAlbumIdFlow
                 ?.collectAsStateWithLifecycle(initialValue = null)
@@ -67,7 +66,7 @@ fun PressmarkNavHost(
                     navController.navigate(PressmarkRoutes.coverSearch(albumId, artist, title))
                 },
                 savedAlbumId = savedAlbumId,
-                onAlbumSavedConsumed = { savedStateHandle?.set(SAVED_ALBUM_ID_KEY, null) },
+                onAlbumSavedConsumed = { savedStateHandle?.clearSavedAlbumId() },
             )
         }
 
@@ -86,7 +85,7 @@ fun PressmarkNavHost(
                 onAlbumSaved = { albumId ->
                     navController.previousBackStackEntry
                         ?.savedStateHandle
-                        ?.set(SAVED_ALBUM_ID_KEY, albumId)
+                        ?.setSavedAlbumId(albumId)
                     navController.popBackStack()
                 },
             )
