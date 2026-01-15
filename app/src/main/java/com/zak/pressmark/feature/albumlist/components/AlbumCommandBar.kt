@@ -3,6 +3,9 @@
 // =======================================================
 package com.zak.pressmark.feature.albumlist.components
 
+import androidx.compose.foundation.layout.Arrangement
+import com.zak.pressmark.feature.albumlist.model.AlbumGrouping
+
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -16,7 +19,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material.icons.filled.MoreVert
@@ -30,6 +32,8 @@ import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -51,6 +55,15 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.foundation.layout.Row
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.List
+
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 
 @Immutable
 data class CommandOption(
@@ -71,6 +84,8 @@ fun AlbumCommandBar(
     densityOptions: List<CommandOption>,
     selectedDensityId: String,
     onDensitySelected: (String) -> Unit,
+    grouping: AlbumGrouping,
+    onGroupingChange: (AlbumGrouping) -> Unit,
     selectionActive: Boolean,
     selectionBar: (@Composable () -> Unit)?,
     modifier: Modifier = Modifier,
@@ -83,7 +98,7 @@ fun AlbumCommandBar(
     var menuOpen by remember { mutableStateOf(false) }
 
     // ✅ Command bar background (change this)
-    val barContainerColor = MaterialTheme.colorScheme.primaryContainer
+    val barContainerColor = MaterialTheme.colorScheme.background
 
     // ✅ Dropdown menu background (change this)
     val menuContainerColor = MaterialTheme.colorScheme.secondaryContainer
@@ -190,6 +205,16 @@ fun AlbumCommandBar(
                 }
             }
 
+            Spacer(modifier = Modifier.height(6.dp))
+
+            GroupingFabRow(
+                grouping = grouping,
+                onGroupingChange = onGroupingChange,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 6.dp)
+            )
+
             CommandInfoRow(
                 countText = countText,
                 sortText = sortText,
@@ -280,4 +305,80 @@ private fun TrailingDotIcon() {
         modifier = Modifier.size(8.dp),
         tint = MaterialTheme.colorScheme.primary,
     )
+}
+
+@Composable
+private fun GroupingFabRow(
+    grouping: AlbumGrouping,
+    onGroupingChange: (AlbumGrouping) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val selectedContainer = MaterialTheme.colorScheme.primaryContainer
+    val selectedContent = MaterialTheme.colorScheme.onPrimaryContainer
+    val unselectedContainer = MaterialTheme.colorScheme.surfaceVariant
+    val unselectedContent = MaterialTheme.colorScheme.onSurfaceVariant
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        GroupingFab(
+            selected = grouping == AlbumGrouping.NONE,
+            label = "All",
+            icon = Icons.AutoMirrored.Filled.List,
+            onClick = { onGroupingChange(AlbumGrouping.NONE) },
+            modifier = Modifier.weight(1f)
+        )
+        GroupingFab(
+            selected = grouping == AlbumGrouping.ARTIST,
+            label = "Artist",
+            icon = Icons.Filled.Person,
+            onClick = { onGroupingChange(AlbumGrouping.ARTIST) },
+            modifier = Modifier.weight(1f)
+        )
+        GroupingFab(
+            selected = grouping == AlbumGrouping.DECADE,
+            label = "Decade",
+            icon = Icons.Filled.DateRange,
+            onClick = { onGroupingChange(AlbumGrouping.DECADE) },
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+@Composable
+private fun GroupingFab(
+    selected: Boolean,
+    label: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val shape = RoundedCornerShape(999.dp)
+
+    SmallFloatingActionButton(
+        onClick = onClick,
+        modifier = modifier
+            .height(40.dp)
+            .clip(shape),
+        shape = shape,
+        containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer
+        else MaterialTheme.colorScheme.secondary,
+        contentColor = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
+        else MaterialTheme.colorScheme.onSurface,
+        elevation = FloatingActionButtonDefaults.elevation(
+            defaultElevation = 0.dp,
+            pressedElevation = 0.dp,
+            focusedElevation = 0.dp,
+            hoveredElevation = 0.dp
+        ),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(icon, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text(label, maxLines = 1)
+        }
+    }
 }

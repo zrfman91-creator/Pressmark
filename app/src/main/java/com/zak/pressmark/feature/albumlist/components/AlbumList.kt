@@ -15,6 +15,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material3.Surface
+import androidx.compose.ui.draw.rotate
+import com.zak.pressmark.feature.albumlist.model.AlbumGrouping
+import com.zak.pressmark.feature.albumlist.model.decadeLabel
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
@@ -80,6 +93,13 @@ fun AlbumList(
     var query by rememberSaveable { mutableStateOf("") }
     var sort by rememberSaveable { mutableStateOf(AlbumSort.ARTIST_AZ) }
     var density by rememberSaveable { mutableStateOf(AlbumRowDensity.STANDARD) }
+
+    var groupingName by rememberSaveable { mutableStateOf(AlbumGrouping.NONE.name) }
+    val grouping = remember(groupingName) {
+        runCatching { AlbumGrouping.valueOf(groupingName) }.getOrDefault(AlbumGrouping.NONE)
+    }
+    var expandedGroups by rememberSaveable { mutableStateOf(setOf<String>()) }
+
 
     var selectedIds by rememberSaveable { mutableStateOf(setOf<String>()) }
     val selectionActive = selectionEnabled && selectedIds.isNotEmpty()
@@ -179,6 +199,11 @@ fun AlbumList(
                         else -> density
                     }
                 },
+                grouping = grouping,
+                onGroupingChange = { newGrouping ->
+                    groupingName = newGrouping.name
+                    if (newGrouping == AlbumGrouping.NONE) expandedGroups = emptySet()
+                },
                 selectionActive = selectionActive,
                 selectionBar = {
                     if (!selectionActive) return@AlbumCommandBar
@@ -193,6 +218,7 @@ fun AlbumList(
                         },
                         onRefreshArtworkSelected = {
                             // Intentionally left as a hook (no-op like your original)
+                            selectedIds = selectedIds
                         },
                     )
                 },
@@ -219,37 +245,240 @@ fun AlbumList(
                         .weight(1f),
                     contentPadding = PaddingValues(bottom = 8.dp),
                 ) {
-                    itemsIndexed(
-                        items = filteredSorted,
-                        key = { _, row -> row.album.id },
-                    ) { index, row ->
-                        val album = row.album
+                    when (grouping) {
+                        AlbumGrouping.NONE -> {
+                            itemsIndexed(
+                                items = filteredSorted,
+                                key = { _, row -> row.album.id },
+                            ) { index, row ->
+                                val album = row.album
 
-                        val normalizedCover = album.coverUri?.trim().takeIf { !it.isNullOrBlank() }
-                        val isSelected =
-                            (selectionEnabled && selectedIds.contains(album.id)) || (selectedAlbumId == album.id)
+                                val isSelected =
+                                    (selectionEnabled && selectedIds.contains(album.id)) || (selectedAlbumId == album.id)
 
-                        AlbumListRow(
-                            row = row,
-                            isSelected = isSelected,
-                            selectionActive = selectionActive,
-                            onClick = {
-                                if (selectionActive) selectedIds = toggleId(selectedIds, album.id)
-                                else onAlbumClick(row)
-                            },
-                            onLongPress = {
-                                if (!selectionEnabled) return@AlbumListRow
-                                selectedIds = toggleId(selectedIds, album.id)
-                            },
-                            onDelete = { onDelete(row) },
-                            onFindCover = { onFindCover(row) },
-                            showDivider = index != filteredSorted.lastIndex,
-                            rowDensity = density,
-                            onEdit = { onEdit(row) },
-                        )
+                                AlbumListRow(
+                                    row = row,
+                                    isSelected = isSelected,
+                                    selectionActive = selectionActive,
+                                    onClick = {
+                                        if (selectionActive) selectedIds = toggleId(selectedIds, album.id)
+                                        else onAlbumClick(row)
+                                    },
+                                    onLongPress = {
+                                        if (!selectionEnabled) return@AlbumListRow
+                                        selectedIds = toggleId(selectedIds, album.id)
+                                    },
+                                    onDelete = { onDelete(row) },
+                                    onFindCover = { onFindCover(row) },
+                                    showDivider = index != filteredSorted.lastIndex,
+                                    rowDensity = density,
+                                    onEdit = { onEdit(row) },
+                                )
+                            }
+                        }
+
+                        AlbumGrouping.ARTIST -> {
+                            val groups =
+                                filteredSorted.groupBy { row -> row.album.artistId?.toString() ?: "unknown" }
+
+                            val sortedKeys = groups.keys.sortedWith { a, b ->
+                                val ra = groups[a]?.firstOrNull()
+                                val rb = groups[b]?.firstOrNull()
+
+                                val ka = ra?.artistSortKey()?.norm().orEmpty()
+                                val kb = rb?.artistSortKey()?.norm().orEmpty()
+
+                                // Unknown at bottom
+                                when {
+                                    a == "unknown" && b != "unknown" -> 1
+                                    a != "unknown" && b == "unknown" -> -1
+                                    else -> ka.compareTo(kb)
+                                }
+                            }
+
+                            sortedKeys.forEach { artistKey ->
+                                val rows = groups[artistKey].orEmpty()
+                                if (rows.isEmpty()) return@forEach
+
+                                val headerKey = "artist:$artistKey"
+                                val expanded = expandedGroups.contains(headerKey)
+
+                                item(key = headerKey) {
+                                    GroupHeaderRow(
+                                        title = rows.first().artistDisplaySafe(),
+                                        subtitle = "${rows.size} album${if (rows.size == 1) "" else "s"}",
+                                        expanded = expanded,
+                                        onToggle = { expandedGroups = toggleId(expandedGroups, headerKey) },
+                                    )
+                                }
+
+                                item(key = "$headerKey:content") {
+                                    AnimatedVisibility(
+                                        visible = expanded,
+                                        enter = fadeIn() + expandVertically(),
+                                        exit = fadeOut() + shrinkVertically(),
+                                    ) {
+                                        Column(modifier = Modifier.padding(top = 6.dp, bottom = 10.dp)) {
+                                            rows.forEachIndexed { index, row ->
+                                                val album = row.album
+                                                val isSelected =
+                                                    (selectionEnabled && selectedIds.contains(album.id)) || (selectedAlbumId == album.id)
+
+                                                AlbumListRow(
+                                                    row = row,
+                                                    isSelected = isSelected,
+                                                    selectionActive = selectionActive,
+                                                    onClick = {
+                                                        if (selectionActive) selectedIds = toggleId(selectedIds, album.id)
+                                                        else onAlbumClick(row)
+                                                    },
+                                                    onLongPress = {
+                                                        if (!selectionEnabled) return@AlbumListRow
+                                                        selectedIds = toggleId(selectedIds, album.id)
+                                                    },
+                                                    onDelete = { onDelete(row) },
+                                                    onFindCover = { onFindCover(row) },
+                                                    showDivider = index != rows.lastIndex,
+                                                    rowDensity = density,
+                                                    onEdit = { onEdit(row) },
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                item(key = "$headerKey:spacer") { Spacer(Modifier.height(6.dp)) }
+                            }
+                        }
+
+                        AlbumGrouping.DECADE -> {
+                            fun decadeStart(year: Int?): Int? = year?.let { (it / 10) * 10 }
+
+                            val groups = filteredSorted.groupBy { row -> decadeStart(row.album.releaseYear) }
+
+                            val sortedKeys = groups.keys.sortedWith { a, b ->
+                                // Unknown at bottom, otherwise newer decades first
+                                when {
+                                    a == null && b != null -> 1
+                                    a != null && b == null -> -1
+                                    a == null && b == null -> 0
+                                    else -> (b ?: 0).compareTo(a ?: 0)
+                                }
+                            }
+
+                            sortedKeys.forEach { decade ->
+                                val rows = groups[decade].orEmpty()
+                                if (rows.isEmpty()) return@forEach
+
+                                val headerKey = "decade:${decade ?: "unknown"}"
+                                val expanded = expandedGroups.contains(headerKey)
+
+                                item(key = headerKey) {
+                                    GroupHeaderRow(
+                                        title = decadeLabel(decade),
+                                        subtitle = "${rows.size} album${if (rows.size == 1) "" else "s"}",
+                                        expanded = expanded,
+                                        onToggle = { expandedGroups = toggleId(expandedGroups, headerKey) },
+                                    )
+                                }
+
+                                item(key = "$headerKey:content") {
+                                    AnimatedVisibility(
+                                        visible = expanded,
+                                        enter = fadeIn() + expandVertically(),
+                                        exit = fadeOut() + shrinkVertically(),
+                                    ) {
+                                        Column(modifier = Modifier.padding(top = 6.dp, bottom = 10.dp)) {
+                                            val sortedRows = rows.sortedWith(
+                                                compareByDescending<AlbumWithArtistName> { it.album.releaseYear ?: Int.MIN_VALUE }
+                                                    .thenBy { it.artistSortKey().norm() }
+                                                    .thenBy { it.album.title.norm() }
+                                            )
+
+                                            sortedRows.forEachIndexed { index, row ->
+                                                val album = row.album
+                                                val isSelected =
+                                                    (selectionEnabled && selectedIds.contains(album.id)) || (selectedAlbumId == album.id)
+
+                                                AlbumListRow(
+                                                    row = row,
+                                                    isSelected = isSelected,
+                                                    selectionActive = selectionActive,
+                                                    onClick = {
+                                                        if (selectionActive) selectedIds = toggleId(selectedIds, album.id)
+                                                        else onAlbumClick(row)
+                                                    },
+                                                    onLongPress = {
+                                                        if (!selectionEnabled) return@AlbumListRow
+                                                        selectedIds = toggleId(selectedIds, album.id)
+                                                    },
+                                                    onDelete = { onDelete(row) },
+                                                    onFindCover = { onFindCover(row) },
+                                                    showDivider = index != sortedRows.lastIndex,
+                                                    rowDensity = density,
+                                                    onEdit = { onEdit(row) },
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                item(key = "$headerKey:spacer") { Spacer(Modifier.height(6.dp)) }
+                            }
+                        }
                     }
                 }
             }
+        }
+    }
+}
+
+
+
+@Composable
+private fun GroupHeaderRow(
+    title: String,
+    subtitle: String,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .animateContentSize()
+            .clickable(onClick = onToggle),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        shape = RoundedCornerShape(14.dp),
+        tonalElevation = 0.dp,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelLarge,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                )
+            }
+
+            Icon(
+                imageVector = Icons.Filled.ExpandMore,
+                contentDescription = if (expanded) "Collapse" else "Expand",
+                modifier = Modifier.rotate(if (expanded) 180f else 0f),
+            )
         }
     }
 }

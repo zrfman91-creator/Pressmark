@@ -32,7 +32,7 @@ fun AlbumListScreen(
     modifier: Modifier = Modifier,
 ) {
     val screenContainerColor = MaterialTheme.colorScheme.background
-    val topBarContainerColor = MaterialTheme.colorScheme.primaryContainer
+    val topBarContainerColor = MaterialTheme.colorScheme.background
 
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(snackMessage) {

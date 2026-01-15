@@ -78,7 +78,7 @@ fun AlbumListRow(
     val rowContainerColor =
         if (isSelected) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primaryContainer
 
-    val menuContainerColor = MaterialTheme.colorScheme.secondaryContainer
+    val menuContainerColor = MaterialTheme.colorScheme.primaryContainer
 
     Column(
         modifier = modifier
