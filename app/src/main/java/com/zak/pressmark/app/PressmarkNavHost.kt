@@ -26,6 +26,8 @@ import com.zak.pressmark.feature.artist.vm.ArtistViewModelFactory
 import com.zak.pressmark.feature.artworkpicker.route.CoverSearchRoute
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
+private const val SAVED_ALBUM_ID_KEY = "saved_album_id"
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalCoroutinesApi::class)
 @Composable
 fun PressmarkNavHost(
@@ -48,6 +50,7 @@ fun PressmarkNavHost(
             val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
             val savedAlbumIdFlow = remember(savedStateHandle) {
                 savedStateHandle?.savedAlbumIdFlow()
+                savedStateHandle?.getStateFlow(SAVED_ALBUM_ID_KEY, null)
             }
             val savedAlbumId = savedAlbumIdFlow
                 ?.collectAsStateWithLifecycle(initialValue = null)
@@ -64,7 +67,7 @@ fun PressmarkNavHost(
                     navController.navigate(PressmarkRoutes.coverSearch(albumId, artist, title))
                 },
                 savedAlbumId = savedAlbumId,
-                onAlbumSavedConsumed = { savedStateHandle?.clearSavedAlbumId() },
+                onAlbumSavedConsumed = { savedStateHandle?.set(SAVED_ALBUM_ID_KEY, null) },
             )
         }
 
@@ -83,7 +86,7 @@ fun PressmarkNavHost(
                 onAlbumSaved = { albumId ->
                     navController.previousBackStackEntry
                         ?.savedStateHandle
-                        ?.setSavedAlbumId(albumId)
+                        ?.set(SAVED_ALBUM_ID_KEY, albumId)
                     navController.popBackStack()
                 },
             )
