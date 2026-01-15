@@ -20,7 +20,7 @@ import com.zak.pressmark.feature.addalbum.vm.SaveIntent
 fun AddAlbumRoute(
     vm: AddAlbumViewModel,
     onNavigateUp: () -> Unit,
-    onAlbumSaved: (albumId: String) -> Unit,
+    onAlbumSaved: (albumId: String, artist: String, title: String) -> Unit,
 ) {
     var form by rememberSaveable(stateSaver = AddAlbumFormStateSaver) {
         mutableStateOf(AddAlbumFormState())
@@ -46,9 +46,14 @@ fun AddAlbumRoute(
                             vm.onArtistQueryChanged("")
                         }
 
-                        SaveIntent.SaveAndExit -> onAlbumSaved(event.albumId)
+                        SaveIntent.SaveAndExit -> onAlbumSaved(
+                            event.albumId,
+                            form.artist,
+                            form.title,
+                        )
                     }
                 }
+
             }
         }
     }

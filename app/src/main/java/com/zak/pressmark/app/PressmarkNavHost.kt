@@ -26,8 +26,6 @@ import com.zak.pressmark.feature.artist.vm.ArtistViewModelFactory
 import com.zak.pressmark.feature.artworkpicker.route.CoverSearchRoute
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
-private const val SAVED_ALBUM_ID_KEY = "saved_album_id"
-
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalCoroutinesApi::class)
 @Composable
 fun PressmarkNavHost(
@@ -82,11 +80,15 @@ fun PressmarkNavHost(
             AddAlbumRoute(
                 vm = vm,
                 onNavigateUp = { navController.popBackStack() },
-                onAlbumSaved = { albumId ->
-                    navController.previousBackStackEntry
-                        ?.savedStateHandle
-                        ?.setSavedAlbumId(albumId)
-                    navController.popBackStack()
+                onAlbumSaved = { albumId, artist, title ->
+                    navController.navigate(
+                        PressmarkRoutes.coverSearch(
+                            albumId = albumId,
+                            artist = artist,
+                            title = title,
+                            origin = PressmarkRoutes.COVER_ORIGIN_LIST_SUCCESS,
+                        ),
+                    )
                 },
             )
         }
@@ -155,6 +157,18 @@ fun PressmarkNavHost(
                             // Drop Cover Search (+ Add) from back stack and land on Details.
                             navController.navigate(PressmarkRoutes.details(albumId)) {
                                 popUpTo(PressmarkRoutes.LIST) { inclusive = false }
+                            }
+                        }
+
+                        PressmarkRoutes.COVER_ORIGIN_LIST_SUCCESS -> {
+                            // Return to Album List and show the success dialog.
+                            navController.getBackStackEntry(PressmarkRoutes.LIST)
+                                .savedStateHandle
+                                .setSavedAlbumId(albumId)
+
+                            navController.navigate(PressmarkRoutes.LIST) {
+                                popUpTo(PressmarkRoutes.LIST) { inclusive = false }
+                                launchSingleTop = true
                             }
                         }
 

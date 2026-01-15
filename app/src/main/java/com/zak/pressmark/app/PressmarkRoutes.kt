@@ -33,6 +33,7 @@ object PressmarkRoutes {
     // Where should Cover Search return?
     const val COVER_ORIGIN_BACK = "back"       // default: just popBackStack()
     const val COVER_ORIGIN_DETAILS = "details" // after closing, go to Album Details
+    const val COVER_ORIGIN_LIST_SUCCESS = "list_success" // after closing, return to Album List and show success
     const val COVER_SEARCH_PATTERN =
         "$COVER_SEARCH/{$ARG_ALBUM_ID}?$ARG_COVER_ARTIST={$ARG_COVER_ARTIST}&$ARG_COVER_TITLE={$ARG_COVER_TITLE}&$ARG_COVER_ORIGIN={$ARG_COVER_ORIGIN}"
 
