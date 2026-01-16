@@ -59,7 +59,8 @@ import kotlin.coroutines.resumeWithException
  * - requests CAMERA permission (runtime)
  * - shows preview
  * - takes photo
- * - returns file:// Uri
+ * - saves to app-private storage (filesDir) so it will NOT appear in the system gallery
+ * - returns a file:// Uri pointing at durable storage
  *
  * This fixes the common "black preview" issue caused by missing permission or binding before
  * a surface provider is ready.
@@ -123,7 +124,7 @@ fun CameraCoverCaptureRoute(
 
         val provider = awaitCameraProvider(context)
         val preview = Preview.Builder().build().also { p ->
-            p.setSurfaceProvider(previewView.surfaceProvider)
+            p.surfaceProvider = previewView.surfaceProvider
         }
 
         try {
@@ -245,13 +246,23 @@ private fun PermissionGate(
     }
 }
 
+private fun createDurableCoverFile(context: Context): File {
+    val dir = File(context.filesDir, "covers").apply {
+        if (!exists()) mkdirs()
+    }
+    // Fallback to filesDir if directory creation fails for any reason.
+    val targetDir = if (dir.exists() && dir.isDirectory) dir else context.filesDir
+    return File(targetDir, "cover_" + System.currentTimeMillis() + ".jpg")
+}
+
+
 private fun takePhoto(
     context: Context,
     imageCapture: ImageCapture,
     onSuccess: (Uri) -> Unit,
     onError: (String) -> Unit,
 ) {
-    val file = File(context.cacheDir, "cover_${System.currentTimeMillis()}.jpg")
+    val file = createDurableCoverFile(context)
     val outputOptions = ImageCapture.OutputFileOptions.Builder(file).build()
 
     imageCapture.takePicture(
