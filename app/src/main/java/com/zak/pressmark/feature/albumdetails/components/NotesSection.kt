@@ -20,7 +20,7 @@ fun AlbumDetailsNotesSection(
     notes: String?,
     modifier: Modifier = Modifier,
 ) {
-    val value = notes?.trim().takeIf { !it.isNullOrBlank() } ?: "—"
+    val value = notes?.trim().takeIf { !it.isNullOrBlank() } ?: "Notes functionality coming soon!"
 
     Surface(
         modifier = modifier.fillMaxWidth(),

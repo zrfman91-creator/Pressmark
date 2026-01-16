@@ -7,6 +7,9 @@ import com.zak.pressmark.data.local.db.AppDatabase
 import com.zak.pressmark.data.local.db.DatabaseProvider
 import com.zak.pressmark.data.remote.discogs.DiscogsApiProvider
 import com.zak.pressmark.data.remote.discogs.DiscogsApiService
+import com.zak.pressmark.data.remote.musicbrainz.DefaultMusicBrainzArtworkRepository
+import com.zak.pressmark.data.remote.musicbrainz.MusicBrainzArtworkApi
+import com.zak.pressmark.data.remote.musicbrainz.MusicBrainzArtworkRepository
 import com.zak.pressmark.data.repository.AlbumRepository
 import com.zak.pressmark.data.repository.ArtistRepository
 import com.zak.pressmark.feature.albumlist.imageloading.AppImageLoader
@@ -33,12 +36,31 @@ class AppGraph(
         buildOkHttp(appContext)
     }
 
+    private val appUserAgent: String by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        // Used by rate-limited public APIs (Discogs / MusicBrainz).
+        "Pressmark/${BuildConfig.VERSION_NAME}"
+    }
+
     // --- API Service Singleton (keep for cover search feature) ---
     val discogsApiService: DiscogsApiService by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         DiscogsApiProvider.create(
             token = BuildConfig.DISCOGS_TOKEN.trim(),
+            userAgent = appUserAgent,
             baseClient = okHttpClient,
         )
+    }
+
+    // --- MusicBrainz (shared OkHttp config) ---
+    private val musicBrainzApi: MusicBrainzArtworkApi by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        MusicBrainzArtworkApi(
+            userAgent = appUserAgent,
+            client = okHttpClient,
+            debugLogging = BuildConfig.DEBUG,
+        )
+    }
+
+    val musicBrainzArtworkRepository: MusicBrainzArtworkRepository by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        DefaultMusicBrainzArtworkRepository(musicBrainzApi)
     }
 
     // --- Repositories (MUST MATCH repo constructors) ---
