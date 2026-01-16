@@ -225,12 +225,7 @@ fun AlbumList(
                 },
             )
 
-            HorizontalDivider(
-                modifier = Modifier
-                    .padding(top = 6.dp, bottom = 4.dp)
-                    .padding(horizontal = dividerInset),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.75f),
-            )
+            Spacer(Modifier.height(10.dp))
 
             if (filteredSorted.isEmpty()) {
                 EmptyState(

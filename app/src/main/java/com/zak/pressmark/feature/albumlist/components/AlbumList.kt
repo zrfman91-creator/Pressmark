@@ -194,6 +194,8 @@ fun AlbumCommandBar(
                     .padding(top = 6.dp)
             )
 
+            Spacer(modifier = Modifier.height(6.dp))
+
             CommandInfoRow(
                 countText = countText,
                 sortText = sortText,
