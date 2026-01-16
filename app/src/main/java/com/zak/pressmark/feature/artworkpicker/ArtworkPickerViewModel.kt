@@ -8,8 +8,10 @@ import com.zak.pressmark.data.remote.discogs.DiscogsApiService
 import com.zak.pressmark.data.remote.discogs.DiscogsSearchResult
 import com.zak.pressmark.data.repository.AlbumRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 data class CoverSearchState(
@@ -34,6 +36,10 @@ class DiscogsCoverSearchViewModel(
 
     private var currentRequest: CoverSearchRequest? = null
 
+    // Step 3: cancellation + "latest wins".
+    private var searchJob: Job? = null
+    private var searchSeq: Long = 0L
+
     fun start(
         albumId: String,
         artist: String,
@@ -53,7 +59,15 @@ class DiscogsCoverSearchViewModel(
     }
 
     private fun search(request: CoverSearchRequest) {
-        viewModelScope.launch(Dispatchers.IO) {
+        // Cancel any in-flight search so stale results can't win.
+        searchJob?.cancel()
+
+        val mySeq = ++searchSeq
+
+        searchJob = viewModelScope.launch(Dispatchers.IO) {
+            // Only the latest search should update state.
+            if (mySeq != searchSeq) return@launch
+
             _uiState.value = CoverSearchState(isLoading = true)
 
             try {
@@ -70,6 +84,9 @@ class DiscogsCoverSearchViewModel(
                 var lastError: Throwable? = null
 
                 for (artist in artistVariants.take(4)) {
+                    // Bail early if a newer search started.
+                    if (!isActive || mySeq != searchSeq) return@launch
+
                     try {
                         val response = discogsApi.searchReleases(
                             artist = artist.ifBlank { null },
@@ -90,6 +107,8 @@ class DiscogsCoverSearchViewModel(
 
                 // Fuzzy fallback: if strict search produces nothing, broaden queries.
                 if (results.isEmpty()) {
+                    if (!isActive || mySeq != searchSeq) return@launch
+
                     results = fuzzyFallbackSearch(
                         userArtist = userArtist,
                         userTitle = userTitle,
@@ -102,13 +121,16 @@ class DiscogsCoverSearchViewModel(
                 val ranked = rankResults(userArtist, userTitle, results)
                     .take(20)
 
+                if (!isActive || mySeq != searchSeq) return@launch
+
                 _uiState.value = CoverSearchState(
                     results = ranked,
                     error = if (ranked.isEmpty()) {
                         lastError?.message ?: "No results found"
-                    } else null
+                    } else null,
                 )
             } catch (t: Throwable) {
+                if (!isActive || mySeq != searchSeq) return@launch
                 _uiState.value = CoverSearchState(error = t.message ?: "Search failed")
             }
         }
@@ -138,7 +160,10 @@ class DiscogsCoverSearchViewModel(
         // 2) Try artist-only (best chance if title is misspelled).
         if (userArtist.isNotBlank()) {
             // Prefer canonical-ish variants first.
-            val broadArtists = (artistVariants + listOf(Normalizer.artistDisplay(userArtist), Normalizer.artistSortName(userArtist)))
+            val broadArtists = (artistVariants + listOf(
+                Normalizer.artistDisplay(userArtist),
+                Normalizer.artistSortName(userArtist),
+            ))
                 .map { it.trim() }
                 .filter { it.isNotBlank() }
                 .distinct()
@@ -218,7 +243,7 @@ class DiscogsCoverSearchViewModel(
                 // ✅ Removed: albumRepository.refreshFromDiscogs(...)
             } catch (t: Throwable) {
                 _uiState.value = _uiState.value.copy(
-                    error = t.message ?: "Failed to save cover"
+                    error = t.message ?: "Failed to save cover",
                 )
             }
         }
