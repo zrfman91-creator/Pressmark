@@ -1,5 +1,5 @@
 // =======================================================
-// file: app/src/main/java/com/zak/pressmark/feature/albumlist/components/AlbumList.kt
+// file: app/src/main/java/com/zak/pressmark/feature/albumlist/components/AlbumCommandBar.kt
 // =======================================================
 package com.zak.pressmark.feature.albumlist.components
 
@@ -15,12 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.filled.ExpandMore
@@ -98,10 +93,12 @@ fun AlbumList(
     val grouping = remember(groupingName) {
         runCatching { AlbumGrouping.valueOf(groupingName) }.getOrDefault(AlbumGrouping.NONE)
     }
-    var expandedGroups by rememberSaveable { mutableStateOf(setOf<String>()) }
+    // NOTE: Sets are not saveable by default. Keep a List in state, convert to Set in-memory.
+    var expandedGroupKeys by rememberSaveable { mutableStateOf(emptyList<String>()) }
+    val expandedGroups = remember(expandedGroupKeys) { expandedGroupKeys.toSet() }
 
-
-    var selectedIds by rememberSaveable { mutableStateOf(setOf<String>()) }
+    var selectedIdList by rememberSaveable { mutableStateOf(emptyList<String>()) }
+    val selectedIds = remember(selectedIdList) { selectedIdList.toSet() }
     val selectionActive = selectionEnabled && selectedIds.isNotEmpty()
 
     val filteredSorted = remember(albums, query, sort) {
@@ -203,29 +200,34 @@ fun AlbumList(
                 grouping = grouping,
                 onGroupingChange = { newGrouping ->
                     groupingName = newGrouping.name
-                    if (newGrouping == AlbumGrouping.NONE) expandedGroups = emptySet()
+                    if (newGrouping == AlbumGrouping.NONE) expandedGroupKeys = emptyList()
                 },
                 selectionActive = selectionActive,
                 selectionBar = {
                     if (!selectionActive) return@AlbumCommandBar
                     SelectionBar(
                         selectedCount = selectedIds.size,
-                        onClear = { selectedIds = emptySet() },
-                        onSelectAll = { selectedIds = filteredSorted.map { it.album.id }.toSet() },
+                        onClear = { selectedIdList = emptyList() },
+                        onSelectAll = { selectedIdList = filteredSorted.map { it.album.id }.distinct() },
                         onDeleteSelected = {
                             val byId = albums.associateBy { it.album.id }
                             selectedIds.forEach { id -> byId[id]?.let(onDelete) }
-                            selectedIds = emptySet()
+                            selectedIdList = emptyList()
                         },
                         onRefreshArtworkSelected = {
                             // Intentionally left as a hook (no-op like your original)
-                            selectedIds = selectedIds
+                            selectedIdList = selectedIdList
                         },
                     )
                 },
             )
 
-            Spacer(Modifier.height(10.dp))
+            HorizontalDivider(
+                modifier = Modifier
+                    .padding(top = 6.dp, bottom = 4.dp)
+                    .padding(horizontal = dividerInset),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.75f),
+            )
 
             if (filteredSorted.isEmpty()) {
                 EmptyState(
@@ -257,12 +259,12 @@ fun AlbumList(
                                     isSelected = isSelected,
                                     selectionActive = selectionActive,
                                     onClick = {
-                                        if (selectionActive) selectedIds = toggleId(selectedIds, album.id)
+                                        if (selectionActive) selectedIdList = toggleIdList(selectedIdList, album.id)
                                         else onAlbumClick(row)
                                     },
                                     onLongPress = {
                                         if (!selectionEnabled) return@AlbumListRow
-                                        selectedIds = toggleId(selectedIds, album.id)
+                                        selectedIdList = toggleIdList(selectedIdList, album.id)
                                     },
                                     onDelete = { onDelete(row) },
                                     onFindCover = { onFindCover(row) },
@@ -304,42 +306,39 @@ fun AlbumList(
                                         title = rows.first().artistDisplaySafe(),
                                         subtitle = "${rows.size} album${if (rows.size == 1) "" else "s"}",
                                         expanded = expanded,
-                                        onToggle = { expandedGroups = toggleId(expandedGroups, headerKey) },
+                                        onToggle = { expandedGroupKeys = toggleIdList(expandedGroupKeys, headerKey) },
                                     )
                                 }
 
-                                item(key = "$headerKey:content") {
-                                    AnimatedVisibility(
-                                        visible = expanded,
-                                        enter = fadeIn() + expandVertically(),
-                                        exit = fadeOut() + shrinkVertically(),
-                                    ) {
-                                        Column(modifier = Modifier.padding(top = 6.dp, bottom = 10.dp)) {
-                                            rows.forEachIndexed { index, row ->
-                                                val album = row.album
-                                                val isSelected =
-                                                    (selectionEnabled && selectedIds.contains(album.id)) || (selectedAlbumId == album.id)
+                                if (expanded) {
+                                    item(key = "$headerKey:pad") { Spacer(Modifier.height(6.dp)) }
 
-                                                AlbumListRow(
-                                                    row = row,
-                                                    isSelected = isSelected,
-                                                    selectionActive = selectionActive,
-                                                    onClick = {
-                                                        if (selectionActive) selectedIds = toggleId(selectedIds, album.id)
-                                                        else onAlbumClick(row)
-                                                    },
-                                                    onLongPress = {
-                                                        if (!selectionEnabled) return@AlbumListRow
-                                                        selectedIds = toggleId(selectedIds, album.id)
-                                                    },
-                                                    onDelete = { onDelete(row) },
-                                                    onFindCover = { onFindCover(row) },
-                                                    showDivider = index != rows.lastIndex,
-                                                    rowDensity = density,
-                                                    onEdit = { onEdit(row) },
-                                                )
-                                            }
-                                        }
+                                    itemsIndexed(
+                                        items = rows,
+                                        key = { _, row -> "row:${row.album.id}" },
+                                    ) { index, row ->
+                                        val album = row.album
+                                        val isSelected =
+                                            (selectionEnabled && selectedIds.contains(album.id)) || (selectedAlbumId == album.id)
+
+                                        AlbumListRow(
+                                            row = row,
+                                            isSelected = isSelected,
+                                            selectionActive = selectionActive,
+                                            onClick = {
+                                                if (selectionActive) selectedIdList = toggleIdList(selectedIdList, album.id)
+                                                else onAlbumClick(row)
+                                            },
+                                            onLongPress = {
+                                                if (!selectionEnabled) return@AlbumListRow
+                                                selectedIdList = toggleIdList(selectedIdList, album.id)
+                                            },
+                                            onDelete = { onDelete(row) },
+                                            onFindCover = { onFindCover(row) },
+                                            showDivider = index != rows.lastIndex,
+                                            rowDensity = density,
+                                            onEdit = { onEdit(row) },
+                                        )
                                     }
                                 }
 
@@ -374,48 +373,45 @@ fun AlbumList(
                                         title = decadeLabel(decade),
                                         subtitle = "${rows.size} album${if (rows.size == 1) "" else "s"}",
                                         expanded = expanded,
-                                        onToggle = { expandedGroups = toggleId(expandedGroups, headerKey) },
+                                        onToggle = { expandedGroupKeys = toggleIdList(expandedGroupKeys, headerKey) },
                                     )
                                 }
 
-                                item(key = "$headerKey:content") {
-                                    AnimatedVisibility(
-                                        visible = expanded,
-                                        enter = fadeIn() + expandVertically(),
-                                        exit = fadeOut() + shrinkVertically(),
-                                    ) {
-                                        Column(modifier = Modifier.padding(top = 6.dp, bottom = 10.dp)) {
-                                            val sortedRows = rows.sortedWith(
-                                                compareByDescending<AlbumWithArtistName> { it.album.releaseYear ?: Int.MIN_VALUE }
-                                                    .thenBy { it.artistSortKey().norm() }
-                                                    .thenBy { it.album.title.norm() }
-                                            )
+                                if (expanded) {
+                                    val sortedRows = rows.sortedWith(
+                                        compareByDescending<AlbumWithArtistName> { it.album.releaseYear ?: Int.MIN_VALUE }
+                                            .thenBy { it.artistSortKey().norm() }
+                                            .thenBy { it.album.title.norm() }
+                                    )
 
-                                            sortedRows.forEachIndexed { index, row ->
-                                                val album = row.album
-                                                val isSelected =
-                                                    (selectionEnabled && selectedIds.contains(album.id)) || (selectedAlbumId == album.id)
+                                    item(key = "$headerKey:pad") { Spacer(Modifier.height(6.dp)) }
 
-                                                AlbumListRow(
-                                                    row = row,
-                                                    isSelected = isSelected,
-                                                    selectionActive = selectionActive,
-                                                    onClick = {
-                                                        if (selectionActive) selectedIds = toggleId(selectedIds, album.id)
-                                                        else onAlbumClick(row)
-                                                    },
-                                                    onLongPress = {
-                                                        if (!selectionEnabled) return@AlbumListRow
-                                                        selectedIds = toggleId(selectedIds, album.id)
-                                                    },
-                                                    onDelete = { onDelete(row) },
-                                                    onFindCover = { onFindCover(row) },
-                                                    showDivider = index != sortedRows.lastIndex,
-                                                    rowDensity = density,
-                                                    onEdit = { onEdit(row) },
-                                                )
-                                            }
-                                        }
+                                    itemsIndexed(
+                                        items = sortedRows,
+                                        key = { _, row -> "row:${row.album.id}" },
+                                    ) { index, row ->
+                                        val album = row.album
+                                        val isSelected =
+                                            (selectionEnabled && selectedIds.contains(album.id)) || (selectedAlbumId == album.id)
+
+                                        AlbumListRow(
+                                            row = row,
+                                            isSelected = isSelected,
+                                            selectionActive = selectionActive,
+                                            onClick = {
+                                                if (selectionActive) selectedIdList = toggleIdList(selectedIdList, album.id)
+                                                else onAlbumClick(row)
+                                            },
+                                            onLongPress = {
+                                                if (!selectionEnabled) return@AlbumListRow
+                                                selectedIdList = toggleIdList(selectedIdList, album.id)
+                                            },
+                                            onDelete = { onDelete(row) },
+                                            onFindCover = { onFindCover(row) },
+                                            showDivider = index != sortedRows.lastIndex,
+                                            rowDensity = density,
+                                            onEdit = { onEdit(row) },
+                                        )
                                     }
                                 }
 
@@ -537,5 +533,9 @@ private fun EmptyState(
     }
 }
 
-private fun toggleId(current: Set<String>, id: String): Set<String> =
-    if (current.contains(id)) current - id else current + id
+private fun toggleIdList(current: List<String>, id: String): List<String> {
+    // Keep List in state (saveable), operate as a Set in-memory.
+    val next = current.toMutableSet()
+    if (next.contains(id)) next.remove(id) else next.add(id)
+    return next.toList()
+}
