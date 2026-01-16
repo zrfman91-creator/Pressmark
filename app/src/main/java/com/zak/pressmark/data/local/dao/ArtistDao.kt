@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.Flow
 
 import com.zak.pressmark.data.local.db.DbSchema.Artist
 import com.zak.pressmark.data.local.entity.ArtistEntity
+import com.zak.pressmark.data.local.entity.normalizeArtistName
 import androidx.room.Transaction
 import com.zak.pressmark.data.local.db.DbSchema.Album
 
@@ -40,17 +41,24 @@ interface ArtistDao {
     )
     fun observeTopArtists(limit: Int): Flow<List<ArtistEntity>>
 
-    // Suggestions — search display + sort (no legacy fields)
+    /**
+     * Suggestions — use the indexed normalized column so search scales as the table grows.
+     *
+     * NOTE: Prefix match keeps the query index-friendly; callers can pass partial names.
+     */
     @Query(
         """
         SELECT * FROM ${Artist.TABLE}
-        WHERE ${Artist.DISPLAY_NAME} LIKE '%' || :query || '%'
-           OR ${Artist.SORT_NAME} LIKE '%' || :query || '%'
+        WHERE ${Artist.NAME_NORMALIZED} LIKE :normalizedPrefix || '%'
         ORDER BY ${Artist.SORT_NAME} COLLATE NOCASE
         LIMIT :limit
         """
     )
-    fun searchByName(query: String, limit: Int): Flow<List<ArtistEntity>>
+    fun searchByNormalizedPrefix(normalizedPrefix: String, limit: Int): Flow<List<ArtistEntity>>
+
+    /** Backwards-compatible entry point for callers already using searchByName(query, limit). */
+    fun searchByName(query: String, limit: Int): Flow<List<ArtistEntity>> =
+        searchByNormalizedPrefix(normalizeArtistName(query), limit)
 
     @Query("""
     UPDATE ${Artist.TABLE}
