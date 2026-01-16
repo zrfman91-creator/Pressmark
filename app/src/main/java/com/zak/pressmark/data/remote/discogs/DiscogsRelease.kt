@@ -76,3 +76,30 @@ data class DiscogsSearchResult(
     @SerializedName("thumb") val thumb: String?,
     @SerializedName("cover_image") val coverImage: String?,
 )
+
+/**
+ * Typed, R8-safe autofill candidate extracted from a Discogs search row.
+ * Keep this in data/ so UI can consume it without reflection.
+ */
+data class DiscogsAutofillCandidate(
+    val releaseYear: Int?,
+    val catalogNo: String?,
+    val label: String?,
+    val format: String?,
+)
+
+fun DiscogsSearchResult.toAutofillCandidate(): DiscogsAutofillCandidate {
+    val yearInt = year?.trim()?.toIntOrNull()
+    val cat = catno?.trim()?.takeIf { it.isNotBlank() }
+    val labelStr = label
+        ?.map { it.trim() }
+        ?.firstOrNull { it.isNotBlank() }
+
+    // Discogs search rows don't reliably include format; keep null for now.
+    return DiscogsAutofillCandidate(
+        releaseYear = yearInt,
+        catalogNo = cat,
+        label = labelStr,
+        format = null,
+    )
+}

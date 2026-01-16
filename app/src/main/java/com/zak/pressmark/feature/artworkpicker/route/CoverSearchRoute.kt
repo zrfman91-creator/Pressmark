@@ -15,6 +15,8 @@ import com.zak.pressmark.app.di.AppGraph
 import com.zak.pressmark.core.artwork.ArtworkCandidate
 import com.zak.pressmark.core.artwork.ArtworkPickerDialog
 import com.zak.pressmark.core.artwork.ArtworkProviderId
+import com.zak.pressmark.data.remote.discogs.DiscogsAutofillCandidate
+import com.zak.pressmark.data.remote.discogs.toAutofillCandidate
 import com.zak.pressmark.feature.artworkpicker.ArtworkPickerViewModelFactory
 import com.zak.pressmark.feature.artworkpicker.DiscogsCoverSearchViewModel
 import com.zak.pressmark.feature.artworkpicker.components.DiscogsConfirmDetailsSheet
@@ -76,65 +78,14 @@ fun CoverSearchRoute(
         }
     }
 
-    data class AutofillCandidate(
-        val releaseYear: Int?,
-        val catalogNo: String?,
-        val label: String?,
-        val format: String?,
-    )
-
-    fun Any.getPropOrNull(name: String): Any? {
-        // Try getter first (Kotlin data class property -> getX())
-        val getter = "get" + name.replaceFirstChar { it.uppercaseChar() }
-        runCatching { return this::class.java.methods.firstOrNull { it.name == getter }?.invoke(this) }.getOrNull()
-        // Fallback: raw method by name
-        runCatching { return this::class.java.methods.firstOrNull { it.name == name }?.invoke(this) }.getOrNull()
-        return null
-    }
-
-    fun Any.extractAutofillCandidate(): AutofillCandidate {
-        val yearAny = getPropOrNull("year")
-        val catAny = getPropOrNull("catno") ?: getPropOrNull("catalogNo") ?: getPropOrNull("catalog_no")
-        val labelAny = getPropOrNull("label")
-        val formatAny = getPropOrNull("format")
-
-        fun asInt(v: Any?): Int? = when (v) {
-            is Int -> v
-            is Long -> v.toInt()
-            is String -> v.toIntOrNull()
-            else -> null
-        }
-
-        fun firstString(v: Any?): String? = when (v) {
-            is String -> v.trim().takeIf { it.isNotBlank() }
-            is List<*> -> v.firstOrNull { it is String }?.let { (it as String).trim() }?.takeIf { it.isNotBlank() }
-            is Array<*> -> v.firstOrNull { it is String }?.let { (it as String).trim() }?.takeIf { it.isNotBlank() }
-            else -> null
-        }
-
-        fun joinStrings(v: Any?): String? = when (v) {
-            is String -> v.trim().takeIf { it.isNotBlank() }
-            is List<*> -> v.filterIsInstance<String>().map { it.trim() }.filter { it.isNotBlank() }
-                .takeIf { it.isNotEmpty() }?.joinToString(", ")
-            is Array<*> -> v.filterIsInstance<String>().map { it.trim() }.filter { it.isNotBlank() }
-                .takeIf { it.isNotEmpty() }?.joinToString(", ")
-            else -> null
-        }
-
-        return AutofillCandidate(
-            releaseYear = asInt(yearAny),
-            catalogNo = firstString(catAny),
-            label = firstString(labelAny),
-            format = joinStrings(formatAny),
-        )
-    }
+    // Reflection-free autofill mapping lives in data/remote/discogs.
 
     fun computeWillFillLabels(
         existingReleaseYear: Int?,
         existingCatalogNo: String?,
         existingLabel: String?,
         existingFormat: String?,
-        candidate: AutofillCandidate,
+        candidate: DiscogsAutofillCandidate,
     ): List<String> = buildList {
         if (existingReleaseYear == null && candidate.releaseYear != null) add("Year: ${candidate.releaseYear}")
         if (existingCatalogNo.isNullOrBlank() && !candidate.catalogNo.isNullOrBlank()) add("Catalog #: ${candidate.catalogNo}")
@@ -142,7 +93,7 @@ fun CoverSearchRoute(
         if (existingFormat.isNullOrBlank() && !candidate.format.isNullOrBlank()) add("Format: ${candidate.format}")
     }
 
-    var pendingCandidate by remember { mutableStateOf<AutofillCandidate?>(null) }
+    var pendingCandidate by remember { mutableStateOf<DiscogsAutofillCandidate?>(null) }
     var willFillLabels by remember { mutableStateOf<List<String>>(emptyList()) }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -197,7 +148,7 @@ fun CoverSearchRoute(
                         return@launch
                     }
 
-                    val extracted = (picked as Any).extractAutofillCandidate()
+                    val extracted = picked.toAutofillCandidate()
                     val labels = computeWillFillLabels(
                         existingReleaseYear = album.releaseYear,
                         existingCatalogNo = album.catalogNo,
