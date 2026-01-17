@@ -18,7 +18,6 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
@@ -50,6 +50,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -143,32 +144,34 @@ fun CameraCoverCaptureRoute(
 
     val crop = remember { Rational(1, 1) }
     var targetRotation by remember {
-        mutableStateOf(previewView.display?.rotation ?: Surface.ROTATION_0)
+        mutableIntStateOf(previewView.display?.rotation ?: Surface.ROTATION_0)
     }
 
-    val imageCapture: ImageCapture = remember(targetRotation) {
     val imageCapture = remember(targetRotation) {
         ImageCapture.Builder()
             .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
             .setTargetRotation(targetRotation)
-            .setCropAspectRatio(crop)
+            .setCropAspectRatioCompat(crop)
             .build()
     }
 
     // Bind/unbind camera only when permission is granted.
-    LaunchedEffect(hasPermission, captured, lifecycleOwner, targetRotation) {
+    LaunchedEffect(hasPermission, captured, lifecycleOwner, targetRotation, imageCapture) {
         if (!hasPermission || captured != null) {
             runCatching { ProcessCameraProvider.getInstance(context).get().unbindAll() }
             return@LaunchedEffect
         }
 
         val provider = awaitCameraProvider(context)
+
         val preview = Preview.Builder().build().also { p ->
             p.surfaceProvider = previewView.surfaceProvider
         }
+
         val viewPort = ViewPort.Builder(crop, targetRotation)
             .setScaleType(ViewPort.FILL_CENTER)
             .build()
+
         val group = UseCaseGroup.Builder()
             .addUseCase(preview)
             .addUseCase(imageCapture)
@@ -189,7 +192,8 @@ fun CameraCoverCaptureRoute(
     }
 
     LaunchedEffect(flashOn, imageCapture) {
-        imageCapture.flashMode = if (flashOn) ImageCapture.FLASH_MODE_ON else ImageCapture.FLASH_MODE_OFF
+        imageCapture.flashMode =
+            if (flashOn) ImageCapture.FLASH_MODE_ON else ImageCapture.FLASH_MODE_OFF
     }
 
     DisposableEffect(hasPermission) {
@@ -237,70 +241,76 @@ fun CameraCoverCaptureRoute(
                     .padding(padding),
                 contentAlignment = Alignment.Center,
             ) {
-                if (!hasPermission) {
-                    PermissionGate(
-                        message = errorText ?: "Camera permission is required.",
-                        onRequest = { permissionLauncher.launch(Manifest.permission.CAMERA) },
-                        onCancel = onBack,
-                    )
-                } else if (captured != null) {
-                    ConfirmCapturedCover(
-                        captured = captured!!,
-                        onRetake = {
-                            captured?.file?.delete()
-                            captured = null
-                            errorText = null
-                            isCapturing = false
-                        },
-                        onUse = { onCaptured(captured!!.uri) },
-                    )
-                } else {
-                    AndroidView(
-                        factory = { previewView },
-                        modifier = Modifier.fillMaxSize(),
-                        update = { view ->
-                            val rotation = view.display?.rotation ?: Surface.ROTATION_0
-                            if (rotation != targetRotation) {
-                                targetRotation = rotation
+                when {
+                    !hasPermission -> {
+                        PermissionGate(
+                            message = errorText ?: "Camera permission is required.",
+                            onRequest = { permissionLauncher.launch(Manifest.permission.CAMERA) },
+                            onCancel = onBack,
+                        )
+                    }
+
+                    captured != null -> {
+                        ConfirmCapturedCover(
+                            captured = captured!!,
+                            onRetake = {
+                                captured?.file?.delete()
+                                captured = null
+                                errorText = null
+                                isCapturing = false
+                            },
+                            onUse = { onCaptured(captured!!.uri) },
+                        )
+                    }
+
+                    else -> {
+                        AndroidView(
+                            factory = { previewView },
+                            modifier = Modifier.fillMaxSize(),
+                            update = { view ->
+                                val rotation = view.display?.rotation ?: Surface.ROTATION_0
+                                if (rotation != targetRotation) {
+                                    targetRotation = rotation
+                                }
+                            },
+                        )
+
+                        CaptureFrameOverlay(modifier = Modifier.fillMaxSize())
+
+                        Text(
+                            text = "Center the album cover and tap the shutter",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(top = 12.dp),
+                        )
+
+                        val canCapture = hasPermission && errorText == null && !isCapturing
+                        ShutterButton(
+                            enabled = canCapture,
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = 20.dp),
+                            onClick = {
+                                if (!canCapture) return@ShutterButton
+                                isCapturing = true
+                                scope.launch {
+                                    takePhoto(
+                                        context = context,
+                                        imageCapture = imageCapture,
+                                        onSuccess = { result ->
+                                            isCapturing = false
+                                            captured = result
+                                        },
+                                        onError = { msg ->
+                                            isCapturing = false
+                                            errorText = msg
+                                        },
+                                    )
+                                }
                             }
-                        },
-                    )
-
-                    CaptureFrameOverlay(modifier = Modifier.fillMaxSize())
-
-                    Text(
-                        text = "Center the album cover and tap the shutter",
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .padding(top = 12.dp),
-                    )
-
-                    val canCapture = hasPermission && errorText == null && !isCapturing
-                    ShutterButton(
-                        enabled = canCapture,
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(bottom = 20.dp),
-                        onClick = {
-                            if (!canCapture) return@ShutterButton
-                            isCapturing = true
-                            scope.launch {
-                                takePhoto(
-                                    context = context,
-                                    imageCapture = imageCapture,
-                                    onSuccess = { result ->
-                                        isCapturing = false
-                                        captured = result
-                                    },
-                                    onError = { msg ->
-                                        isCapturing = false
-                                        errorText = msg
-                                    },
-                                )
-                            }
-                        }
-                    )
+                        )
+                    }
                 }
 
                 errorText?.let { msg ->
@@ -457,8 +467,12 @@ private fun ShutterButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val bg = if (enabled) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
-    val fg = if (enabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+    val bg =
+        if (enabled) MaterialTheme.colorScheme.primaryContainer
+        else MaterialTheme.colorScheme.surfaceVariant
+    val fg =
+        if (enabled) MaterialTheme.colorScheme.onPrimaryContainer
+        else MaterialTheme.colorScheme.onSurfaceVariant
 
     Surface(
         shape = CircleShape,
@@ -474,7 +488,6 @@ private fun ShutterButton(
         }
     }
 }
-
 
 private fun takePhoto(
     context: Context,
@@ -518,7 +531,8 @@ private suspend fun awaitCameraProvider(context: Context): ProcessCameraProvider
 }
 
 @Suppress("SwallowedException")
-private fun ImageCapture.Builder.setCropAspectRatio(crop: Rational): ImageCapture.Builder {
+private fun ImageCapture.Builder.setCropAspectRatioCompat(crop: Rational): ImageCapture.Builder {
+    // CameraX's setCropAspectRatio has been hidden/changed across versions; reflection keeps us resilient.
     return try {
         val method = ImageCapture.Builder::class.java.getMethod("setCropAspectRatio", Rational::class.java)
         method.invoke(this, crop)

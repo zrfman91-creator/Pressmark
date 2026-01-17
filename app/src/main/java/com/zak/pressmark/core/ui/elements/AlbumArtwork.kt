@@ -1,5 +1,5 @@
 // File: app/src/main/java/com/zak/pressmark/ui/albumlist/components/AlbumArtwork.kt
-package com.zak.pressmark.core.ui.components
+package com.zak.pressmark.core.ui.elements
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box

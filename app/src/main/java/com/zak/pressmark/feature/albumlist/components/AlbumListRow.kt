@@ -42,7 +42,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.zak.pressmark.core.ui.components.AlbumArtwork
+import com.zak.pressmark.core.ui.elements.AlbumArtwork
 import com.zak.pressmark.data.local.model.AlbumWithArtistName
 
 enum class AlbumRowDensity { SPACIOUS, STANDARD, COMPACT, TEXT_ONLY }
