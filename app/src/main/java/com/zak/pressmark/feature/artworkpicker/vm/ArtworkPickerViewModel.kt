@@ -5,11 +5,15 @@ import androidx.lifecycle.viewModelScope
 import com.zak.pressmark.core.util.FuzzyMatch
 import com.zak.pressmark.core.util.Normalizer
 import com.zak.pressmark.data.remote.discogs.DiscogsApiService
+import com.zak.pressmark.data.remote.discogs.DiscogsAutofillCandidate
 import com.zak.pressmark.data.remote.discogs.DiscogsSearchResult
+import com.zak.pressmark.data.remote.discogs.toAutofillCandidate
 import com.zak.pressmark.data.repository.AlbumRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -18,6 +22,8 @@ data class CoverSearchState(
     val results: List<DiscogsSearchResult> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
+    val pendingAutofill: DiscogsAutofillCandidate? = null,
+    val willFillLabels: List<String> = emptyList(),
 )
 
 data class CoverSearchRequest(
@@ -26,6 +32,10 @@ data class CoverSearchRequest(
     val title: String,
 )
 
+sealed interface CoverSearchEffect {
+    data object Close : CoverSearchEffect
+}
+
 class DiscogsCoverSearchViewModel(
     private val albumRepository: AlbumRepository,
     private val discogsApi: DiscogsApiService,
@@ -33,6 +43,9 @@ class DiscogsCoverSearchViewModel(
 
     private val _uiState = MutableStateFlow(CoverSearchState())
     val uiState = _uiState.asStateFlow()
+
+    private val _effects = MutableSharedFlow<CoverSearchEffect>(extraBufferCapacity = 1)
+    val effects = _effects.asSharedFlow()
 
     private var currentRequest: CoverSearchRequest? = null
 
@@ -248,4 +261,83 @@ class DiscogsCoverSearchViewModel(
             }
         }
     }
+
+    fun prepareAutofillPromptIfNeeded(
+        picked: DiscogsSearchResult,
+        shouldPromptAutofill: Boolean,
+    ) {
+        val request = currentRequest ?: return
+        if (!shouldPromptAutofill) return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val album = albumRepository.getById(request.albumId)
+            if (album == null) {
+                _effects.tryEmit(CoverSearchEffect.Close)
+                return@launch
+            }
+
+            val extracted = picked.toAutofillCandidate()
+            val labels = computeWillFillLabels(
+                existingReleaseYear = album.releaseYear,
+                existingCatalogNo = album.catalogNo,
+                existingLabel = album.label,
+                existingFormat = album.format,
+                candidate = extracted,
+            )
+
+            if (labels.isEmpty()) {
+                _effects.tryEmit(CoverSearchEffect.Close)
+            } else {
+                _uiState.value = _uiState.value.copy(
+                    pendingAutofill = extracted,
+                    willFillLabels = labels,
+                )
+            }
+        }
+    }
+
+    fun dismissAutofillPrompt() {
+        _uiState.value = _uiState.value.copy(
+            pendingAutofill = null,
+            willFillLabels = emptyList(),
+        )
+    }
+
+    fun applyDiscogsFillMissing() {
+        val request = currentRequest ?: return
+        val c = _uiState.value.pendingAutofill ?: return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                albumRepository.fillMissingFields(
+                    albumId = request.albumId,
+                    releaseYear = c.releaseYear,
+                    catalogNo = c.catalogNo,
+                    label = c.label,
+                    format = c.format,
+                )
+
+                dismissAutofillPrompt()
+                _effects.tryEmit(CoverSearchEffect.Close)
+            } catch (t: Throwable) {
+                _uiState.value = _uiState.value.copy(
+                    error = t.message ?: "Failed to update details",
+                )
+            }
+        }
+    }
+
+    private fun computeWillFillLabels(
+        existingReleaseYear: Int?,
+        existingCatalogNo: String?,
+        existingLabel: String?,
+        existingFormat: String?,
+        candidate: DiscogsAutofillCandidate,
+    ): List<String> = buildList {
+        if (existingReleaseYear == null && candidate.releaseYear != null) add("Year: ${candidate.releaseYear}")
+        if (existingCatalogNo.isNullOrBlank() && !candidate.catalogNo.isNullOrBlank()) add("Catalog #: ${candidate.catalogNo}")
+        if (existingLabel.isNullOrBlank() && !candidate.label.isNullOrBlank()) add("Label: ${candidate.label}")
+        if (existingFormat.isNullOrBlank() && !candidate.format.isNullOrBlank()) add("Format: ${candidate.format}")
+    }
+
 }

@@ -18,10 +18,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -29,15 +26,13 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.zak.pressmark.app.di.AppGraph
-import com.zak.pressmark.feature.artworkpicker.model.ArtworkCandidate
 import com.zak.pressmark.feature.artworkpicker.components.ArtworkPickerDialog
+import com.zak.pressmark.feature.artworkpicker.components.DiscogsConfirmDetailsSheet
+import com.zak.pressmark.feature.artworkpicker.model.ArtworkCandidate
 import com.zak.pressmark.feature.artworkpicker.model.ArtworkProviderId
-import com.zak.pressmark.data.remote.discogs.DiscogsAutofillCandidate
-import com.zak.pressmark.data.remote.discogs.toAutofillCandidate
 import com.zak.pressmark.feature.artworkpicker.vm.ArtworkPickerViewModelFactory
 import com.zak.pressmark.feature.artworkpicker.vm.DiscogsCoverSearchViewModel
-import com.zak.pressmark.feature.artworkpicker.components.DiscogsConfirmDetailsSheet
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collect
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,9 +58,15 @@ fun CoverSearchRoute(
     )
 
     val state by vm.uiState.collectAsStateWithLifecycle()
-    val scope = rememberCoroutineScope()
 
-    // Kick off / update search when inputs change
+    // VM-owned side effects (close when VM says we're done).
+    LaunchedEffect(vm) {
+        vm.effects.collect {
+            onClose()
+        }
+    }
+
+    // Kick off / update search when inputs change.
     LaunchedEffect(albumId, artist, title) {
         if (albumId.isNotBlank()) {
             vm.start(
@@ -95,51 +96,22 @@ fun CoverSearchRoute(
         }
     }
 
-    // Reflection-free autofill mapping lives in data/remote/discogs.
-
-    fun computeWillFillLabels(
-        existingReleaseYear: Int?,
-        existingCatalogNo: String?,
-        existingLabel: String?,
-        existingFormat: String?,
-        candidate: DiscogsAutofillCandidate,
-    ): List<String> = buildList {
-        if (existingReleaseYear == null && candidate.releaseYear != null) add("Year: ${candidate.releaseYear}")
-        if (existingCatalogNo.isNullOrBlank() && !candidate.catalogNo.isNullOrBlank()) add("Catalog #: ${candidate.catalogNo}")
-        if (existingLabel.isNullOrBlank() && !candidate.label.isNullOrBlank()) add("Label: ${candidate.label}")
-        if (existingFormat.isNullOrBlank() && !candidate.format.isNullOrBlank()) add("Format: ${candidate.format}")
-    }
-
-    var pendingCandidate by remember { mutableStateOf<DiscogsAutofillCandidate?>(null) }
-    var willFillLabels by remember { mutableStateOf<List<String>>(emptyList()) }
-
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-    fun closeAndReset() {
-        pendingCandidate = null
-        willFillLabels = emptyList()
-        onClose()
-    }
-
-    if (pendingCandidate != null) {
+    if (state.pendingAutofill != null) {
         DiscogsConfirmDetailsSheet(
             sheetState = sheetState,
-            willFillLabels = willFillLabels,
+            willFillLabels = state.willFillLabels,
             onUseDiscogsFillMissing = {
-                val c = pendingCandidate ?: return@DiscogsConfirmDetailsSheet
-                scope.launch {
-                    graph.albumRepository.fillMissingFields(
-                        albumId = albumId,
-                        releaseYear = c.releaseYear,
-                        catalogNo = c.catalogNo,
-                        label = c.label,
-                        format = c.format,
-                    )
-                    closeAndReset()
-                }
+                vm.applyDiscogsFillMissing()
             },
-            onKeepMyEntry = { closeAndReset() },
-            onDismiss = { closeAndReset() },
+            onKeepMyEntry = {
+                vm.dismissAutofillPrompt()
+                onClose()
+            },
+            onDismiss = {
+                vm.dismissAutofillPrompt()
+                onClose()
+            },
         )
     }
 
@@ -206,40 +178,25 @@ fun CoverSearchRoute(
                 title = title,
                 results = candidates,
                 onPick = { candidate ->
-                    discogsById[candidate.providerItemId]?.let { picked ->
-                        // Always set the cover selection first.
-                        vm.pickResult(picked)
+                    val picked = discogsById[candidate.providerItemId]
+                    if (picked == null) {
+                        onClose()
+                        return@ArtworkPickerDialog
+                    }
 
-                        // Batch E: only prompt in Save & Exit flow (list success origin).
-                        if (!shouldPromptAutofill) {
-                            onClose()
-                            return@ArtworkPickerDialog
-                        }
+                    // Always set the cover selection first.
+                    vm.pickResult(picked)
 
-                        scope.launch {
-                            val album = graph.albumRepository.getById(albumId)
-                            if (album == null) {
-                                onClose()
-                                return@launch
-                            }
+                    // Only prompt in Save & Exit flow (list success origin).
+                    if (!shouldPromptAutofill) {
+                        onClose()
+                        return@ArtworkPickerDialog
+                    }
 
-                            val extracted = picked.toAutofillCandidate()
-                            val labels = computeWillFillLabels(
-                                existingReleaseYear = album.releaseYear,
-                                existingCatalogNo = album.catalogNo,
-                                existingLabel = album.label,
-                                existingFormat = album.format,
-                                candidate = extracted,
-                            )
-
-                            if (labels.isEmpty()) {
-                                onClose()
-                            } else {
-                                pendingCandidate = extracted
-                                willFillLabels = labels
-                            }
-                        }
-                    } ?: onClose()
+                    vm.prepareAutofillPromptIfNeeded(
+                        picked = picked,
+                        shouldPromptAutofill = true,
+                    )
                 },
                 onSkip = onClose,
                 onTakePhoto = onTakePhoto,
