@@ -1,4 +1,4 @@
-package com.zak.pressmark.feature.albumlist.coversearch
+package com.zak.pressmark.feature.albumlist.coversearch.vm
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

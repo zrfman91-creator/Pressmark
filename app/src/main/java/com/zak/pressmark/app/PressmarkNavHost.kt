@@ -24,7 +24,7 @@ import com.zak.pressmark.feature.artist.route.ArtistRoute
 import com.zak.pressmark.feature.artist.vm.ArtistViewModel
 import com.zak.pressmark.feature.artist.vm.ArtistViewModelFactory
 import com.zak.pressmark.feature.artworkpicker.route.CoverSearchRoute
-import com.zak.pressmark.feature.covercapture.screen.CameraCoverCaptureRoute
+import com.zak.pressmark.feature.capturecover.screen.CameraCoverCaptureRoute
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 

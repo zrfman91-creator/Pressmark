@@ -34,8 +34,8 @@ import com.zak.pressmark.core.artwork.ArtworkPickerDialog
 import com.zak.pressmark.core.artwork.ArtworkProviderId
 import com.zak.pressmark.data.remote.discogs.DiscogsAutofillCandidate
 import com.zak.pressmark.data.remote.discogs.toAutofillCandidate
-import com.zak.pressmark.feature.artworkpicker.ArtworkPickerViewModelFactory
-import com.zak.pressmark.feature.artworkpicker.DiscogsCoverSearchViewModel
+import com.zak.pressmark.feature.artworkpicker.vm.ArtworkPickerViewModelFactory
+import com.zak.pressmark.feature.artworkpicker.vm.DiscogsCoverSearchViewModel
 import com.zak.pressmark.feature.artworkpicker.components.DiscogsConfirmDetailsSheet
 import kotlinx.coroutines.launch
 

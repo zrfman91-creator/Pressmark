@@ -12,7 +12,7 @@ import com.zak.pressmark.data.remote.musicbrainz.MusicBrainzArtworkApi
 import com.zak.pressmark.data.remote.musicbrainz.MusicBrainzArtworkRepository
 import com.zak.pressmark.data.repository.AlbumRepository
 import com.zak.pressmark.data.repository.ArtistRepository
-import com.zak.pressmark.feature.albumlist.imageloading.AppImageLoader
+import com.zak.pressmark.core.util.AppImageLoader
 import okhttp3.Cache
 import okhttp3.OkHttpClient
 import java.io.File

@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.size.Precision
-import com.zak.pressmark.feature.albumlist.imageloading.AppImageLoader
+import com.zak.pressmark.core.util.AppImageLoader
 
 private const val DISCOGS_NOT_FOUND_COVER_URI: String = "discogs:not_found"
 

@@ -1,4 +1,4 @@
-package com.zak.pressmark.feature.artworkpicker
+package com.zak.pressmark.feature.artworkpicker.vm
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider

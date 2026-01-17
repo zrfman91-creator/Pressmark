@@ -1,4 +1,4 @@
-package com.zak.pressmark.feature.albumlist.imageloading
+package com.zak.pressmark.core.util
 
 import android.content.Context
 import coil3.ImageLoader

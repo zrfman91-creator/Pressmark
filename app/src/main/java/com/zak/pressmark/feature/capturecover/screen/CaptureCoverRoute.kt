@@ -1,4 +1,4 @@
-package com.zak.pressmark.feature.covercapture.screen
+package com.zak.pressmark.feature.capturecover.screen
 
 import android.Manifest
 import android.content.Context

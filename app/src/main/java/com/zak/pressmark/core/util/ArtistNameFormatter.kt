@@ -1,7 +1,4 @@
-// =======================================================
-// file: app/src/main/java/com/zak/pressmark/ui/albumlist/format/ArtistNameFormatter.kt
-// =======================================================
-package com.zak.pressmark.feature.albumlist.format
+package com.zak.pressmark.core.util
 
 import java.util.Locale
 
