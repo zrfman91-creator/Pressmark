@@ -2,7 +2,7 @@
 # Toolchain
 agp = "9.0.0"
 kotlin = "2.3.0"
-ksp = "2.3.2"
+ksp = "2.3.4"
 
 # AndroidX
 coreKtx = "1.17.0"
@@ -11,10 +11,10 @@ navigation = "2.9.6"
 activityCompose = "1.12.2"
 
 # Compose (BOM controls Compose artifact versions)
-composeBom = "2025.12.01"
+composeBom = "2026.01.00"
 
 # Room
-room = "2.8.1"
+room = "2.8.4"
 
 # Test
 junit = "4.13.2"
@@ -28,16 +28,14 @@ okhttp = "4.12.0"
 # Images
 coil3 = "3.3.0"
 
-#Google Services
+# Google Services
 googleServices = "4.4.4"
 firebaseAppDistribution = "5.2.0"
-ui = "1.10.0"
-foundationLayout = "1.10.0"
-uiGraphics = "1.10.0"
 
-#Camera
+
+# Camera
 camerax = "1.5.2"
-foundation = "1.10.1"
+exifinterface = "1.4.2"
 
 
 [libraries]
@@ -85,21 +83,20 @@ okhttp-logging = { module = "com.squareup.okhttp3:logging-interceptor", version.
 # Images
 coil3-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil3" }
 coil3-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil3" }
-androidx-ui = { group = "androidx.compose.ui", name = "ui", version.ref = "ui" }
-androidx-foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout", version.ref = "foundationLayout" }
-androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics", version.ref = "uiGraphics" }
 
-#Camera
+
+
+
+# Camera
 androidx-camera-core = { group = "androidx.camera", name = "camera-core", version.ref = "camerax" }
 androidx-camera-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "camerax" }
 androidx-camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "camerax" }
 androidx-camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "camerax" }
-androidx-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundation" }
+androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
 
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }

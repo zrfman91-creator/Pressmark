@@ -3,6 +3,9 @@ package com.zak.pressmark.feature.capturecover.screen
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.net.Uri
 import android.util.Rational
 import android.view.Surface
@@ -71,27 +74,23 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.exifinterface.media.ExifInterface
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.File
+import java.io.FileOutputStream
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlinx.coroutines.withContext
+import kotlin.math.min
 
-/**
- * Simple CameraX capture screen:
- * - requests CAMERA permission (runtime)
- * - shows preview
- * - takes photo
- * - saves to app-private storage (filesDir) so it will NOT appear in the system gallery
- * - returns a file:// Uri pointing at durable storage
- *
- * This fixes the common "black preview" issue caused by missing permission or binding before
- * a surface provider is ready.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CameraCoverCaptureRoute(
@@ -295,18 +294,15 @@ fun CameraCoverCaptureRoute(
                                 if (!canCapture) return@ShutterButton
                                 isCapturing = true
                                 scope.launch {
-                                    takePhoto(
-                                        context = context,
-                                        imageCapture = imageCapture,
-                                        onSuccess = { result ->
+                                    runCatching { takePhotoCropped(context = context, imageCapture = imageCapture) }
+                                        .onSuccess { result ->
                                             isCapturing = false
                                             captured = result
-                                        },
-                                        onError = { msg ->
+                                        }
+                                        .onFailure { t ->
                                             isCapturing = false
-                                            errorText = msg
-                                        },
-                                    )
+                                            errorText = t.message ?: "Failed to capture photo."
+                                        }
                                 }
                             }
                         )
@@ -374,9 +370,12 @@ private fun ConfirmCapturedCover(
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier.fillMaxSize()) {
+        val ctx = LocalContext.current
         AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(captured.uri)
+            model = ImageRequest.Builder(ctx)
+                .data(captured.file) // <- use file directly
+                .memoryCacheKey("cover_${captured.file?.lastModified()}")
+                .diskCacheKey("cover_${captured.file?.lastModified()}")
                 .crossfade(true)
                 .build(),
             contentDescription = "Captured cover",
@@ -489,29 +488,84 @@ private fun ShutterButton(
     }
 }
 
-private fun takePhoto(
+/**
+ * CameraX's viewport/crop controls often affect **preview** reliably, but many devices/versions still
+ * save the full sensor image to disk.
+ *
+ * To guarantee what the user sees is what they get, we:
+ * 1) capture to a file (fast path, no YUV conversion)
+ * 2) read EXIF orientation
+ * 3) decode (downsampled), rotate, center-crop to a square
+ * 4) overwrite the original file with the cropped image
+ */
+private suspend fun takePhotoCropped(
     context: Context,
     imageCapture: ImageCapture,
-    onSuccess: (CapturedPhoto) -> Unit,
-    onError: (String) -> Unit,
-) {
-    val file = createDurableCoverFile(context)
-    val outputOptions = ImageCapture.OutputFileOptions.Builder(file).build()
+): CapturedPhoto {
+    val dir = File(context.filesDir, "covers").apply { if (!exists()) mkdirs() }
+    val base = System.currentTimeMillis()
+    val rawFile = File(dir, "cover_raw_$base.jpg")
+    val outFile = File(dir, "cover_$base.jpg")
 
-    imageCapture.takePicture(
-        outputOptions,
-        ContextCompat.getMainExecutor(context),
-        object : ImageCapture.OnImageSavedCallback {
-            override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                val uri = outputFileResults.savedUri ?: Uri.fromFile(file)
-                onSuccess(CapturedPhoto(uri = uri, file = file))
-            }
+    val outputOptions = ImageCapture.OutputFileOptions.Builder(rawFile).build()
 
-            override fun onError(exception: ImageCaptureException) {
-                onError(exception.message ?: "Failed to capture photo.")
+    val finalUri = suspendCancellableCoroutine<Uri> { cont ->
+        imageCapture.takePicture(
+            outputOptions,
+            ContextCompat.getMainExecutor(context),
+            object : ImageCapture.OnImageSavedCallback {
+                override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
+                    CoroutineScope(Dispatchers.IO).launch {
+                        if (!cont.isActive) return@launch
+                        try {
+                            cropSquareToNewFile(rawFile = rawFile, outFile = outFile)
+                            rawFile.delete()
+
+                            if (cont.isActive) cont.resume(Uri.fromFile(outFile))
+                        } catch (t: Throwable) {
+                            if (cont.isActive) cont.resumeWithException(t)
+                        }
+                    }
+                }
+
+                override fun onError(exception: ImageCaptureException) {
+                    if (cont.isActive) cont.resumeWithException(exception)
+                }
             }
-        }
-    )
+        )
+    }
+
+    return CapturedPhoto(uri = finalUri, file = outFile)
+}
+
+private fun decodeDownsampled(file: File, maxDimPx: Int): Bitmap? {
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeFile(file.absolutePath, bounds)
+    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+
+    var sample = 1
+    val maxDim = maxOf(bounds.outWidth, bounds.outHeight)
+    while (maxDim / sample > maxDimPx) sample *= 2
+
+    val opts = BitmapFactory.Options().apply {
+        inSampleSize = sample
+        inPreferredConfig = Bitmap.Config.ARGB_8888
+    }
+    return BitmapFactory.decodeFile(file.absolutePath, opts)
+}
+
+private fun exifRotationDegrees(exif: ExifInterface): Int {
+    return when (
+        exif.getAttributeInt(
+            ExifInterface.TAG_ORIENTATION,
+            ExifInterface.ORIENTATION_NORMAL
+        )
+    ) {
+        ExifInterface.ORIENTATION_ROTATE_90 -> 90
+        ExifInterface.ORIENTATION_ROTATE_180 -> 180
+        ExifInterface.ORIENTATION_ROTATE_270 -> 270
+        else -> 0
+    }
 }
 
 private suspend fun awaitCameraProvider(context: Context): ProcessCameraProvider {
@@ -539,5 +593,42 @@ private fun ImageCapture.Builder.setCropAspectRatioCompat(crop: Rational): Image
         this
     } catch (_: Throwable) {
         this
+    }
+}
+private fun cropSquareToNewFile(rawFile: File, outFile: File) {
+    if (!rawFile.exists()) error("Raw file missing")
+
+    val exif = ExifInterface(rawFile.absolutePath)
+    val rotationDegrees = exifRotationDegrees(exif)
+
+    val bitmap = decodeDownsampled(rawFile, maxDimPx = 2048) ?: error("Decode failed")
+
+    val rotated = if (rotationDegrees != 0) {
+        val m = Matrix().apply { postRotate(rotationDegrees.toFloat()) }
+        Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, m, true).also {
+            if (it != bitmap) bitmap.recycle()
+        }
+    } else bitmap
+
+    val side = minOf(rotated.width, rotated.height)
+    val left = (rotated.width - side) / 2
+    val top = (rotated.height - side) / 2
+    val cropped = Bitmap.createBitmap(rotated, left, top, side, side)
+    if (cropped != rotated) rotated.recycle()
+
+    FileOutputStream(outFile, false).use { out ->
+        cropped.compress(Bitmap.CompressFormat.JPEG, 92, out)
+        out.flush()
+    }
+    cropped.recycle()
+
+    // normalize EXIF on output
+    try {
+        ExifInterface(outFile.absolutePath).apply {
+            setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL.toString())
+            saveAttributes()
+        }
+    } catch (_: Throwable) {
+        // ignore
     }
 }

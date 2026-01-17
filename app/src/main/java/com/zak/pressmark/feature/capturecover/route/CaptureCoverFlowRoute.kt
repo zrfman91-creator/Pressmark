@@ -8,7 +8,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.zak.pressmark.data.repository.AlbumRepository
 import com.zak.pressmark.feature.capturecover.screen.CameraCoverCaptureRoute
 import com.zak.pressmark.feature.capturecover.vm.CaptureCoverEffect
-import kotlinx.coroutines.flow.collect
 import com.zak.pressmark.feature.capturecover.vm.CaptureCoverFlowViewModel
 import com.zak.pressmark.feature.capturecover.vm.CaptureCoverFlowViewModelFactory
 

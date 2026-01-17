@@ -1,5 +1,6 @@
 // File: app/build.gradle.kts
 
+import com.google.firebase.appdistribution.gradle.AppDistributionExtension
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Properties
 
@@ -24,7 +25,6 @@ val localProps = Properties().apply {
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.google.services)
@@ -39,11 +39,8 @@ android {
         applicationId = "com.zak.pressmark"
         minSdk = 26
         targetSdk = 36
-
-        // ✅ For “official” alpha cadence: bump this for every distributed build
         versionCode = 1
         versionName = "0.1.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         val discogsToken = (localProps["DISCOGS_TOKEN"] as String?)?.trim().orEmpty()
@@ -57,9 +54,6 @@ android {
             versionNameSuffix = "-debug"
         }
 
-        /**
-         * Alpha = installable, release-like behavior, debug-signed for easy side-load.
-         */
         create("alpha") {
             initWith(getByName("release"))
             signingConfig = signingConfigs.getByName("debug")
@@ -70,16 +64,12 @@ android {
             isDebuggable = false
             matchingFallbacks += listOf("release")
 
-            // ✅ Firebase App Distribution config for Alpha
-            firebaseAppDistribution {
-                // Option A: distribute to a Firebase tester GROUP
+            // Firebase App Distribution config for Alpha
+            // Kotlin DSL accessor can be flaky; configure the extension explicitly.
+            extensions.configure<AppDistributionExtension>("firebaseAppDistribution") {
                 groups = "internal"
-
-                // Option B: distribute directly to emails (comma-separated)
                 // testers = "wanderingbogeygrips@gmail.com"
-
                 releaseNotes = "Pressmark 0.1.0-alpha01"
-                // Or use a file:
                 // releaseNotesFile = "release-notes-alpha.txt"
             }
         }
@@ -97,16 +87,15 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-
     kotlin {
         compilerOptions {
-            jvmTarget = JvmTarget.JVM_17
+            jvmTarget.set(JvmTarget.JVM_17)
         }
     }
-
     buildFeatures {
         compose = true
         buildConfig = true
+        resValues = true
     }
 }
 
@@ -124,7 +113,7 @@ dependencies {
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
-    implementation(libs.androidx.foundation)
+    implementation(libs.androidx.exifinterface)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 
@@ -153,6 +142,7 @@ dependencies {
     implementation(libs.androidx.camera.camera2)
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
+    implementation("androidx.exifinterface:exifinterface:1.4.2")
 
     // Unit tests
     testImplementation(libs.junit)

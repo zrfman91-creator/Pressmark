@@ -33,7 +33,7 @@ val AddAlbumFormStateSaver: Saver<AddAlbumFormState, Any> = mapSaver(
     },
     restore = { restored ->
         @Suppress("UNCHECKED_CAST")
-        val map = restored as Map<String, Any?>
+        val map = restored
         AddAlbumFormState(
             title = map["title"] as? String ?: "",
             artist = map["artist"] as? String ?: "",
