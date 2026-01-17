@@ -4,12 +4,16 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.util.Rational
+import android.view.Surface
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
+import androidx.camera.core.UseCaseGroup
+import androidx.camera.core.ViewPort
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Canvas
@@ -137,14 +141,21 @@ fun CameraCoverCaptureRoute(
         }
     }
 
-    val imageCapture = remember {
+    val crop = remember { Rational(1, 1) }
+    var targetRotation by remember {
+        mutableStateOf(previewView.display?.rotation ?: Surface.ROTATION_0)
+    }
+
+    val imageCapture: ImageCapture = remember(targetRotation) {
         ImageCapture.Builder()
             .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+            .setTargetRotation(targetRotation)
+            .applyCropAspectRatio(crop)
             .build()
     }
 
     // Bind/unbind camera only when permission is granted.
-    LaunchedEffect(hasPermission, captured, lifecycleOwner) {
+    LaunchedEffect(hasPermission, captured, lifecycleOwner, targetRotation) {
         if (!hasPermission || captured != null) {
             runCatching { ProcessCameraProvider.getInstance(context).get().unbindAll() }
             return@LaunchedEffect
@@ -154,14 +165,21 @@ fun CameraCoverCaptureRoute(
         val preview = Preview.Builder().build().also { p ->
             p.surfaceProvider = previewView.surfaceProvider
         }
+        val viewPort = ViewPort.Builder(crop, targetRotation)
+            .setScaleType(ViewPort.FILL_CENTER)
+            .build()
+        val group = UseCaseGroup.Builder()
+            .addUseCase(preview)
+            .addUseCase(imageCapture)
+            .setViewPort(viewPort)
+            .build()
 
         try {
             provider.unbindAll()
             provider.bindToLifecycle(
                 lifecycleOwner,
                 CameraSelector.DEFAULT_BACK_CAMERA,
-                preview,
-                imageCapture,
+                group,
             )
             errorText = null
         } catch (t: Throwable) {
@@ -169,7 +187,7 @@ fun CameraCoverCaptureRoute(
         }
     }
 
-    LaunchedEffect(flashOn) {
+    LaunchedEffect(flashOn, imageCapture) {
         imageCapture.flashMode = if (flashOn) ImageCapture.FLASH_MODE_ON else ImageCapture.FLASH_MODE_OFF
     }
 
@@ -239,6 +257,12 @@ fun CameraCoverCaptureRoute(
                     AndroidView(
                         factory = { previewView },
                         modifier = Modifier.fillMaxSize(),
+                        update = { view ->
+                            val rotation = view.display?.rotation ?: Surface.ROTATION_0
+                            if (rotation != targetRotation) {
+                                targetRotation = rotation
+                            }
+                        },
                     )
 
                     CaptureFrameOverlay(modifier = Modifier.fillMaxSize())
@@ -397,7 +421,7 @@ private fun CaptureFrameOverlay(
 
         val pad = 24.dp.toPx()
         val cutoutSize = size.width - (pad * 2)
-        val top = (size.height * 0.18f).coerceAtLeast(pad)
+        val top = ((size.height - cutoutSize) / 2f).coerceAtLeast(pad)
 
         val rect = Rect(
             left = pad,
@@ -489,5 +513,16 @@ private suspend fun awaitCameraProvider(context: Context): ProcessCameraProvider
             },
             ContextCompat.getMainExecutor(context)
         )
+    }
+}
+
+@Suppress("SwallowedException")
+private fun ImageCapture.Builder.applyCropAspectRatio(crop: Rational): ImageCapture.Builder {
+    return try {
+        val method = ImageCapture.Builder::class.java.getMethod("setCropAspectRatio", Rational::class.java)
+        method.invoke(this, crop)
+        this
+    } catch (_: Throwable) {
+        this
     }
 }
