@@ -515,3 +515,14 @@ private suspend fun awaitCameraProvider(context: Context): ProcessCameraProvider
         )
     }
 }
+
+@Suppress("SwallowedException")
+private fun ImageCapture.Builder.setCropAspectRatio(crop: Rational): ImageCapture.Builder {
+    return try {
+        val method = ImageCapture.Builder::class.java.getMethod("setCropAspectRatio", Rational::class.java)
+        method.invoke(this, crop)
+        this
+    } catch (_: Throwable) {
+        this
+    }
+}
