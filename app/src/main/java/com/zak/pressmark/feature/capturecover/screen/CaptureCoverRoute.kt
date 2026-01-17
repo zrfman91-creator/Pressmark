@@ -23,6 +23,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -71,6 +72,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -82,13 +84,11 @@ import coil3.request.crossfade
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.File
 import java.io.FileOutputStream
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
-import kotlinx.coroutines.withContext
 import kotlin.math.min
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -234,94 +234,116 @@ fun CameraCoverCaptureRoute(
                 )
             },
         ) { padding ->
-            Box(
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
-                contentAlignment = Alignment.Center,
             ) {
-                when {
-                    !hasPermission -> {
-                        PermissionGate(
-                            message = errorText ?: "Camera permission is required.",
-                            onRequest = { permissionLauncher.launch(Manifest.permission.CAMERA) },
-                            onCancel = onBack,
-                        )
-                    }
-
-                    captured != null -> {
-                        ConfirmCapturedCover(
-                            captured = captured!!,
-                            onRetake = {
-                                captured?.file?.delete()
-                                captured = null
-                                errorText = null
-                                isCapturing = false
-                            },
-                            onUse = { onCaptured(captured!!.uri) },
-                        )
-                    }
-
-                    else -> {
-                        AndroidView(
-                            factory = { previewView },
-                            modifier = Modifier.fillMaxSize(),
-                            update = { view ->
-                                val rotation = view.display?.rotation ?: Surface.ROTATION_0
-                                if (rotation != targetRotation) {
-                                    targetRotation = rotation
-                                }
-                            },
-                        )
-
-                        CaptureFrameOverlay(modifier = Modifier.fillMaxSize())
-
-                        Text(
-                            text = "Center the album cover and tap the shutter",
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .padding(top = 12.dp),
-                        )
-
-                        val canCapture = hasPermission && errorText == null && !isCapturing
-                        ShutterButton(
-                            enabled = canCapture,
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .padding(bottom = 20.dp),
-                            onClick = {
-                                if (!canCapture) return@ShutterButton
-                                isCapturing = true
-                                scope.launch {
-                                    runCatching { takePhotoCropped(context = context, imageCapture = imageCapture) }
-                                        .onSuccess { result ->
-                                            isCapturing = false
-                                            captured = result
-                                        }
-                                        .onFailure { t ->
-                                            isCapturing = false
-                                            errorText = t.message ?: "Failed to capture photo."
-                                        }
-                                }
-                            }
-                        )
+                val density = LocalDensity.current
+                val minDimPx = with(density) { min(maxWidth, maxHeight).toPx() }
+                val framePaddingPx = with(density) { 24.dp.toPx() }
+                val frameFraction = remember(minDimPx, framePaddingPx) {
+                    if (minDimPx <= 0f) {
+                        1f
+                    } else {
+                        ((minDimPx - framePaddingPx * 2f) / minDimPx).coerceIn(0.4f, 1f)
                     }
                 }
 
-                errorText?.let { msg ->
-                    // Show errors even on top of the preview.
-                    Row(
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .padding(12.dp),
-                        horizontalArrangement = Arrangement.Center,
-                    ) {
-                        Text(
-                            text = msg,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    when {
+                        !hasPermission -> {
+                            PermissionGate(
+                                message = errorText ?: "Camera permission is required.",
+                                onRequest = { permissionLauncher.launch(Manifest.permission.CAMERA) },
+                                onCancel = onBack,
+                            )
+                        }
+
+                        captured != null -> {
+                            ConfirmCapturedCover(
+                                captured = captured!!,
+                                onRetake = {
+                                    captured?.file?.delete()
+                                    captured = null
+                                    errorText = null
+                                    isCapturing = false
+                                },
+                                onUse = { onCaptured(captured!!.uri) },
+                            )
+                        }
+
+                        else -> {
+                            AndroidView(
+                                factory = { previewView },
+                                modifier = Modifier.fillMaxSize(),
+                                update = { view ->
+                                    val rotation = view.display?.rotation ?: Surface.ROTATION_0
+                                    if (rotation != targetRotation) {
+                                        targetRotation = rotation
+                                    }
+                                },
+                            )
+
+                            CaptureFrameOverlay(
+                                modifier = Modifier.fillMaxSize(),
+                                frameFraction = frameFraction,
+                            )
+
+                            Text(
+                                text = "Center the album cover and tap the shutter",
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier
+                                    .align(Alignment.TopCenter)
+                                    .padding(top = 12.dp),
+                            )
+
+                            val canCapture = hasPermission && errorText == null && !isCapturing
+                            ShutterButton(
+                                enabled = canCapture,
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .padding(bottom = 20.dp),
+                                onClick = {
+                                    if (!canCapture) return@ShutterButton
+                                    isCapturing = true
+                                    scope.launch {
+                                        runCatching {
+                                            takePhotoCropped(
+                                                context = context,
+                                                imageCapture = imageCapture,
+                                                cropFraction = frameFraction,
+                                            )
+                                        }.onSuccess { result ->
+                                            isCapturing = false
+                                            captured = result
+                                        }.onFailure { t ->
+                                            isCapturing = false
+                                            errorText = t.message ?: "Failed to capture photo."
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    }
+
+                    errorText?.let { msg ->
+                        // Show errors even on top of the preview.
+                        Row(
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            Text(
+                                text = msg,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
                     }
                 }
             }
@@ -420,6 +442,7 @@ private fun ConfirmCapturedCover(
 @Composable
 private fun CaptureFrameOverlay(
     modifier: Modifier = Modifier,
+    frameFraction: Float = 1f,
 ) {
     // Draw a soft scrim with a square cutout + border, giving a clear framing target.
     Canvas(
@@ -429,14 +452,13 @@ private fun CaptureFrameOverlay(
     ) {
         drawRect(Color.Black.copy(alpha = 0.35f))
 
-        val pad = 24.dp.toPx()
-        val cutoutSize = size.width - (pad * 2)
-        val top = ((size.height - cutoutSize) / 2f).coerceAtLeast(pad)
-
+        val cutoutSize = min(size.width, size.height) * frameFraction
+        val left = (size.width - cutoutSize) / 2f
+        val top = (size.height - cutoutSize) / 2f
         val rect = Rect(
-            left = pad,
+            left = left,
             top = top,
-            right = pad + cutoutSize,
+            right = left + cutoutSize,
             bottom = top + cutoutSize,
         )
 
@@ -501,6 +523,7 @@ private fun ShutterButton(
 private suspend fun takePhotoCropped(
     context: Context,
     imageCapture: ImageCapture,
+    cropFraction: Float,
 ): CapturedPhoto {
     val dir = File(context.filesDir, "covers").apply { if (!exists()) mkdirs() }
     val base = System.currentTimeMillis()
@@ -518,7 +541,11 @@ private suspend fun takePhotoCropped(
                     CoroutineScope(Dispatchers.IO).launch {
                         if (!cont.isActive) return@launch
                         try {
-                            cropSquareToNewFile(rawFile = rawFile, outFile = outFile)
+                            cropSquareToNewFile(
+                                rawFile = rawFile,
+                                outFile = outFile,
+                                cropFraction = cropFraction,
+                            )
                             rawFile.delete()
 
                             if (cont.isActive) cont.resume(Uri.fromFile(outFile))
@@ -595,7 +622,7 @@ private fun ImageCapture.Builder.setCropAspectRatioCompat(crop: Rational): Image
         this
     }
 }
-private fun cropSquareToNewFile(rawFile: File, outFile: File) {
+private fun cropSquareToNewFile(rawFile: File, outFile: File, cropFraction: Float) {
     if (!rawFile.exists()) error("Raw file missing")
 
     val exif = ExifInterface(rawFile.absolutePath)
@@ -610,7 +637,8 @@ private fun cropSquareToNewFile(rawFile: File, outFile: File) {
         }
     } else bitmap
 
-    val side = minOf(rotated.width, rotated.height)
+    val minSide = minOf(rotated.width, rotated.height)
+    val side = (minSide * cropFraction).toInt().coerceIn(1, minSide)
     val left = (rotated.width - side) / 2
     val top = (rotated.height - side) / 2
     val cropped = Bitmap.createBitmap(rotated, left, top, side, side)
