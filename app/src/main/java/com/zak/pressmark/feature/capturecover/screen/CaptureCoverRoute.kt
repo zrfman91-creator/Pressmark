@@ -146,7 +146,7 @@ fun CameraCoverCaptureRoute(
         mutableStateOf(previewView.display?.rotation ?: Surface.ROTATION_0)
     }
 
-    val imageCapture: ImageCapture = remember(targetRotation) {
+    val imageCapture = remember(targetRotation) {
         ImageCapture.Builder()
             .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
             .setTargetRotation(targetRotation)
