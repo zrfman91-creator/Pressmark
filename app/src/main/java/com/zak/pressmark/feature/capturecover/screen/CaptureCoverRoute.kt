@@ -146,6 +146,7 @@ fun CameraCoverCaptureRoute(
         mutableStateOf(previewView.display?.rotation ?: Surface.ROTATION_0)
     }
 
+    val imageCapture: ImageCapture = remember(targetRotation) {
     val imageCapture = remember(targetRotation) {
         ImageCapture.Builder()
             .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
@@ -421,7 +422,7 @@ private fun CaptureFrameOverlay(
 
         val pad = 24.dp.toPx()
         val cutoutSize = size.width - (pad * 2)
-        val top = (size.height * 0.18f).coerceAtLeast(pad)
+        val top = ((size.height - cutoutSize) / 2f).coerceAtLeast(pad)
 
         val rect = Rect(
             left = pad,
