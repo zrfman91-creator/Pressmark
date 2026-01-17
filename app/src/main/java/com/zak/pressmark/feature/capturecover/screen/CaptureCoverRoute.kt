@@ -147,10 +147,11 @@ fun CameraCoverCaptureRoute(
     }
 
     val imageCapture: ImageCapture = remember(targetRotation) {
+    val imageCapture = remember(targetRotation) {
         ImageCapture.Builder()
             .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
             .setTargetRotation(targetRotation)
-            .applyCropAspectRatio(crop)
+            .setCropAspectRatio(crop)
             .build()
     }
 
@@ -517,7 +518,7 @@ private suspend fun awaitCameraProvider(context: Context): ProcessCameraProvider
 }
 
 @Suppress("SwallowedException")
-private fun ImageCapture.Builder.applyCropAspectRatio(crop: Rational): ImageCapture.Builder {
+private fun ImageCapture.Builder.setCropAspectRatio(crop: Rational): ImageCapture.Builder {
     return try {
         val method = ImageCapture.Builder::class.java.getMethod("setCropAspectRatio", Rational::class.java)
         method.invoke(this, crop)
