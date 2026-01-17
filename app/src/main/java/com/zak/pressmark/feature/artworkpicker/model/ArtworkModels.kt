@@ -1,4 +1,4 @@
-package com.zak.pressmark.core.artwork
+package com.zak.pressmark.feature.artworkpicker.model
 
 data class ArtworkQuery(
     val albumId: String,

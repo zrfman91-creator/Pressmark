@@ -1,5 +1,5 @@
 // file: app/src/main/java/com/zak/pressmark/feature/albumdetails/components/AlbumDetailsHero.kt
-package com.zak.pressmark.feature.albumdetails.components
+package com.zak.pressmark.core.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box

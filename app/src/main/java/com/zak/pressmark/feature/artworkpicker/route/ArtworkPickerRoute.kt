@@ -29,9 +29,9 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.zak.pressmark.app.di.AppGraph
-import com.zak.pressmark.core.artwork.ArtworkCandidate
-import com.zak.pressmark.core.artwork.ArtworkPickerDialog
-import com.zak.pressmark.core.artwork.ArtworkProviderId
+import com.zak.pressmark.feature.artworkpicker.model.ArtworkCandidate
+import com.zak.pressmark.feature.artworkpicker.components.ArtworkPickerDialog
+import com.zak.pressmark.feature.artworkpicker.model.ArtworkProviderId
 import com.zak.pressmark.data.remote.discogs.DiscogsAutofillCandidate
 import com.zak.pressmark.data.remote.discogs.toAutofillCandidate
 import com.zak.pressmark.feature.artworkpicker.vm.ArtworkPickerViewModelFactory

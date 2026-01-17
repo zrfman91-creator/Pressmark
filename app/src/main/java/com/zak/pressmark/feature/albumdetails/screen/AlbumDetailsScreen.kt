@@ -40,7 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.zak.pressmark.feature.albumdetails.components.AlbumArtworkOverflowMenu
-import com.zak.pressmark.feature.albumdetails.components.AlbumDetailsHero
+import com.zak.pressmark.core.ui.components.AlbumDetailsHero
 import com.zak.pressmark.feature.albumdetails.components.AlbumDetailsInfoSection
 import com.zak.pressmark.feature.albumdetails.components.AlbumDetailsMetaRow
 import com.zak.pressmark.feature.albumdetails.components.AlbumDetailsNotesSection

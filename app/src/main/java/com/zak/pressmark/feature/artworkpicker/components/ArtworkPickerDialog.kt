@@ -1,4 +1,4 @@
-package com.zak.pressmark.core.artwork
+package com.zak.pressmark.feature.artworkpicker.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -17,6 +17,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import coil3.compose.AsyncImage
+import com.zak.pressmark.feature.artworkpicker.model.ArtworkCandidate
+import com.zak.pressmark.feature.artworkpicker.model.ArtworkProviderId
 
 @Composable
 fun ArtworkPickerDialog(

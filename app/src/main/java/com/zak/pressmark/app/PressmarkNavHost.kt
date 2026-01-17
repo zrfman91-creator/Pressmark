@@ -24,11 +24,9 @@ import com.zak.pressmark.feature.artist.route.ArtistRoute
 import com.zak.pressmark.feature.artist.vm.ArtistViewModel
 import com.zak.pressmark.feature.artist.vm.ArtistViewModelFactory
 import com.zak.pressmark.feature.artworkpicker.route.CoverSearchRoute
-import com.zak.pressmark.feature.capturecover.screen.CameraCoverCaptureRoute
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.launch
+import com.zak.pressmark.feature.capturecover.route.CaptureCoverFlowRoute
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PressmarkNavHost(
     navController: NavHostController,
@@ -225,8 +223,6 @@ fun PressmarkNavHost(
             val origin = backStackEntry.arguments?.getString(PressmarkRoutes.ARG_COVER_ORIGIN)
                 ?: PressmarkRoutes.COVER_ORIGIN_BACK
 
-            val scope = androidx.compose.runtime.rememberCoroutineScope()
-
             fun closeAfterCapture() {
                 when (origin) {
                     PressmarkRoutes.COVER_ORIGIN_DETAILS -> {
@@ -260,14 +256,11 @@ fun PressmarkNavHost(
                 }
             }
 
-            CameraCoverCaptureRoute(
+            CaptureCoverFlowRoute(
+                albumId = albumId,
+                albumRepository = graph.albumRepository,
                 onBack = { navController.popBackStack() },
-                onCaptured = { uri ->
-                    scope.launch {
-                        graph.albumRepository.setLocalCover(albumId, uri.toString())
-                        closeAfterCapture()
-                    }
-                }
+                onDone = { closeAfterCapture() },
             )
         }
 

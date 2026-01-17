@@ -22,8 +22,8 @@ import com.zak.pressmark.app.di.AppGraph
 import com.zak.pressmark.core.ui.dialog.AlbumEditDialog
 import com.zak.pressmark.core.ui.dialog.AlbumEditFields
 import com.zak.pressmark.data.local.model.AlbumWithArtistName
-import com.zak.pressmark.feature.albumdetails.components.AlbumDetailsHero
-import com.zak.pressmark.feature.albumlist.components.AlbumArtwork
+import com.zak.pressmark.core.ui.components.AlbumDetailsHero
+import com.zak.pressmark.core.ui.components.AlbumArtwork
 import com.zak.pressmark.feature.albumlist.screen.AlbumListScreen
 import com.zak.pressmark.feature.albumlist.vm.AlbumListViewModel
 

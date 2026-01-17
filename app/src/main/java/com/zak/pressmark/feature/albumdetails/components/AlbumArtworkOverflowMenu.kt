@@ -23,7 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.zak.pressmark.feature.albumlist.components.AlbumArtwork
+import com.zak.pressmark.core.ui.components.AlbumArtwork
 
 @Composable
 fun AlbumArtworkOverflowMenu(
