@@ -81,7 +81,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -89,7 +88,9 @@ import java.io.File
 import java.io.FileOutputStream
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -118,25 +119,18 @@ fun CameraCoverCaptureRoute(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { granted ->
             hasPermission = granted
-            errorText = if (!granted) {
-                "Camera permission is required to take a cover photo."
-            } else {
-                null
-            }
+            errorText = if (!granted) "Camera permission is required to take a cover photo." else null
         }
     )
 
-    // If we don't have permission, request it once on entry.
     LaunchedEffect(Unit) {
-        if (!hasPermission) {
-            permissionLauncher.launch(Manifest.permission.CAMERA)
-        }
+        if (!hasPermission) permissionLauncher.launch(Manifest.permission.CAMERA)
     }
 
     val previewView = remember {
         PreviewView(context).apply {
-            // More reliable across devices than PERFORMANCE for some OEMs.
             implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+            // IMPORTANT: We assume center-crop behavior for correct mapping.
             scaleType = PreviewView.ScaleType.FILL_CENTER
         }
     }
@@ -154,7 +148,6 @@ fun CameraCoverCaptureRoute(
             .build()
     }
 
-    // Bind/unbind camera only when permission is granted.
     LaunchedEffect(hasPermission, captured, lifecycleOwner, targetRotation, imageCapture) {
         if (!hasPermission || captured != null) {
             runCatching { ProcessCameraProvider.getInstance(context).get().unbindAll() }
@@ -182,7 +175,7 @@ fun CameraCoverCaptureRoute(
             provider.bindToLifecycle(
                 lifecycleOwner,
                 CameraSelector.DEFAULT_BACK_CAMERA,
-                group,
+                group
             )
             errorText = null
         } catch (t: Throwable) {
@@ -198,9 +191,7 @@ fun CameraCoverCaptureRoute(
     DisposableEffect(hasPermission) {
         onDispose {
             if (hasPermission) {
-                runCatching {
-                    ProcessCameraProvider.getInstance(context).get().unbindAll()
-                }
+                runCatching { ProcessCameraProvider.getInstance(context).get().unbindAll() }
             }
         }
     }
@@ -221,7 +212,6 @@ fun CameraCoverCaptureRoute(
                         }
                     },
                     actions = {
-                        // Flash toggle (only while actively capturing).
                         if (hasPermission && captured == null && errorText == null) {
                             IconButton(onClick = { flashOn = !flashOn }) {
                                 Icon(
@@ -240,15 +230,14 @@ fun CameraCoverCaptureRoute(
                     .padding(padding),
             ) {
                 val density = LocalDensity.current
-                val minDimPx = with(density) { min(maxWidth, maxHeight).toPx() }
-                val framePaddingPx = with(density) { 24.dp.toPx() }
-                val frameFraction = remember(minDimPx, framePaddingPx) {
-                    if (minDimPx <= 0f) {
-                        1f
-                    } else {
-                        ((minDimPx - framePaddingPx * 2f) / minDimPx).coerceIn(0.4f, 1f)
-                    }
-                }
+                val viewWpx = with(density) { maxWidth.toPx() }
+                val viewHpx = with(density) { maxHeight.toPx() }
+
+                // Keep overlay padding consistent with CaptureFrameOverlay.
+                val framePadPx = with(density) { 24.dp.toPx() }
+                val minDimPx = min(viewWpx, viewHpx).coerceAtLeast(1f)
+                val cutoutPx = (minDimPx - 2f * framePadPx).coerceAtLeast(minDimPx * 0.4f)
+                val frameFraction = (cutoutPx / minDimPx).coerceIn(0.4f, 1f)
 
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -282,9 +271,7 @@ fun CameraCoverCaptureRoute(
                                 modifier = Modifier.fillMaxSize(),
                                 update = { view ->
                                     val rotation = view.display?.rotation ?: Surface.ROTATION_0
-                                    if (rotation != targetRotation) {
-                                        targetRotation = rotation
-                                    }
+                                    if (rotation != targetRotation) targetRotation = rotation
                                 },
                             )
 
@@ -312,10 +299,12 @@ fun CameraCoverCaptureRoute(
                                     isCapturing = true
                                     scope.launch {
                                         runCatching {
-                                            takePhotoCropped(
+                                            takePhotoCroppedToOverlay(
                                                 context = context,
                                                 imageCapture = imageCapture,
-                                                cropFraction = frameFraction,
+                                                viewWpx = viewWpx,
+                                                viewHpx = viewHpx,
+                                                frameFraction = frameFraction,
                                             )
                                         }.onSuccess { result ->
                                             isCapturing = false
@@ -331,7 +320,6 @@ fun CameraCoverCaptureRoute(
                     }
 
                     errorText?.let { msg ->
-                        // Show errors even on top of the preview.
                         Row(
                             modifier = Modifier
                                 .align(Alignment.TopCenter)
@@ -370,18 +358,9 @@ private fun PermissionGate(
     }
 }
 
-private fun createDurableCoverFile(context: Context): File {
-    val dir = File(context.filesDir, "covers").apply {
-        if (!exists()) mkdirs()
-    }
-    // Fallback to filesDir if directory creation fails for any reason.
-    val targetDir = if (dir.exists() && dir.isDirectory) dir else context.filesDir
-    return File(targetDir, "cover_" + System.currentTimeMillis() + ".jpg")
-}
-
 private data class CapturedPhoto(
     val uri: Uri,
-    val file: File?,
+    val file: File,
 )
 
 @Composable
@@ -392,12 +371,9 @@ private fun ConfirmCapturedCover(
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier.fillMaxSize()) {
-        val ctx = LocalContext.current
         AsyncImage(
-            model = ImageRequest.Builder(ctx)
-                .data(captured.file) // <- use file directly
-                .memoryCacheKey("cover_${captured.file?.lastModified()}")
-                .diskCacheKey("cover_${captured.file?.lastModified()}")
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(captured.uri)
                 .crossfade(true)
                 .build(),
             contentDescription = "Captured cover",
@@ -405,7 +381,6 @@ private fun ConfirmCapturedCover(
             contentScale = ContentScale.Crop,
         )
 
-        // Subtle top label
         Surface(
             color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
             modifier = Modifier
@@ -444,7 +419,6 @@ private fun CaptureFrameOverlay(
     modifier: Modifier = Modifier,
     frameFraction: Float = 1f,
 ) {
-    // Draw a soft scrim with a square cutout + border, giving a clear framing target.
     Canvas(
         modifier = modifier.graphicsLayer {
             compositingStrategy = CompositingStrategy.Offscreen
@@ -455,6 +429,7 @@ private fun CaptureFrameOverlay(
         val cutoutSize = min(size.width, size.height) * frameFraction
         val left = (size.width - cutoutSize) / 2f
         val top = (size.height - cutoutSize) / 2f
+
         val rect = Rect(
             left = left,
             top = top,
@@ -462,7 +437,6 @@ private fun CaptureFrameOverlay(
             bottom = top + cutoutSize,
         )
 
-        // Punch out the cutout.
         drawRoundRect(
             color = Color.Transparent,
             topLeft = Offset(rect.left, rect.top),
@@ -471,7 +445,6 @@ private fun CaptureFrameOverlay(
             blendMode = BlendMode.Clear,
         )
 
-        // Border
         drawRoundRect(
             color = Color.White.copy(alpha = 0.75f),
             topLeft = Offset(rect.left, rect.top),
@@ -511,19 +484,19 @@ private fun ShutterButton(
 }
 
 /**
- * CameraX's viewport/crop controls often affect **preview** reliably, but many devices/versions still
- * save the full sensor image to disk.
+ * Captures RAW -> crops to match overlay region as seen in the PreviewView (FILL_CENTER) -> writes OUT file.
  *
- * To guarantee what the user sees is what they get, we:
- * 1) capture to a file (fast path, no YUV conversion)
- * 2) read EXIF orientation
- * 3) decode (downsampled), rotate, center-crop to a square
- * 4) overwrite the original file with the cropped image
+ * Why this fixes “thumbnail still full image”:
+ * PreviewView with FILL_CENTER shows a center-cropped view of the sensor buffer.
+ * If you only “center crop the saved file”, you crop the *full sensor*, not the *preview*.
+ * This function maps the overlay rect in VIEW space back into BUFFER space and crops that exact region.
  */
-private suspend fun takePhotoCropped(
+private suspend fun takePhotoCroppedToOverlay(
     context: Context,
     imageCapture: ImageCapture,
-    cropFraction: Float,
+    viewWpx: Float,
+    viewHpx: Float,
+    frameFraction: Float,
 ): CapturedPhoto {
     val dir = File(context.filesDir, "covers").apply { if (!exists()) mkdirs() }
     val base = System.currentTimeMillis()
@@ -538,19 +511,26 @@ private suspend fun takePhotoCropped(
             ContextCompat.getMainExecutor(context),
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                    CoroutineScope(Dispatchers.IO).launch {
-                        if (!cont.isActive) return@launch
+                    // Heavy work OFF main thread to avoid “not on main thread” / jank.
+                    kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
                         try {
-                            cropSquareToNewFile(
+                            cropToOverlayAndWrite(
                                 rawFile = rawFile,
                                 outFile = outFile,
-                                cropFraction = cropFraction,
+                                viewWpx = viewWpx,
+                                viewHpx = viewHpx,
+                                frameFraction = frameFraction,
                             )
                             rawFile.delete()
-
-                            if (cont.isActive) cont.resume(Uri.fromFile(outFile))
+                            val uri = Uri.fromFile(outFile)
+                            // Resume on main thread for safety with UI continuations.
+                            kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                if (cont.isActive) cont.resume(uri)
+                            }
                         } catch (t: Throwable) {
-                            if (cont.isActive) cont.resumeWithException(t)
+                            kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                if (cont.isActive) cont.resumeWithException(t)
+                            }
                         }
                     }
                 }
@@ -565,13 +545,107 @@ private suspend fun takePhotoCropped(
     return CapturedPhoto(uri = finalUri, file = outFile)
 }
 
+private fun cropToOverlayAndWrite(
+    rawFile: File,
+    outFile: File,
+    viewWpx: Float,
+    viewHpx: Float,
+    frameFraction: Float,
+) {
+    if (!rawFile.exists()) error("Raw file missing")
+
+    val exif = ExifInterface(rawFile.absolutePath)
+    val rotationDegrees = exifRotationDegrees(exif)
+
+    val bitmap = decodeDownsampled(rawFile, maxDimPx = 2400) ?: error("Decode failed")
+
+    val rotated = if (rotationDegrees != 0) {
+        val m = Matrix().apply { postRotate(rotationDegrees.toFloat()) }
+        Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, m, true).also {
+            if (it != bitmap) bitmap.recycle()
+        }
+    } else bitmap
+
+    val cropped = cropBitmapToOverlayFillCenter(
+        src = rotated,
+        viewWpx = viewWpx,
+        viewHpx = viewHpx,
+        frameFraction = frameFraction,
+    )
+    if (cropped !== rotated) rotated.recycle()
+
+    FileOutputStream(outFile, false).use { out ->
+        cropped.compress(Bitmap.CompressFormat.JPEG, 92, out)
+        out.flush()
+    }
+    cropped.recycle()
+
+    // Normalize EXIF orientation on output
+    try {
+        ExifInterface(outFile.absolutePath).apply {
+            setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL.toString())
+            saveAttributes()
+        }
+    } catch (_: Throwable) {
+        // ignore
+    }
+}
+
+/**
+ * Map overlay square (in view coords) back into the bitmap coords, using PreviewView.ScaleType.FILL_CENTER math:
+ * scale = max(viewW/bufW, viewH/bufH)
+ * visible buffer rect is centered in buffer; overlay rect is inside view.
+ */
+private fun cropBitmapToOverlayFillCenter(
+    src: Bitmap,
+    viewWpx: Float,
+    viewHpx: Float,
+    frameFraction: Float,
+): Bitmap {
+    val bufW = src.width.toFloat()
+    val bufH = src.height.toFloat()
+
+    val safeViewW = viewWpx.coerceAtLeast(1f)
+    val safeViewH = viewHpx.coerceAtLeast(1f)
+
+    val scale = max(safeViewW / bufW, safeViewH / bufH)
+
+    // Visible buffer size (in buffer pixels) that maps to the view.
+    val visibleBufW = safeViewW / scale
+    val visibleBufH = safeViewH / scale
+
+    val offsetX = (bufW - visibleBufW) / 2f
+    val offsetY = (bufH - visibleBufH) / 2f
+
+    // Overlay square in VIEW coords (centered)
+    val cutoutView = min(safeViewW, safeViewH) * frameFraction
+    val overlayLeftV = (safeViewW - cutoutView) / 2f
+    val overlayTopV = (safeViewH - cutoutView) / 2f
+
+    // Map overlay rect to BUFFER coords
+    val leftB = overlayLeftV / scale + offsetX
+    val topB = overlayTopV / scale + offsetY
+    val sizeB = cutoutView / scale
+
+    // Clamp to bitmap bounds
+    var x = leftB.roundToInt().coerceIn(0, src.width - 1)
+    var y = topB.roundToInt().coerceIn(0, src.height - 1)
+
+    var s = sizeB.roundToInt().coerceAtLeast(1)
+    if (x + s > src.width) s = src.width - x
+    if (y + s > src.height) s = src.height - y
+    s = s.coerceAtLeast(1)
+
+    return Bitmap.createBitmap(src, x, y, s, s)
+}
+
 private fun decodeDownsampled(file: File, maxDimPx: Int): Bitmap? {
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     BitmapFactory.decodeFile(file.absolutePath, bounds)
     if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
 
     var sample = 1
-    val maxDim = maxOf(bounds.outWidth, bounds.outHeight)
+    val maxDim = max(bounds.outWidth, bounds.outHeight)
     while (maxDim / sample > maxDimPx) sample *= 2
 
     val opts = BitmapFactory.Options().apply {
@@ -613,50 +687,11 @@ private suspend fun awaitCameraProvider(context: Context): ProcessCameraProvider
 
 @Suppress("SwallowedException")
 private fun ImageCapture.Builder.setCropAspectRatioCompat(crop: Rational): ImageCapture.Builder {
-    // CameraX's setCropAspectRatio has been hidden/changed across versions; reflection keeps us resilient.
     return try {
         val method = ImageCapture.Builder::class.java.getMethod("setCropAspectRatio", Rational::class.java)
         method.invoke(this, crop)
         this
     } catch (_: Throwable) {
         this
-    }
-}
-private fun cropSquareToNewFile(rawFile: File, outFile: File, cropFraction: Float) {
-    if (!rawFile.exists()) error("Raw file missing")
-
-    val exif = ExifInterface(rawFile.absolutePath)
-    val rotationDegrees = exifRotationDegrees(exif)
-
-    val bitmap = decodeDownsampled(rawFile, maxDimPx = 2048) ?: error("Decode failed")
-
-    val rotated = if (rotationDegrees != 0) {
-        val m = Matrix().apply { postRotate(rotationDegrees.toFloat()) }
-        Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, m, true).also {
-            if (it != bitmap) bitmap.recycle()
-        }
-    } else bitmap
-
-    val minSide = minOf(rotated.width, rotated.height)
-    val side = (minSide * cropFraction).toInt().coerceIn(1, minSide)
-    val left = (rotated.width - side) / 2
-    val top = (rotated.height - side) / 2
-    val cropped = Bitmap.createBitmap(rotated, left, top, side, side)
-    if (cropped != rotated) rotated.recycle()
-
-    FileOutputStream(outFile, false).use { out ->
-        cropped.compress(Bitmap.CompressFormat.JPEG, 92, out)
-        out.flush()
-    }
-    cropped.recycle()
-
-    // normalize EXIF on output
-    try {
-        ExifInterface(outFile.absolutePath).apply {
-            setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL.toString())
-            saveAttributes()
-        }
-    } catch (_: Throwable) {
-        // ignore
     }
 }
