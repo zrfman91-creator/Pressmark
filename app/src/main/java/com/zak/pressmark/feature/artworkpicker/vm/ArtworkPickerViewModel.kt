@@ -2,7 +2,7 @@ package com.zak.pressmark.feature.artworkpicker.vm
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.zak.pressmark.core.util.FuzzyMatch
+import com.zak.pressmark.feature.artworkpicker.util.FuzzyMatch
 import com.zak.pressmark.core.util.Normalizer
 import com.zak.pressmark.data.remote.discogs.DiscogsApiService
 import com.zak.pressmark.data.remote.discogs.DiscogsAutofillCandidate

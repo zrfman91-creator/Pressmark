@@ -3,6 +3,8 @@
 // =======================================================
 package com.zak.pressmark.feature.albumlist.components
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,23 +17,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material3.Surface
-import androidx.compose.ui.draw.rotate
-import com.zak.pressmark.feature.albumlist.model.AlbumGrouping
-import com.zak.pressmark.feature.albumlist.model.decadeLabel
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SelectAll
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -41,10 +37,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.zak.pressmark.core.ui.theme.AppTypography
 import com.zak.pressmark.data.local.model.AlbumWithArtistName
+import com.zak.pressmark.feature.albumlist.model.AlbumGrouping
+import com.zak.pressmark.feature.albumlist.model.decadeLabel
 import java.util.Locale
 
 private enum class AlbumSort { ARTIST_AZ, TITLE_AZ, YEAR_DESC }
@@ -83,7 +82,6 @@ fun AlbumList(
     modifier: Modifier = Modifier,
     selectedAlbumId: String? = null,
     selectionEnabled: Boolean = true,
-    dividerInset: Dp = 8.dp,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     var sort by rememberSaveable { mutableStateOf(AlbumSort.ARTIST_AZ) }
@@ -216,17 +214,9 @@ fun AlbumList(
                         },
                         onRefreshArtworkSelected = {
                             // Intentionally left as a hook (no-op like your original)
-                            selectedIdList = selectedIdList
                         },
                     )
                 },
-            )
-
-            HorizontalDivider(
-                modifier = Modifier
-                    .padding(top = 6.dp, bottom = 4.dp)
-                    .padding(horizontal = dividerInset),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.75f),
             )
 
             if (filteredSorted.isEmpty()) {
@@ -456,13 +446,13 @@ private fun GroupHeaderRow(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.labelLarge,
                     maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
 

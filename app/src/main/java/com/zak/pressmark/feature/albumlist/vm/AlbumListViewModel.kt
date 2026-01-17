@@ -22,6 +22,21 @@ class AlbumListViewModel(
     private val artistRepository: ArtistRepository,
 ) : ViewModel() {
 
+    companion object {
+        @Volatile
+        private var didRunLegacyArtworkProviderBackfill: Boolean = false
+    }
+
+    init {
+        // One-time normalization: ensure provider fields are populated for legacy Discogs covers.
+        if (!didRunLegacyArtworkProviderBackfill) {
+            didRunLegacyArtworkProviderBackfill = true
+            viewModelScope.launch(Dispatchers.IO) {
+                runCatching { albumRepository.backfillArtworkProviderFromLegacyDiscogs() }
+            }
+        }
+    }
+
     private val _ui = MutableStateFlow(AlbumListUiState())
     val ui: StateFlow<AlbumListUiState> = _ui
 

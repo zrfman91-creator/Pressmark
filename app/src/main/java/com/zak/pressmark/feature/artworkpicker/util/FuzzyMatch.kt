@@ -1,6 +1,6 @@
-package com.zak.pressmark.core.util
+package com.zak.pressmark.feature.artworkpicker.util
 
-import java.text.Normalizer as JNormalizer
+import java.text.Normalizer
 import kotlin.math.max
 import kotlin.math.min
 
@@ -24,8 +24,8 @@ object FuzzyMatch {
         val trimmed = input.trim()
         if (trimmed.isBlank()) return ""
 
-        val noDiacritics = JNormalizer
-            .normalize(trimmed, JNormalizer.Form.NFKD)
+        val noDiacritics = Normalizer
+            .normalize(trimmed, Normalizer.Form.NFKD)
             .replace(Regex("\\p{M}+"), "")
 
         return noDiacritics
