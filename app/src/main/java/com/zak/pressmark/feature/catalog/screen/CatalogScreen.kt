@@ -44,6 +44,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
 import com.zak.pressmark.data.local.model.ReleaseListItem
 import com.zak.pressmark.feature.catalog.components.CatalogActionRail
+import com.zak.pressmark.feature.catalog.components.CatalogOption
 import com.zak.pressmark.feature.catalog.components.CatalogTopActionBar
 import com.zak.pressmark.feature.catalog.components.CommandOption
 import com.zak.pressmark.feature.catalog.components.RailMode

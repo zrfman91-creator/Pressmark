@@ -46,6 +46,11 @@ import androidx.compose.ui.unit.dp
 private val ChipWidth: Dp = 120.dp
 private val MenuShape = RoundedCornerShape(12.dp)
 
+data class CatalogOption(
+    val id: String,
+    val label: String,
+)
+
 /**
  * Display-only compaction to keep fixed-width dropdown rows single-line.
  * Selection values remain the original option strings.
