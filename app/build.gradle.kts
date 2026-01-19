@@ -39,8 +39,8 @@ android {
         applicationId = "com.zak.pressmark"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         val discogsToken = (localProps["DISCOGS_TOKEN"] as String?)?.trim().orEmpty()
@@ -69,7 +69,7 @@ android {
             extensions.configure<AppDistributionExtension>("firebaseAppDistribution") {
                 groups = "internal"
                 // testers = "wanderingbogeygrips@gmail.com"
-                releaseNotes = "Pressmark 0.1.0-alpha01"
+                releaseNotes = "Pressmark 0.2.0-alpha"
                 // releaseNotesFile = "release-notes-alpha.txt"
             }
         }
