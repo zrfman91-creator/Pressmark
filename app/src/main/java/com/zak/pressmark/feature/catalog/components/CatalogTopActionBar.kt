@@ -1,15 +1,23 @@
 package com.zak.pressmark.feature.catalog.components
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,6 +29,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -35,6 +44,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 private val ChipWidth: Dp = 120.dp
+private val MenuShape = RoundedCornerShape(12.dp)
 
 /**
  * Display-only compaction to keep fixed-width dropdown rows single-line.
@@ -76,44 +86,79 @@ fun CatalogTopActionBar(
     onSortSelect: (String) -> Unit,
     onFilterSelect: (String) -> Unit,
     onGroupSelect: (String) -> Unit,
+    showClear: Boolean,
+    onClearSelections: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        ActionPillDropdown(
-            label = "Sort",
-            selectedValue = selectedSort,
-            expanded = sortExpanded,
-            onToggle = onSortToggle,
-            options = sortOptions,
-            onSelect = onSortSelect,
-            width = ChipWidth,
-        )
+    Column(modifier = modifier.fillMaxWidth()) {
 
-        ActionPillDropdown(
-            label = "Filter",
-            selectedValue = selectedFilter,
-            expanded = filterExpanded,
-            onToggle = onFilterToggle,
-            options = filterOptions,
-            onSelect = onFilterSelect,
-            width = ChipWidth,
-        )
+        // Clear action above selection labels, centered.
+        AnimatedVisibility(
+            visible = showClear,
+            enter = fadeIn(tween(120)),
+            exit = fadeOut(tween(90)),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 2.dp, bottom = 1.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                TextButton(
+                    onClick = onClearSelections,
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                    modifier = Modifier
+                        .height(24.dp)              // <- hard cap, tighten here
+                        .defaultMinSize(minHeight = 0.dp),
+                ) {
+                    Text(
+                        text = "Clear selections",
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
 
-        ActionPillDropdown(
-            label = "Grouping",
-            selectedValue = selectedGroup,
-            expanded = groupExpanded,
-            onToggle = onGroupToggle,
-            options = groupOptions,
-            onSelect = onGroupSelect,
-            width = ChipWidth,
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 1.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ActionPillDropdown(
+                label = "Sort",
+                selectedValue = selectedSort,
+                expanded = sortExpanded,
+                onToggle = onSortToggle,
+                options = sortOptions,
+                onSelect = onSortSelect,
+                width = ChipWidth,
+            )
+
+            ActionPillDropdown(
+                label = "Filter",
+                selectedValue = selectedFilter,
+                expanded = filterExpanded,
+                onToggle = onFilterToggle,
+                options = filterOptions,
+                onSelect = onFilterSelect,
+                width = ChipWidth,
+            )
+
+            ActionPillDropdown(
+                label = "Grouping",
+                selectedValue = selectedGroup,
+                expanded = groupExpanded,
+                onToggle = onGroupToggle,
+                options = groupOptions,
+                onSelect = onGroupSelect,
+                width = ChipWidth,
+            )
+        }
     }
 }
 
@@ -147,9 +192,7 @@ private fun ActionPillDropdown(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 4.dp)
-                .semantics {
-                    contentDescription = "$label selection"
-                },
+                .semantics { contentDescription = "$label selection" },
             textAlign = TextAlign.Center,
         )
 
@@ -191,9 +234,14 @@ private fun ActionPillDropdown(
             DropdownMenu(
                 expanded = expanded,
                 onDismissRequest = onToggle,
-                modifier = Modifier.width(width),
-                shape = RoundedCornerShape(12.dp),
-                containerColor = MaterialTheme.colorScheme.surface,
+                modifier = Modifier
+                    .width(width)
+                    .clip(MenuShape)
+                    .background(MaterialTheme.colorScheme.surface)
+                    .border(
+                        BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                        MenuShape,
+                    ),
             ) {
                 options.forEach { option ->
                     // Keep menu items single-line within fixed width.
@@ -217,7 +265,12 @@ private fun ActionPillDropdown(
                         onClick = { onSelect(option) },
                         // No checkmark needed; selection is shown above the pill.
                         // Keep a consistent left inset for the menu content.
-                        contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
+                        contentPadding = PaddingValues(
+                            start = 4.dp,
+                            end = 12.dp,
+                            top = 8.dp,
+                            bottom = 8.dp,
+                        ),
                     )
                 }
             }

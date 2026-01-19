@@ -90,6 +90,8 @@ fun AlbumListScreen(
     var selectedFilter by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedGroup by rememberSaveable { mutableStateOf<String?>(null) }
 
+    val showClearSelections = selectedSort != null || selectedFilter != null || selectedGroup != null
+
 // Scroll state to collapse menus on scroll
     val listState = rememberLazyListState()
 
@@ -162,7 +164,7 @@ fun AlbumListScreen(
                             filterExpanded = false
                         },
 
-                        sortOptions = listOf("Recently Added", "Title A–Z", "Artist A–Z", "Year Desc."),
+                        sortOptions = listOf("Added newest", "Title A–Z", "Artist A–Z", "Year newest"),
                         filterOptions = listOf("Has barcode", "No barcode"),
                         groupOptions = listOf("Artist", "Year"),
 
@@ -177,6 +179,16 @@ fun AlbumListScreen(
                         },
                         onGroupSelect = {
                             selectedGroup = it
+                            groupExpanded = false
+                        },
+
+                        showClear = showClearSelections,
+                        onClearSelections = {
+                            selectedSort = null
+                            selectedFilter = null
+                            selectedGroup = null
+                            isSortExpanded = false
+                            filterExpanded = false
                             groupExpanded = false
                         },
                     )
