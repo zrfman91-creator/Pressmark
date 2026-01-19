@@ -91,7 +91,6 @@ fun CatalogTopActionBar(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
-
         // Clear action above selection labels, centered.
         AnimatedVisibility(
             visible = showClear,
