@@ -1,7 +1,7 @@
 // =======================================================
 // file: app/src/main/java/com/zak/pressmark/ui/components/TopAppBar.kt
 // =======================================================
-package com.zak.pressmark.feature.albumlist.components
+package com.zak.pressmark.feature.catalog.components
 
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material3.ExperimentalMaterial3Api

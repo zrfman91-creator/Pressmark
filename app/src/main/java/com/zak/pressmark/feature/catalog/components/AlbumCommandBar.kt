@@ -1,10 +1,10 @@
 // =======================================================
 // file: app/src/main/java/com/zak/pressmark/ui/albumlist/components/AlbumCommandBar.kt
 // =======================================================
-package com.zak.pressmark.feature.albumlist.components
+package com.zak.pressmark.feature.catalog.components
 
 import androidx.compose.foundation.layout.Arrangement
-import com.zak.pressmark.feature.albumlist.model.AlbumGrouping
+import com.zak.pressmark.feature.catalog.model.AlbumGrouping
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,7 +32,6 @@ import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -53,12 +52,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.List
 
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.SmallFloatingActionButton

@@ -1,7 +1,7 @@
 // =======================================================
 // file: app/src/main/java/com/zak/pressmark/feature/albumlist/components/AlbumListRow.kt
 // =======================================================
-package com.zak.pressmark.feature.albumlist.components
+package com.zak.pressmark.feature.catalog.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable

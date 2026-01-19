@@ -3,7 +3,6 @@ package com.zak.pressmark.app
 
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -19,9 +18,9 @@ import com.zak.pressmark.feature.addalbum.vm.AddAlbumViewModelFactory
 import com.zak.pressmark.feature.albumdetails.route.AlbumDetailsRoute
 import com.zak.pressmark.feature.albumdetails.vm.AlbumDetailsViewModel
 import com.zak.pressmark.feature.albumdetails.vm.AlbumDetailsViewModelFactory
-import com.zak.pressmark.feature.albumlist.route.AlbumListRoute
-import com.zak.pressmark.feature.albumlist.vm.AlbumListViewModel
-import com.zak.pressmark.feature.albumlist.vm.AlbumListViewModelFactory
+import com.zak.pressmark.feature.catalog.route.AlbumListRoute
+import com.zak.pressmark.feature.catalog.vm.AlbumListViewModel
+import com.zak.pressmark.feature.catalog.vm.CatalogViewModelFactory
 import com.zak.pressmark.feature.artist.route.ArtistRoute
 import com.zak.pressmark.feature.artist.vm.ArtistViewModel
 import com.zak.pressmark.feature.artist.vm.ArtistViewModelFactory
@@ -40,7 +39,7 @@ fun PressmarkNavHost(
     ) {
         composable(PressmarkRoutes.LIST) {
             val listFactory = remember(graph) {
-                AlbumListViewModelFactory(
+                CatalogViewModelFactory(
                     albumRepo = graph.albumRepository,
                     artistRepo = graph.artistRepository,
                     releaseRepo = graph.releaseRepository,
@@ -48,10 +47,7 @@ fun PressmarkNavHost(
             }
             val vm: AlbumListViewModel = viewModel(factory = listFactory)
 
-            LaunchedEffect(Unit) {
-                vm.refreshReleases()
-            }
-
+            // ✅ No manual refresh needed: list is driven by Room Flow.
             AlbumListRoute(
                 vm = vm,
                 onAddAlbum = { navController.navigate(PressmarkRoutes.ADD) },

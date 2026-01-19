@@ -12,6 +12,8 @@ import com.zak.pressmark.data.local.entity.ReleaseEntity
 import com.zak.pressmark.data.local.model.ReleaseListItem
 import com.zak.pressmark.data.local.model.ReleaseListItemMapper
 import com.zak.pressmark.data.repository.ArtistRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 /**
  * Bottom-up repository for the Release-first model.
@@ -108,7 +110,7 @@ class ReleaseRepository(
     suspend fun listReleases(): List<ReleaseEntity> = releaseDao.listAll()
 
     /**
-     * Main list read-model (no N+1):
+     * Main list read-model (no N+1), one-shot:
      * - one DAO query
      * - in-memory grouping (by release.id)
      * - pure formatting (ArtistCreditFormatter)
@@ -116,6 +118,18 @@ class ReleaseRepository(
     suspend fun listReleaseListItems(): List<ReleaseListItem> {
         val rows = releaseDao.listReleaseRowsFlat()
         return ReleaseListItemMapper.fromFlatRows(rows)
+    }
+
+    /**
+     * Main list read-model (no N+1), live:
+     * - one DAO Flow query
+     * - in-memory grouping (by release.id)
+     * - pure formatting (ArtistCreditFormatter)
+     */
+    fun observeReleaseListItems(): Flow<List<ReleaseListItem>> {
+        return releaseDao
+            .observeReleaseRowsFlat()
+            .map { rows -> ReleaseListItemMapper.fromFlatRows(rows) }
     }
 
     suspend fun getRelease(releaseId: String): ReleaseEntity? = releaseDao.getById(releaseId)

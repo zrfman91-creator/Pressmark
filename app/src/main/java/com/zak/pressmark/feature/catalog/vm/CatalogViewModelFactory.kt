@@ -1,5 +1,5 @@
 // file: app/src/main/java/com/zak/pressmark/feature/albumlist/vm/AlbumListViewModelFactory.kt
-package com.zak.pressmark.feature.albumlist.vm
+package com.zak.pressmark.feature.catalog.vm
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -7,7 +7,7 @@ import com.zak.pressmark.data.local.repository.ReleaseRepository
 import com.zak.pressmark.data.repository.AlbumRepository
 import com.zak.pressmark.data.repository.ArtistRepository
 
-class AlbumListViewModelFactory(
+class CatalogViewModelFactory(
     private val albumRepo: AlbumRepository,
     private val artistRepo: ArtistRepository,
     private val releaseRepo: ReleaseRepository,

@@ -1,4 +1,4 @@
-package com.zak.pressmark.feature.albumlist.model
+package com.zak.pressmark.feature.catalog.model
 
 import androidx.compose.runtime.Immutable
 

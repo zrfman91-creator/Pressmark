@@ -1,4 +1,4 @@
-// File: app/src/main/java/com/zak/pressmark/core/credits/ArtistCreditParser.kt
+// file: app/src/main/java/com/zak/pressmark/core/credits/ArtistCreditParser.kt
 package com.zak.pressmark.core.credits
 
 import com.zak.pressmark.core.util.Normalizer
@@ -150,7 +150,7 @@ object ArtistCreditParser {
         val splitIndex = hit.first
         val marker = hit.second
 
-        val left = input.substring(0, splitIndex).normalizeWhitespace().trimTrimPunct()
+        val left = input.take(splitIndex).normalizeWhitespace().trimTrimPunct()
         val right = input.substring(splitIndex + marker.length).normalizeWhitespace().trimTrimPunct()
 
         if (left.isBlank() || right.isBlank()) return input to null
@@ -162,12 +162,14 @@ object ArtistCreditParser {
      * - "Glenn Miller and his orchestra"
      * - "So-and-so with His Orchestra"
      *
-     * Returns primaryPart and a displayHint phrase preserving the exact connector phrase.
+     * Returns primaryPart and a displayHint phrase.
+     *
+     * NOTE: displayHint is canonicalized to the lowercase phrase ("with his orchestra"),
+     * not the input casing, so formatting is stable.
      */
     private fun splitOffPronounOrchestra(input: String): PronounOrchestraSplit? {
         val lower = input.lowercase()
 
-        // Keep the exact phrase boundaries (we’ll preserve the phrase as it appears in the original input).
         val patterns = listOf(
             " and his orchestra",
             " and her orchestra",
@@ -184,13 +186,13 @@ object ArtistCreditParser {
             ?: return null
 
         val idx = hit.first
-        val phraseLen = hit.second.length
+        val phrase = hit.second
 
-        val primary = input.substring(0, idx).normalizeWhitespace().trimTrimPunct()
+        val primary = input.take(idx).normalizeWhitespace().trimTrimPunct()
         if (primary.isBlank()) return null
 
-        val hint = input.substring(idx, idx + phraseLen)
-            .normalizeWhitespace()
+        // Canonical, stable hint phrase (lowercase, no leading space, no trailing punct)
+        val hint = phrase
             .trim()
             .trimEnd('.', ',', ';')
 
@@ -212,7 +214,7 @@ object ArtistCreditParser {
         val idx = lower.indexOf(needle)
         if (idx <= 0) return null
 
-        val left = input.substring(0, idx).normalizeWhitespace().trimTrimPunct()
+        val left = input.take(idx).normalizeWhitespace().trimTrimPunct()
         val right = input.substring(idx + needle.length).normalizeWhitespace().trimTrimPunct()
         if (left.isBlank() || right.isBlank()) return null
 

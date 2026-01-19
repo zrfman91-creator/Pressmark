@@ -1,5 +1,5 @@
 // File: app/src/main/java/com/zak/pressmark/feature/albumlist/components/CatalogHeader.kt
-package com.zak.pressmark.feature.albumlist.components
+package com.zak.pressmark.feature.catalog.components
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent

@@ -12,6 +12,7 @@ import com.zak.pressmark.data.local.db.DbSchema.Release
 import com.zak.pressmark.data.local.db.DbSchema.ReleaseArtistCredit
 import com.zak.pressmark.data.local.entity.ReleaseEntity
 import com.zak.pressmark.data.local.model.ReleaseListRowFlat
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ReleaseDao {
@@ -111,4 +112,50 @@ interface ReleaseDao {
         """
     )
     suspend fun listReleaseRowsFlat(): List<ReleaseListRowFlat>
+
+    /**
+     * Live (reactive) version of [listReleaseRowsFlat].
+     *
+     * Room will re-emit when any observed table in this query changes
+     * (Release, Artwork, ReleaseArtistCredit, Artist).
+     */
+    @Query(
+        """
+        SELECT
+          r.*,
+
+          aw.${Artwork.ID} AS artwork_id,
+          aw.${Artwork.URI} AS artwork_uri,
+
+          c.${ReleaseArtistCredit.ARTIST_ID} AS credit_artist_id,
+          c.${ReleaseArtistCredit.ROLE} AS credit_role,
+          c.${ReleaseArtistCredit.POSITION} AS credit_position,
+          c.${ReleaseArtistCredit.DISPLAY_HINT} AS credit_display_hint,
+
+          a.${Artist.DISPLAY_NAME} AS artist_display_name
+
+        FROM ${Release.TABLE} r
+
+        LEFT JOIN ${Artwork.TABLE} aw
+          ON aw.${Artwork.ID} = (
+            SELECT a2.${Artwork.ID}
+            FROM ${Artwork.TABLE} a2
+            WHERE a2.${Artwork.RELEASE_ID} = r.${Release.ID}
+            ORDER BY a2.${Artwork.IS_PRIMARY} DESC, a2.${Artwork.ID} DESC
+            LIMIT 1
+          )
+
+        LEFT JOIN ${ReleaseArtistCredit.TABLE} c
+          ON c.${ReleaseArtistCredit.RELEASE_ID} = r.${Release.ID}
+
+        LEFT JOIN ${Artist.TABLE} a
+          ON a.${Artist.ID} = c.${ReleaseArtistCredit.ARTIST_ID}
+
+        ORDER BY
+          r.${Release.ADDED_AT} DESC,
+          c.${ReleaseArtistCredit.POSITION} ASC,
+          c.${ReleaseArtistCredit.ID} ASC
+        """
+    )
+    fun observeReleaseRowsFlat(): Flow<List<ReleaseListRowFlat>>
 }

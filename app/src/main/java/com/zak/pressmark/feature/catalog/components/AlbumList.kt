@@ -1,7 +1,7 @@
 // =======================================================
 // file: app/src/main/java/com/zak/pressmark/feature/albumlist/components/AlbumCommandBar.kt
 // =======================================================
-package com.zak.pressmark.feature.albumlist.components
+package com.zak.pressmark.feature.catalog.components
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
@@ -42,8 +42,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.zak.pressmark.core.ui.theme.AppTypography
 import com.zak.pressmark.data.local.model.AlbumWithArtistName
-import com.zak.pressmark.feature.albumlist.model.AlbumGrouping
-import com.zak.pressmark.feature.albumlist.model.decadeLabel
+import com.zak.pressmark.feature.catalog.model.AlbumGrouping
+import com.zak.pressmark.feature.catalog.model.decadeLabel
 import java.util.Locale
 
 private enum class AlbumSort { ARTIST_AZ, TITLE_AZ, YEAR_DESC }
