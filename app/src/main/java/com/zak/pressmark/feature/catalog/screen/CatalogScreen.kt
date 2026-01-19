@@ -45,7 +45,6 @@ import androidx.compose.ui.unit.dp
 import com.zak.pressmark.data.local.model.ReleaseListItem
 import com.zak.pressmark.feature.catalog.components.CatalogActionRail
 import com.zak.pressmark.feature.catalog.components.CatalogTopActionBar
-import com.zak.pressmark.feature.catalog.components.CommandOption
 import com.zak.pressmark.feature.catalog.components.RailMode
 import com.zak.pressmark.feature.catalog.components.TopAppBar
 import com.zak.pressmark.feature.catalog.model.CatalogFilter
@@ -53,26 +52,32 @@ import com.zak.pressmark.feature.catalog.model.CatalogGrouping
 import com.zak.pressmark.feature.catalog.model.CatalogListItem
 import com.zak.pressmark.feature.catalog.vm.CatalogSort
 
-private data class CatalogOption<T>(
-    val value: T,
-    val label: String,
-)
+private const val SortLabelAddedNewest = "Added newest"
+private const val SortLabelTitleAz = "Title A–Z"
+private const val SortLabelArtistAz = "Artist A–Z"
+private const val SortLabelYearNewest = "Year newest"
+
+private const val FilterLabelHasBarcode = "Has barcode"
+private const val FilterLabelNoBarcode = "No barcode"
+
+private const val GroupLabelArtist = "Artist"
+private const val GroupLabelYear = "Year"
 
 private val SortOptions = listOf(
-    CatalogOption(CatalogSort.AddedNewest, "Added newest"),
-    CatalogOption(CatalogSort.TitleAZ, "Title A–Z"),
-    CatalogOption(CatalogSort.ArtistAZ, "Artist A–Z"),
-    CatalogOption(CatalogSort.YearNewest, "Year newest"),
+    SortLabelAddedNewest,
+    SortLabelTitleAz,
+    SortLabelArtistAz,
+    SortLabelYearNewest,
 )
 
 private val FilterOptions = listOf(
-    CatalogOption(CatalogFilter.HAS_BARCODE, "Has barcode"),
-    CatalogOption(CatalogFilter.NO_BARCODE, "No barcode"),
+    FilterLabelHasBarcode,
+    FilterLabelNoBarcode,
 )
 
 private val GroupOptions = listOf(
-    CatalogOption(CatalogGrouping.ARTIST, "Artist"),
-    CatalogOption(CatalogGrouping.YEAR, "Year"),
+    GroupLabelArtist,
+    GroupLabelYear,
 )
 
 
@@ -112,11 +117,22 @@ fun AlbumListScreen(
     var filterExpanded by rememberSaveable { mutableStateOf(false) }
     var groupExpanded by rememberSaveable { mutableStateOf(false) }
 
-    val selectedSort = SortOptions.firstOrNull { it.value == sort }?.label
-    val selectedFilter = FilterOptions.firstOrNull { it.value == filter }?.label
-        ?.takeIf { filter != CatalogFilter.ALL }
-    val selectedGroup = GroupOptions.firstOrNull { it.value == grouping }?.label
-        ?.takeIf { grouping != CatalogGrouping.NONE }
+    val selectedSort = when (sort) {
+        CatalogSort.AddedNewest -> SortLabelAddedNewest
+        CatalogSort.TitleAZ -> SortLabelTitleAz
+        CatalogSort.ArtistAZ -> SortLabelArtistAz
+        CatalogSort.YearNewest -> SortLabelYearNewest
+    }
+    val selectedFilter = when (filter) {
+        CatalogFilter.ALL -> null
+        CatalogFilter.HAS_BARCODE -> FilterLabelHasBarcode
+        CatalogFilter.NO_BARCODE -> FilterLabelNoBarcode
+    }
+    val selectedGroup = when (grouping) {
+        CatalogGrouping.NONE -> null
+        CatalogGrouping.ARTIST -> GroupLabelArtist
+        CatalogGrouping.YEAR -> GroupLabelYear
+    }
 
     val showClearSelections =
         sort != CatalogSort.AddedNewest || filter != CatalogFilter.ALL || grouping != CatalogGrouping.NONE
@@ -173,9 +189,9 @@ fun AlbumListScreen(
                         filterExpanded = filterExpanded,
                         groupExpanded = groupExpanded,
 
-                        selectedSortId = selectedSortId,
-                        selectedFilterId = selectedFilterId,
-                        selectedGroupId = selectedGroupId,
+                        selectedSort = selectedSort,
+                        selectedFilter = selectedFilter,
+                        selectedGroup = selectedGroup,
 
                         onSortToggle = {
                             isSortExpanded = !isSortExpanded
@@ -193,23 +209,37 @@ fun AlbumListScreen(
                             filterExpanded = false
                         },
 
-                        sortOptions = SortOptions.map { it.label },
-                        filterOptions = FilterOptions.map { it.label },
-                        groupOptions = GroupOptions.map { it.label },
+                        sortOptions = SortOptions,
+                        filterOptions = FilterOptions,
+                        groupOptions = GroupOptions,
 
                         onSortSelect = {
-                            val selected = SortOptions.firstOrNull { option -> option.label == it } ?: return@CatalogTopActionBar
-                            onSortChange(selected.value)
+                            val selected = when (it) {
+                                SortLabelAddedNewest -> CatalogSort.AddedNewest
+                                SortLabelTitleAz -> CatalogSort.TitleAZ
+                                SortLabelArtistAz -> CatalogSort.ArtistAZ
+                                SortLabelYearNewest -> CatalogSort.YearNewest
+                                else -> sort
+                            }
+                            onSortChange(selected)
                             isSortExpanded = false
                         },
                         onFilterSelect = {
-                            val selected = FilterOptions.firstOrNull { option -> option.label == it } ?: return@CatalogTopActionBar
-                            onFilterChange(selected.value)
+                            val selected = when (it) {
+                                FilterLabelHasBarcode -> CatalogFilter.HAS_BARCODE
+                                FilterLabelNoBarcode -> CatalogFilter.NO_BARCODE
+                                else -> filter
+                            }
+                            onFilterChange(selected)
                             filterExpanded = false
                         },
                         onGroupSelect = {
-                            val selected = GroupOptions.firstOrNull { option -> option.label == it } ?: return@CatalogTopActionBar
-                            onGroupingChange(selected.value)
+                            val selected = when (it) {
+                                GroupLabelArtist -> CatalogGrouping.ARTIST
+                                GroupLabelYear -> CatalogGrouping.YEAR
+                                else -> grouping
+                            }
+                            onGroupingChange(selected)
                             groupExpanded = false
                         },
 
