@@ -1,13 +1,16 @@
+// file: app/src/main/java/com/zak/pressmark/feature/albumlist/vm/AlbumListViewModelFactory.kt
 package com.zak.pressmark.feature.albumlist.vm
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.zak.pressmark.data.local.repository.ReleaseRepository
 import com.zak.pressmark.data.repository.AlbumRepository
 import com.zak.pressmark.data.repository.ArtistRepository
 
 class AlbumListViewModelFactory(
     private val albumRepo: AlbumRepository,
     private val artistRepo: ArtistRepository,
+    private val releaseRepo: ReleaseRepository,
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
@@ -18,6 +21,7 @@ class AlbumListViewModelFactory(
         return AlbumListViewModel(
             albumRepository = albumRepo,
             artistRepository = artistRepo,
+            releaseRepository = releaseRepo,
         ) as T
     }
 }
