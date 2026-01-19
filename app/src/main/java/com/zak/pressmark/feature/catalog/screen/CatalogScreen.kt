@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import com.zak.pressmark.data.local.model.ReleaseListItem
 import com.zak.pressmark.feature.catalog.components.CatalogActionRail
 import com.zak.pressmark.feature.catalog.components.CatalogTopActionBar
+import com.zak.pressmark.feature.catalog.components.CommandOption
 import com.zak.pressmark.feature.catalog.components.RailMode
 import com.zak.pressmark.feature.catalog.components.TopAppBar
 import com.zak.pressmark.feature.catalog.model.CatalogFilter
@@ -172,9 +173,9 @@ fun AlbumListScreen(
                         filterExpanded = filterExpanded,
                         groupExpanded = groupExpanded,
 
-                        selectedSort = selectedSort,
-                        selectedFilter = selectedFilter,
-                        selectedGroup = selectedGroup,
+                        selectedSortId = selectedSortId,
+                        selectedFilterId = selectedFilterId,
+                        selectedGroupId = selectedGroupId,
 
                         onSortToggle = {
                             isSortExpanded = !isSortExpanded
