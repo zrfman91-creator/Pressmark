@@ -1,3 +1,4 @@
+// file: app/src/main/java/com/zak/pressmark/app/PressmarkNavHost.kt
 package com.zak.pressmark.app
 
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -42,6 +43,7 @@ fun PressmarkNavHost(
                 AlbumListViewModelFactory(
                     albumRepo = graph.albumRepository,
                     artistRepo = graph.artistRepository,
+                    releaseRepo = graph.releaseRepository,
                 )
             }
             val vm: AlbumListViewModel = viewModel(factory = listFactory)
