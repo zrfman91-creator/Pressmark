@@ -1,9 +1,13 @@
+// file: app/src/main/java/com/zak/pressmark/feature/albumlist/vm/AlbumListViewModel.kt
 package com.zak.pressmark.feature.albumlist.vm
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zak.pressmark.data.local.entity.AlbumEntity
+import com.zak.pressmark.data.local.entity.ReleaseEntity
 import com.zak.pressmark.data.local.model.AlbumWithArtistName
+import com.zak.pressmark.data.local.model.ReleaseListItem
+import com.zak.pressmark.data.local.repository.ReleaseRepository
 import com.zak.pressmark.data.repository.AlbumRepository
 import com.zak.pressmark.data.repository.ArtistRepository
 import kotlinx.coroutines.Dispatchers
@@ -18,8 +22,12 @@ data class AlbumListUiState(
 )
 
 class AlbumListViewModel(
+    // Legacy (kept temporarily to avoid breaking other screens that still depend on album flows)
     private val albumRepository: AlbumRepository,
     private val artistRepository: ArtistRepository,
+
+    // New canonical list source
+    private val releaseRepository: ReleaseRepository,
 ) : ViewModel() {
 
     companion object {
@@ -35,10 +43,47 @@ class AlbumListViewModel(
                 runCatching { albumRepository.backfillArtworkProviderFromLegacyDiscogs() }
             }
         }
+
+        refreshReleases()
     }
 
     private val _ui = MutableStateFlow(AlbumListUiState())
     val ui: StateFlow<AlbumListUiState> = _ui
+
+    // -----------------------------
+    // New canonical list (Release-first)
+    // -----------------------------
+
+    private val _releaseListItems = MutableStateFlow<List<ReleaseListItem>>(emptyList())
+    val releaseListItems: StateFlow<List<ReleaseListItem>> = _releaseListItems
+
+    fun refreshReleases() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                _releaseListItems.value = releaseRepository.listReleaseListItems()
+            } catch (t: Throwable) {
+                _ui.value = _ui.value.copy(
+                    snackMessage = t.message ?: "Failed to load releases."
+                )
+            }
+        }
+    }
+
+    fun deleteRelease(release: ReleaseEntity) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                releaseRepository.deleteRelease(release.id)
+                refreshReleases()
+            } catch (t: Throwable) {
+                _ui.value =
+                    _ui.value.copy(snackMessage = t.message ?: "Failed to delete release.")
+            }
+        }
+    }
+
+    // -----------------------------
+    // Legacy album flows (temporary)
+    // -----------------------------
 
     // ✅ Canonical list for UI (artist name comes from Artist table)
     val albumsWithArtistName: StateFlow<List<AlbumWithArtistName>> =
