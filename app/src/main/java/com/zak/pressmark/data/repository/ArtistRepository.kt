@@ -1,10 +1,10 @@
+// file: app/src/main/java/com/zak/pressmark/data/repository/ArtistRepository.kt
 package com.zak.pressmark.data.repository
 
 import kotlinx.coroutines.flow.Flow
-
-import com.zak.pressmark.data.local.dao.MergeArtistsResult
 import com.zak.pressmark.core.util.Normalizer
 import com.zak.pressmark.data.local.dao.ArtistDao
+import com.zak.pressmark.data.local.dao.MergeArtistsResult
 import com.zak.pressmark.data.local.entity.ArtistEntity
 
 class ArtistRepository(
@@ -32,12 +32,15 @@ class ArtistRepository(
             }
             return existing.id
         }
+
         val entity = ArtistEntity(
             displayName = canonDisplay,
             sortName = canonSort,
             nameNormalized = key,
+            // Keep null for now to match your existing model; we'll tighten later.
             artistType = null
         )
+
         return try {
             dao.insert(entity)
         } catch (_: Throwable) {
@@ -46,19 +49,49 @@ class ArtistRepository(
         }
     }
 
+    /**
+     * Merge duplicate artist into canonical artist.
+     *
+     * NOTE: This now uses the new release-credit model:
+     * - reassigns ReleaseArtistCredit rows
+     * - dedupes collisions
+     * - deletes the duplicate artist
+     */
     suspend fun mergeArtists(duplicateId: Long, canonicalId: Long): MergeArtistsResult {
         require(duplicateId > 0L) { "duplicateId must be > 0" }
         require(canonicalId > 0L) { "canonicalId must be > 0" }
         require(duplicateId != canonicalId) { "Cannot merge an artist into itself" }
 
         // Safety: ensure both rows exist before we do anything destructive.
-        val dup = dao.getById(duplicateId)
+        dao.getById(duplicateId)
             ?: throw IllegalArgumentException("Duplicate artist not found: $duplicateId")
 
-        val canon = dao.getById(canonicalId)
+        dao.getById(canonicalId)
             ?: throw IllegalArgumentException("Canonical artist not found: $canonicalId")
 
-        // Optional extra safety: if canon is "hidden"/special later, you can block merges here.
-        return dao.mergeAndDeleteArtist(duplicateId = dup.id, canonicalId = canon.id)
+        return dao.mergeArtist(duplicateId = duplicateId, canonicalId = canonicalId)
     }
+
+    /**
+     * Delete an artist only if it has zero credits.
+     *
+     * This prevents breaking referential integrity and keeps the artist table pristine.
+     */
+    suspend fun deleteArtistIfUnused(artistId: Long): DeleteArtistResult {
+        require(artistId > 0L) { "artistId must be > 0" }
+
+        val existing = dao.getById(artistId) ?: return DeleteArtistResult.NotFound
+
+        val creditCount = dao.countCredits(existing.id)
+        if (creditCount > 0) return DeleteArtistResult.Blocked(creditCount)
+
+        val deleted = dao.deleteById(existing.id)
+        return if (deleted > 0) DeleteArtistResult.Deleted else DeleteArtistResult.NotFound
+    }
+}
+
+sealed class DeleteArtistResult {
+    data object Deleted : DeleteArtistResult()
+    data object NotFound : DeleteArtistResult()
+    data class Blocked(val creditCount: Int) : DeleteArtistResult()
 }
