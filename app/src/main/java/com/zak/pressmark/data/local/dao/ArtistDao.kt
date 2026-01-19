@@ -1,37 +1,37 @@
+// file: app/src/main/java/com/zak/pressmark/data/local/dao/ArtistDao.kt
 package com.zak.pressmark.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 
 import com.zak.pressmark.data.local.db.DbSchema.Artist
+import com.zak.pressmark.data.local.db.DbSchema.ReleaseArtistCredit
 import com.zak.pressmark.data.local.entity.ArtistEntity
 import com.zak.pressmark.data.local.entity.normalizeArtistName
-import androidx.room.Transaction
-import com.zak.pressmark.data.local.db.DbSchema.Album
-
 
 @Dao
 interface ArtistDao {
 
+    // -------------------------------------------------
+    // Basic CRUD / lookup (unchanged)
+    // -------------------------------------------------
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(entity: ArtistEntity): Long
 
-    // Canonical lookup (used by ArtistRepository.getOrCreateArtistId)
     @Query("SELECT * FROM ${Artist.TABLE} WHERE ${Artist.NAME_NORMALIZED} = :normalized LIMIT 1")
     suspend fun findByNormalizedName(normalized: String): ArtistEntity?
 
-    // Needed by ArtistRepository.observeById() and ArtistViewModel
     @Query("SELECT * FROM ${Artist.TABLE} WHERE ${Artist.ID} = :id LIMIT 1")
     fun observeById(id: Long): Flow<ArtistEntity?>
 
-    // Optional convenience (sometimes helpful)
     @Query("SELECT * FROM ${Artist.TABLE} WHERE ${Artist.ID} = :id LIMIT 1")
     suspend fun getById(id: Long): ArtistEntity?
 
-    // “Top artists” list — uses sortName (NOT playCount; you don’t have that column)
     @Query(
         """
         SELECT * FROM ${Artist.TABLE}
@@ -41,11 +41,6 @@ interface ArtistDao {
     )
     fun observeTopArtists(limit: Int): Flow<List<ArtistEntity>>
 
-    /**
-     * Suggestions — use the indexed normalized column so search scales as the table grows.
-     *
-     * NOTE: Prefix match keeps the query index-friendly; callers can pass partial names.
-     */
     @Query(
         """
         SELECT * FROM ${Artist.TABLE}
@@ -54,45 +49,115 @@ interface ArtistDao {
         LIMIT :limit
         """
     )
-    fun searchByNormalizedPrefix(normalizedPrefix: String, limit: Int): Flow<List<ArtistEntity>>
+    fun searchByNormalizedPrefix(
+        normalizedPrefix: String,
+        limit: Int
+    ): Flow<List<ArtistEntity>>
 
-    /** Backwards-compatible entry point for callers already using searchByName(query, limit). */
     fun searchByName(query: String, limit: Int): Flow<List<ArtistEntity>> =
         searchByNormalizedPrefix(normalizeArtistName(query), limit)
 
-    @Query("""
-    UPDATE ${Artist.TABLE}
-    SET ${Artist.DISPLAY_NAME} = :displayName,
-        ${Artist.SORT_NAME} = :sortName
-    WHERE ${Artist.ID} = :id
-""")
+    @Query(
+        """
+        UPDATE ${Artist.TABLE}
+        SET ${Artist.DISPLAY_NAME} = :displayName,
+            ${Artist.SORT_NAME} = :sortName
+        WHERE ${Artist.ID} = :id
+        """
+    )
     suspend fun updateNames(id: Long, displayName: String, sortName: String): Int
 
-    @Query("""
-    UPDATE ${Album.TABLE}
-    SET ${Album.ARTIST_ID} = :canonicalId
-    WHERE ${Album.ARTIST_ID} = :duplicateId
-""")
-    suspend fun reassignAlbumsArtist(duplicateId: Long, canonicalId: Long): Int
+    // -------------------------------------------------
+    // Merge / delete support (NEW MODEL)
+    // -------------------------------------------------
 
-    // Delete the duplicate artist row
-    @Query("""
-    DELETE FROM ${Artist.TABLE}
-    WHERE ${Artist.ID} = :duplicateId
-""")
-    suspend fun deleteById(duplicateId: Long): Int
+    /**
+     * Reassign all release credits from duplicate artist → canonical artist.
+     */
+    @Query(
+        """
+        UPDATE ${ReleaseArtistCredit.TABLE}
+        SET ${ReleaseArtistCredit.ARTIST_ID} = :canonicalId
+        WHERE ${ReleaseArtistCredit.ARTIST_ID} = :duplicateId
+        """
+    )
+    suspend fun reassignCredits(
+        duplicateId: Long,
+        canonicalId: Long
+    ): Int
 
+    /**
+     * Remove duplicate credit rows that may result from a merge
+     * (same release, same role, same artist after reassignment).
+     */
+    @Query(
+        """
+        DELETE FROM ${ReleaseArtistCredit.TABLE}
+        WHERE ${ReleaseArtistCredit.ARTIST_ID} = :canonicalId
+          AND ${ReleaseArtistCredit.ID} NOT IN (
+              SELECT MIN(${ReleaseArtistCredit.ID})
+              FROM ${ReleaseArtistCredit.TABLE}
+              WHERE ${ReleaseArtistCredit.ARTIST_ID} = :canonicalId
+              GROUP BY
+                ${ReleaseArtistCredit.RELEASE_ID},
+                ${ReleaseArtistCredit.ROLE},
+                ${ReleaseArtistCredit.POSITION}
+          )
+        """
+    )
+    suspend fun dedupeCreditsForArtist(canonicalId: Long): Int
 
-    //One atomic operation: repoint albums & delete duplicate artist
+    /**
+     * Count how many credits an artist still has.
+     * Used to block deletes unless merged.
+     */
+    @Query(
+        """
+        SELECT COUNT(*) FROM ${ReleaseArtistCredit.TABLE}
+        WHERE ${ReleaseArtistCredit.ARTIST_ID} = :artistId
+        """
+    )
+    suspend fun countCredits(artistId: Long): Int
+
+    /**
+     * Delete an artist row by id.
+     */
+    @Query(
+        """
+        DELETE FROM ${Artist.TABLE}
+        WHERE ${Artist.ID} = :artistId
+        """
+    )
+    suspend fun deleteById(artistId: Long): Int
+
+    /**
+     * Atomic merge:
+     * - Move all credits
+     * - Dedupe collisions
+     * - Delete duplicate artist
+     */
     @Transaction
-    suspend fun mergeAndDeleteArtist(duplicateId: Long, canonicalId: Long): MergeArtistsResult {
-        val moved = reassignAlbumsArtist(duplicateId, canonicalId)
+    suspend fun mergeArtist(
+        duplicateId: Long,
+        canonicalId: Long
+    ): MergeArtistsResult {
+        val moved = reassignCredits(duplicateId, canonicalId)
+        val deduped = dedupeCreditsForArtist(canonicalId)
         val deleted = deleteById(duplicateId)
-        return MergeArtistsResult(albumsMoved = moved, artistsDeleted = deleted)
+        return MergeArtistsResult(
+            creditsMoved = moved,
+            creditsDeduped = deduped,
+            artistsDeleted = deleted
+        )
     }
 }
 
+/**
+ * Result payload for merge operations.
+ * Useful for logging, snackbars, or debug UI.
+ */
 data class MergeArtistsResult(
-    val albumsMoved: Int,
+    val creditsMoved: Int,
+    val creditsDeduped: Int,
     val artistsDeleted: Int
 )
