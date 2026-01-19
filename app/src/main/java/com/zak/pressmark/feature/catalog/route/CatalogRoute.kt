@@ -13,13 +13,15 @@ fun AlbumListRoute(
     onOpenRelease: (releaseId: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val releases = vm.releaseListItems.collectAsStateWithLifecycle().value
+    val listItems = vm.catalogListItems.collectAsStateWithLifecycle().value
     val uiState = vm.ui.collectAsStateWithLifecycle().value
     val query = vm.query.collectAsStateWithLifecycle().value
     val sort = vm.sort.collectAsStateWithLifecycle().value
+    val filter = vm.filter.collectAsStateWithLifecycle().value
+    val grouping = vm.grouping.collectAsStateWithLifecycle().value
 
     AlbumListScreen(
-        releases = releases,
+        listItems = listItems,
 
         query = query,
         onQueryChange = vm::setQuery,
@@ -32,7 +34,11 @@ fun AlbumListRoute(
         onDelete = { item -> vm.deleteRelease(item.release) },
 
         sort = sort,
+        filter = filter,
+        grouping = grouping,
         onSortChange = vm::setSort,
+        onFilterChange = vm::setFilter,
+        onGroupingChange = vm::setGrouping,
 
         modifier = modifier,
     )
