@@ -46,6 +46,7 @@ import com.zak.pressmark.data.local.model.ReleaseListItem
 import com.zak.pressmark.feature.catalog.components.CatalogActionRail
 import com.zak.pressmark.feature.catalog.components.CatalogOption
 import com.zak.pressmark.feature.catalog.components.CatalogTopActionBar
+import com.zak.pressmark.feature.catalog.components.CommandOption
 import com.zak.pressmark.feature.catalog.components.RailMode
 import com.zak.pressmark.feature.catalog.components.TopAppBar
 import com.zak.pressmark.feature.catalog.model.CatalogFilter
@@ -53,32 +54,26 @@ import com.zak.pressmark.feature.catalog.model.CatalogGrouping
 import com.zak.pressmark.feature.catalog.model.CatalogListItem
 import com.zak.pressmark.feature.catalog.vm.CatalogSort
 
-private const val SortIdAddedNewest = "sort_added_newest"
-private const val SortIdTitleAz = "sort_title_az"
-private const val SortIdArtistAz = "sort_artist_az"
-private const val SortIdYearNewest = "sort_year_newest"
-
-private const val FilterIdHasBarcode = "filter_has_barcode"
-private const val FilterIdNoBarcode = "filter_no_barcode"
-
-private const val GroupIdArtist = "group_artist"
-private const val GroupIdYear = "group_year"
+private data class CatalogOption<T>(
+    val value: T,
+    val label: String,
+)
 
 private val SortOptions = listOf(
-    CatalogOption(SortIdAddedNewest, "Added newest"),
-    CatalogOption(SortIdTitleAz, "Title A–Z"),
-    CatalogOption(SortIdArtistAz, "Artist A–Z"),
-    CatalogOption(SortIdYearNewest, "Year newest"),
+    CatalogOption(CatalogSort.AddedNewest, "Added newest"),
+    CatalogOption(CatalogSort.TitleAZ, "Title A–Z"),
+    CatalogOption(CatalogSort.ArtistAZ, "Artist A–Z"),
+    CatalogOption(CatalogSort.YearNewest, "Year newest"),
 )
 
 private val FilterOptions = listOf(
-    CatalogOption(FilterIdHasBarcode, "Has barcode"),
-    CatalogOption(FilterIdNoBarcode, "No barcode"),
+    CatalogOption(CatalogFilter.HAS_BARCODE, "Has barcode"),
+    CatalogOption(CatalogFilter.NO_BARCODE, "No barcode"),
 )
 
 private val GroupOptions = listOf(
-    CatalogOption(GroupIdArtist, "Artist"),
-    CatalogOption(GroupIdYear, "Year"),
+    CatalogOption(CatalogGrouping.ARTIST, "Artist"),
+    CatalogOption(CatalogGrouping.YEAR, "Year"),
 )
 
 
@@ -118,22 +113,11 @@ fun AlbumListScreen(
     var filterExpanded by rememberSaveable { mutableStateOf(false) }
     var groupExpanded by rememberSaveable { mutableStateOf(false) }
 
-    val selectedSortId = when (sort) {
-        CatalogSort.AddedNewest -> SortIdAddedNewest
-        CatalogSort.TitleAZ -> SortIdTitleAz
-        CatalogSort.ArtistAZ -> SortIdArtistAz
-        CatalogSort.YearNewest -> SortIdYearNewest
-    }
-    val selectedFilterId = when (filter) {
-        CatalogFilter.ALL -> null
-        CatalogFilter.HAS_BARCODE -> FilterIdHasBarcode
-        CatalogFilter.NO_BARCODE -> FilterIdNoBarcode
-    }
-    val selectedGroupId = when (grouping) {
-        CatalogGrouping.NONE -> null
-        CatalogGrouping.ARTIST -> GroupIdArtist
-        CatalogGrouping.YEAR -> GroupIdYear
-    }
+    val selectedSort = SortOptions.firstOrNull { it.value == sort }?.label
+    val selectedFilter = FilterOptions.firstOrNull { it.value == filter }?.label
+        ?.takeIf { filter != CatalogFilter.ALL }
+    val selectedGroup = GroupOptions.firstOrNull { it.value == grouping }?.label
+        ?.takeIf { grouping != CatalogGrouping.NONE }
 
     val showClearSelections =
         sort != CatalogSort.AddedNewest || filter != CatalogFilter.ALL || grouping != CatalogGrouping.NONE
@@ -210,37 +194,23 @@ fun AlbumListScreen(
                             filterExpanded = false
                         },
 
-                        sortOptions = SortOptions,
-                        filterOptions = FilterOptions,
-                        groupOptions = GroupOptions,
+                        sortOptions = SortOptions.map { it.label },
+                        filterOptions = FilterOptions.map { it.label },
+                        groupOptions = GroupOptions.map { it.label },
 
                         onSortSelect = {
-                            val selected = when (it) {
-                                SortIdAddedNewest -> CatalogSort.AddedNewest
-                                SortIdTitleAz -> CatalogSort.TitleAZ
-                                SortIdArtistAz -> CatalogSort.ArtistAZ
-                                SortIdYearNewest -> CatalogSort.YearNewest
-                                else -> sort
-                            }
-                            onSortChange(selected)
+                            val selected = SortOptions.firstOrNull { option -> option.label == it } ?: return@CatalogTopActionBar
+                            onSortChange(selected.value)
                             isSortExpanded = false
                         },
                         onFilterSelect = {
-                            val selected = when (it) {
-                                FilterIdHasBarcode -> CatalogFilter.HAS_BARCODE
-                                FilterIdNoBarcode -> CatalogFilter.NO_BARCODE
-                                else -> filter
-                            }
-                            onFilterChange(selected)
+                            val selected = FilterOptions.firstOrNull { option -> option.label == it } ?: return@CatalogTopActionBar
+                            onFilterChange(selected.value)
                             filterExpanded = false
                         },
                         onGroupSelect = {
-                            val selected = when (it) {
-                                GroupIdArtist -> CatalogGrouping.ARTIST
-                                GroupIdYear -> CatalogGrouping.YEAR
-                                else -> grouping
-                            }
-                            onGroupingChange(selected)
+                            val selected = GroupOptions.firstOrNull { option -> option.label == it } ?: return@CatalogTopActionBar
+                            onGroupingChange(selected.value)
                             groupExpanded = false
                         },
 
