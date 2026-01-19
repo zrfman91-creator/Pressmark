@@ -1,3 +1,4 @@
+// file: app/src/main/java/com/zak/pressmark/feature/addalbum/vm/AddAlbumViewModel.kt
 @file:OptIn(ExperimentalCoroutinesApi::class)
 
 package com.zak.pressmark.feature.addalbum.vm
@@ -5,6 +6,8 @@ package com.zak.pressmark.feature.addalbum.vm
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zak.pressmark.data.local.entity.ArtistEntity
+import com.zak.pressmark.data.local.entity.ReleaseEntity
+import com.zak.pressmark.data.local.repository.ReleaseRepository
 import com.zak.pressmark.data.repository.AlbumRepository
 import com.zak.pressmark.data.repository.ArtistRepository
 import com.zak.pressmark.feature.addalbum.model.AddAlbumFormState
@@ -14,15 +17,12 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import com.zak.pressmark.feature.addalbum.state.AlbumAutofillDetails
-import com.zak.pressmark.feature.addalbum.state.DiscogsAutofillUi
 
 sealed interface AddAlbumEvent {
     data object NavigateUp : AddAlbumEvent
@@ -41,6 +41,7 @@ enum class SaveIntent {
 class AddAlbumViewModel(
     private val albumRepository: AlbumRepository,
     private val artistRepository: ArtistRepository,
+    private val releaseRepository: ReleaseRepository,
 ) : ViewModel() {
 
     private val _events = MutableSharedFlow<AddAlbumEvent>()
@@ -108,11 +109,13 @@ class AddAlbumViewModel(
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                // Legacy album path still needs a single artistId FK.
                 val resolvedArtistId: Long? = when {
                     form.artistId != null -> form.artistId
                     else -> artistRepository.getOrCreateArtistId(cleanArtist)
                 }
 
+                // 1) Legacy Album insert (keeps current cover flow + details stable for now)
                 val albumId = albumRepository.addAlbumReturningId(
                     title = cleanTitle,
                     artistId = resolvedArtistId,
@@ -120,6 +123,24 @@ class AddAlbumViewModel(
                     label = cleanLabel,
                     catalogNo = cleanCatalogNo,
                     format = cleanFormat,
+                )
+
+                // 2) Canonical Release insert + parsed credits (this is what the new list reads)
+                val now = System.currentTimeMillis()
+                val release = ReleaseEntity(
+                    id = albumId,
+                    title = cleanTitle,
+                    releaseYear = year,
+                    label = cleanLabel,
+                    catalogNo = cleanCatalogNo,
+                    format = cleanFormat,
+                    addedAt = now,
+                )
+
+                // Parse roles like "feat.", "with", "and his orchestra" into structured credits.
+                releaseRepository.upsertReleaseFromRawArtist(
+                    release = release,
+                    rawArtist = cleanArtist,
                 )
 
                 withContext(Dispatchers.Main) {

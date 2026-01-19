@@ -17,13 +17,14 @@ class AddAlbumViewModelFactory(
     @OptIn(ExperimentalCoroutinesApi::class)
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(AddAlbumViewModel::class.java)) {
-            return AddAlbumViewModel(
-                albumRepository = albumRepository,
-                artistRepository = artistRepository,
-                releaseRepository = releaseRepository,
-            ) as T
+        if (!modelClass.isAssignableFrom(AddAlbumViewModel::class.java)) {
+            throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
         }
-        throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
+
+        return AddAlbumViewModel(
+            albumRepository = albumRepository,
+            artistRepository = artistRepository,
+            releaseRepository = releaseRepository,
+        ) as T
     }
 }
