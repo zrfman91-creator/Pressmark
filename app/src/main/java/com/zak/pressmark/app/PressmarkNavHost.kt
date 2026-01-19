@@ -38,7 +38,6 @@ fun PressmarkNavHost(
         startDestination = PressmarkRoutes.LIST,
     ) {
         composable(PressmarkRoutes.LIST) {
-            // Album list VM
             val listFactory = remember(graph) {
                 AlbumListViewModelFactory(
                     albumRepo = graph.albumRepository,
@@ -47,26 +46,14 @@ fun PressmarkNavHost(
                 )
             }
             val vm: AlbumListViewModel = viewModel(factory = listFactory)
-            val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
-            val savedAlbumIdFlow = remember(savedStateHandle) {
-                savedStateHandle?.savedAlbumIdFlow()
-            }
-            val savedAlbumId = savedAlbumIdFlow
-                ?.collectAsStateWithLifecycle(initialValue = null)
-                ?.value
 
             AlbumListRoute(
                 vm = vm,
-                graph = graph,
                 onAddAlbum = { navController.navigate(PressmarkRoutes.ADD) },
-                onOpenAlbum = { albumId ->
-                    navController.navigate(PressmarkRoutes.details(albumId))
+                onOpenRelease = { releaseId ->
+                    // NOTE: Details screen is still AlbumDetailsRoute; this will work as long as ids match.
+                    navController.navigate(PressmarkRoutes.details(releaseId))
                 },
-                onOpenCoverSearch = { albumId, artist, title ->
-                    navController.navigate(PressmarkRoutes.coverSearch(albumId, artist, title))
-                },
-                savedAlbumId = savedAlbumId,
-                onAlbumSavedConsumed = { savedStateHandle?.clearSavedAlbumId() },
             )
         }
 
