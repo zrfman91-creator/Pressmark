@@ -9,6 +9,13 @@ enum class AlbumGrouping {
     DECADE,
 }
 
+@Immutable
+enum class CatalogGrouping {
+    NONE,
+    ARTIST,
+    YEAR,
+}
+
 fun decadeLabel(decadeStart: Int?): String {
     return if (decadeStart == null) "Unknown Year" else "${decadeStart}–${decadeStart + 9}"
 }
