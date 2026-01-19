@@ -3,6 +3,7 @@ package com.zak.pressmark.app
 
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -47,11 +48,14 @@ fun PressmarkNavHost(
             }
             val vm: AlbumListViewModel = viewModel(factory = listFactory)
 
+            LaunchedEffect(Unit) {
+                vm.refreshReleases()
+            }
+
             AlbumListRoute(
                 vm = vm,
                 onAddAlbum = { navController.navigate(PressmarkRoutes.ADD) },
                 onOpenRelease = { releaseId ->
-                    // NOTE: Details screen is still AlbumDetailsRoute; this will work as long as ids match.
                     navController.navigate(PressmarkRoutes.details(releaseId))
                 },
             )
@@ -70,6 +74,7 @@ fun PressmarkNavHost(
                 AddAlbumViewModelFactory(
                     albumRepository = graph.albumRepository,
                     artistRepository = graph.artistRepository,
+                    releaseRepository = graph.releaseRepository,
                 )
             }
             val vm: AddAlbumViewModel = viewModel(factory = factory)
@@ -152,14 +157,12 @@ fun PressmarkNavHost(
             fun closeCoverFlow() {
                 when (origin) {
                     PressmarkRoutes.COVER_ORIGIN_DETAILS -> {
-                        // Drop Cover Search (+ Add) from back stack and land on Details.
                         navController.navigate(PressmarkRoutes.details(albumId)) {
                             popUpTo(PressmarkRoutes.LIST) { inclusive = false }
                         }
                     }
 
                     PressmarkRoutes.COVER_ORIGIN_LIST_SUCCESS -> {
-                        // Return to List and show success dialog.
                         runCatching {
                             navController.getBackStackEntry(PressmarkRoutes.LIST)
                                 .savedStateHandle
@@ -169,7 +172,6 @@ fun PressmarkNavHost(
                     }
 
                     PressmarkRoutes.COVER_ORIGIN_ADD_ANOTHER -> {
-                        // Return to Add Album and clear form exactly once.
                         navController.previousBackStackEntry
                             ?.savedStateHandle
                             ?.requestClearAddAlbumForm()
