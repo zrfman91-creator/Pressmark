@@ -12,6 +12,7 @@ import com.zak.pressmark.data.local.model.ReleaseListItem
 import com.zak.pressmark.data.local.model.ReleaseListItemMapper
 import com.zak.pressmark.data.repository.ArtistRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 
 /**
@@ -32,6 +33,12 @@ class ReleaseRepository(
     private val artistRepository: ArtistRepository = ArtistRepository(db.artistDao()),
     private val creditsBuilder: ReleaseArtistCreditsBuilder = ReleaseArtistCreditsBuilder(artistRepository),
 ) {
+    data class ReleaseDetailsSnapshot(
+        val release: ReleaseEntity?,
+        val credits: List<ReleaseArtistCreditEntity>,
+        val artworks: List<ArtworkEntity>,
+    )
+
 
     /**
      * Create or update a release plus its credits and optional artwork, atomically.
@@ -138,6 +145,20 @@ class ReleaseRepository(
 
     fun observeArtworksForRelease(releaseId: String): Flow<List<ArtworkEntity>> =
         artworkDao.observeArtworksForRelease(releaseId)
+
+    fun observeReleaseDetails(releaseId: String): Flow<ReleaseDetailsSnapshot> {
+        return combine(
+            observeRelease(releaseId),
+            observeCreditsForRelease(releaseId),
+            observeArtworksForRelease(releaseId),
+        ) { release, credits, artworks ->
+            ReleaseDetailsSnapshot(
+                release = release,
+                credits = credits,
+                artworks = artworks,
+            )
+        }
+    }
 
     suspend fun getRelease(releaseId: String): ReleaseEntity? = releaseDao.getById(releaseId)
 
