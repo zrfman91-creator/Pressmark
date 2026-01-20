@@ -1,5 +1,4 @@
-// file: app/src/main/java/com/zak/pressmark/data/repository/ReleaseRepository.kt
-package com.zak.pressmark.data.repository
+package com.zak.pressmark.data.local.repository
 
 import androidx.room.withTransaction
 import com.zak.pressmark.data.local.dao.ArtworkDao
@@ -11,7 +10,7 @@ import com.zak.pressmark.data.local.entity.ReleaseArtistCreditEntity
 import com.zak.pressmark.data.local.entity.ReleaseEntity
 import com.zak.pressmark.data.local.model.ReleaseListItem
 import com.zak.pressmark.data.local.model.ReleaseListItemMapper
-import com.zak.pressmark.data.local.repository.ReleaseArtistCreditsBuilder
+import com.zak.pressmark.data.repository.ArtistRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -31,9 +30,7 @@ class ReleaseRepository(
 
     // Defaults keep this plug-and-play with existing call sites.
     private val artistRepository: ArtistRepository = ArtistRepository(db.artistDao()),
-    private val creditsBuilder: ReleaseArtistCreditsBuilder = ReleaseArtistCreditsBuilder(
-        artistRepository
-    ),
+    private val creditsBuilder: ReleaseArtistCreditsBuilder = ReleaseArtistCreditsBuilder(artistRepository),
 ) {
 
     /**
