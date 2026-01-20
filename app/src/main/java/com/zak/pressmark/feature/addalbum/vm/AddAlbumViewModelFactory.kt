@@ -4,12 +4,10 @@ package com.zak.pressmark.feature.addalbum.vm
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.zak.pressmark.data.repository.ReleaseRepository
-import com.zak.pressmark.data.repository.AlbumRepository
 import com.zak.pressmark.data.repository.ArtistRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 class AddAlbumViewModelFactory(
-    private val albumRepository: AlbumRepository,
     private val artistRepository: ArtistRepository,
     private val releaseRepository: ReleaseRepository,
 ) : ViewModelProvider.Factory {
@@ -22,7 +20,6 @@ class AddAlbumViewModelFactory(
         }
 
         return AddAlbumViewModel(
-            albumRepository = albumRepository,
             artistRepository = artistRepository,
             releaseRepository = releaseRepository,
         ) as T

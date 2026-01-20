@@ -1,16 +1,24 @@
-package com.zak.pressmark.data.local.repository
+package com.zak.pressmark.data.repository
 
 import androidx.room.withTransaction
+import com.zak.pressmark.core.credits.ArtistCreditFormatter
 import com.zak.pressmark.data.local.dao.ArtworkDao
 import com.zak.pressmark.data.local.dao.ReleaseArtistCreditDao
 import com.zak.pressmark.data.local.dao.ReleaseDao
 import com.zak.pressmark.data.local.db.AppDatabase
 import com.zak.pressmark.data.local.entity.ArtworkEntity
+import com.zak.pressmark.data.local.entity.ArtworkKind
+import com.zak.pressmark.data.local.entity.ArtworkSource
 import com.zak.pressmark.data.local.entity.ReleaseArtistCreditEntity
 import com.zak.pressmark.data.local.entity.ReleaseEntity
+import com.zak.pressmark.data.local.model.ArtistCreditFormatMapper
+import com.zak.pressmark.data.local.model.ReleaseCreditRow
 import com.zak.pressmark.data.local.model.ReleaseListItem
 import com.zak.pressmark.data.local.model.ReleaseListItemMapper
-import com.zak.pressmark.data.repository.ArtistRepository
+import com.zak.pressmark.data.model.ReleaseArtwork
+import com.zak.pressmark.data.model.ReleaseCredit
+import com.zak.pressmark.data.model.ReleaseDetails
+import com.zak.pressmark.data.model.ReleaseSummary
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
@@ -138,10 +146,19 @@ class ReleaseRepository(
             .map { rows -> ReleaseListItemMapper.fromFlatRows(rows) }
     }
 
+    suspend fun listReleaseSummaries(): List<ReleaseSummary> =
+        listReleaseListItems().map { item -> item.toSummary() }
+
+    fun observeReleaseSummaries(): Flow<List<ReleaseSummary>> =
+        observeReleaseListItems().map { items -> items.map { item -> item.toSummary() } }
+
     fun observeRelease(releaseId: String): Flow<ReleaseEntity?> = releaseDao.observeById(releaseId)
 
     fun observeCreditsForRelease(releaseId: String): Flow<List<ReleaseArtistCreditEntity>> =
         creditDao.observeCreditsForRelease(releaseId)
+
+    fun observeCreditRowsForRelease(releaseId: String): Flow<List<ReleaseCreditRow>> =
+        creditDao.observeCreditRowsForRelease(releaseId)
 
     fun observeArtworksForRelease(releaseId: String): Flow<List<ArtworkEntity>> =
         artworkDao.observeArtworksForRelease(releaseId)
@@ -160,10 +177,239 @@ class ReleaseRepository(
         }
     }
 
+    fun observeReleaseDetailsModel(releaseId: String): Flow<ReleaseDetails?> {
+        return combine(
+            observeRelease(releaseId),
+            observeCreditRowsForRelease(releaseId),
+            observeArtworksForRelease(releaseId),
+        ) { release, credits, artworks ->
+            release?.let { mapReleaseDetails(it, credits, artworks) }
+        }
+    }
+
     suspend fun getRelease(releaseId: String): ReleaseEntity? = releaseDao.getById(releaseId)
+
+    suspend fun updateReleaseDetails(
+        releaseId: String,
+        title: String,
+        rawArtist: String,
+        releaseYear: Int?,
+        label: String?,
+        catalogNo: String?,
+        format: String?,
+        barcode: String?,
+        country: String?,
+        releaseType: String?,
+        notes: String?,
+        rating: Int?,
+        lastPlayedAt: Long?,
+    ): Int {
+        return db.withTransaction {
+            val updated = releaseDao.updateReleaseDetails(
+                releaseId = releaseId,
+                title = title.trim(),
+                releaseYear = releaseYear,
+                label = label?.trim()?.takeIf { it.isNotBlank() },
+                catalogNo = catalogNo?.trim()?.takeIf { it.isNotBlank() },
+                format = format?.trim()?.takeIf { it.isNotBlank() },
+                barcode = barcode?.trim()?.takeIf { it.isNotBlank() },
+                country = country?.trim()?.takeIf { it.isNotBlank() },
+                releaseType = releaseType?.trim()?.takeIf { it.isNotBlank() },
+                notes = notes?.trim()?.takeIf { it.isNotBlank() },
+                rating = rating,
+                lastPlayedAt = lastPlayedAt,
+            )
+
+            val credits = creditsBuilder.buildForRelease(releaseId = releaseId, rawArtist = rawArtist)
+            creditDao.replaceCreditsForRelease(releaseId, credits)
+
+            updated
+        }
+    }
+
+    suspend fun updateReleaseMetadata(
+        releaseId: String,
+        releaseYear: Int?,
+        label: String?,
+        catalogNo: String?,
+        format: String?,
+        country: String?,
+        releaseType: String?,
+        notes: String?,
+        discogsReleaseId: Long?,
+    ): Boolean {
+        return db.withTransaction {
+            val existing = releaseDao.getById(releaseId) ?: return@withTransaction false
+            releaseDao.update(
+                existing.copy(
+                    releaseYear = releaseYear,
+                    label = label?.trim()?.takeIf { it.isNotBlank() },
+                    catalogNo = catalogNo?.trim()?.takeIf { it.isNotBlank() },
+                    format = format?.trim()?.takeIf { it.isNotBlank() },
+                    country = country?.trim()?.takeIf { it.isNotBlank() },
+                    releaseType = releaseType?.trim()?.takeIf { it.isNotBlank() },
+                    notes = notes?.trim()?.takeIf { it.isNotBlank() },
+                    discogsReleaseId = discogsReleaseId ?: existing.discogsReleaseId,
+                )
+            )
+            true
+        }
+    }
+
+    suspend fun setLocalCover(releaseId: String, coverUri: String?) {
+        setArtworkSelection(
+            releaseId = releaseId,
+            coverUrl = coverUri,
+            provider = null,
+            providerItemId = null,
+        )
+    }
+
+    suspend fun setDiscogsCover(
+        releaseId: String,
+        coverUrl: String?,
+        discogsReleaseId: Long?,
+    ) {
+        setArtworkSelection(
+            releaseId = releaseId,
+            coverUrl = coverUrl,
+            provider = "discogs",
+            providerItemId = discogsReleaseId?.toString(),
+        )
+    }
+
+    suspend fun setArtworkSelection(
+        releaseId: String,
+        coverUrl: String?,
+        provider: String?,
+        providerItemId: String?,
+    ) {
+        val normalizedCover = coverUrl?.trim()?.takeIf { it.isNotBlank() }
+        val normalizedProvider = provider?.trim()?.takeIf { it.isNotBlank() }
+        val normalizedItemId = providerItemId?.trim()?.takeIf { it.isNotBlank() }
+
+        db.withTransaction {
+            updateReleaseArtworkProvider(
+                releaseId = releaseId,
+                provider = normalizedProvider,
+                providerItemId = normalizedItemId,
+            )
+
+            if (normalizedCover.isNullOrBlank()) {
+                artworkDao.deleteByReleaseId(releaseId)
+                return@withTransaction
+            }
+
+            val artworkId = artworkDao.insert(
+                ArtworkEntity(
+                    releaseId = releaseId,
+                    uri = normalizedCover,
+                    kind = ArtworkKind.COVER_FRONT,
+                    source = if (normalizedProvider == "discogs") ArtworkSource.DISCOGS else ArtworkSource.LOCAL,
+                    isPrimary = true,
+                    createdAt = System.currentTimeMillis(),
+                )
+            )
+            artworkDao.setPrimaryArtwork(releaseId, artworkId)
+        }
+    }
 
     suspend fun deleteRelease(releaseId: String) {
         // CASCADE FKs will clean up credits + artworks automatically.
         releaseDao.deleteById(releaseId)
     }
+
+    private suspend fun updateReleaseArtworkProvider(
+        releaseId: String,
+        provider: String?,
+        providerItemId: String?,
+    ) {
+        val existing = releaseDao.getById(releaseId) ?: return
+        val discogsReleaseId =
+            if (provider == "discogs") providerItemId?.toLongOrNull() else null
+
+        releaseDao.update(
+            existing.copy(
+                artworkProvider = provider,
+                artworkProviderItemId = providerItemId,
+                discogsReleaseId = discogsReleaseId,
+            )
+        )
+    }
+
+    private fun mapReleaseDetails(
+        release: ReleaseEntity,
+        credits: List<ReleaseCreditRow>,
+        artworks: List<ArtworkEntity>,
+    ): ReleaseDetails {
+        val formatterCredits = credits.map { row ->
+            val creditEntity = ReleaseArtistCreditEntity(
+                releaseId = release.id,
+                artistId = row.artistId,
+                role = row.role,
+                position = row.position,
+                displayHint = row.displayHint,
+            )
+            ArtistCreditFormatMapper.toFormatterCredit(
+                credit = creditEntity,
+                artistDisplayName = row.artistDisplayName,
+            )
+        }
+
+        val artistLine = ArtistCreditFormatter.formatSingleLine(formatterCredits)
+        val primaryArtwork = artworks.firstOrNull()
+
+        return ReleaseDetails(
+            releaseId = release.id,
+            title = release.title,
+            artistLine = artistLine,
+            releaseYear = release.releaseYear,
+            label = release.label,
+            catalogNo = release.catalogNo,
+            format = release.format,
+            barcode = release.barcode,
+            country = release.country,
+            releaseType = release.releaseType,
+            notes = release.notes,
+            rating = release.rating,
+            addedAt = release.addedAt,
+            lastPlayedAt = release.lastPlayedAt,
+            artwork = primaryArtwork?.let { artwork ->
+                ReleaseArtwork(
+                    id = artwork.id,
+                    uri = artwork.uri,
+                    isPrimary = artwork.isPrimary,
+                    kind = artwork.kind.name,
+                    source = artwork.source.name,
+                    width = artwork.width,
+                    height = artwork.height,
+                )
+            },
+            credits = credits.map { row ->
+                ReleaseCredit(
+                    artistId = row.artistId,
+                    artistName = row.artistDisplayName,
+                    role = row.role.name,
+                    position = row.position,
+                    displayHint = row.displayHint,
+                )
+            },
+        )
+    }
+
+    private fun ReleaseListItem.toSummary(): ReleaseSummary =
+        ReleaseSummary(
+            releaseId = release.id,
+            title = release.title,
+            artistLine = artistLine,
+            releaseYear = release.releaseYear,
+            artworkUri = artworkUri,
+            catalogNo = release.catalogNo,
+            barcode = release.barcode,
+            label = release.label,
+            country = release.country,
+            format = release.format,
+            releaseType = release.releaseType,
+            addedAt = release.addedAt,
+        )
 }
