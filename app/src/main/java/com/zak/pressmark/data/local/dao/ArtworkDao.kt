@@ -8,6 +8,7 @@ import androidx.room.Query
 import androidx.room.Transaction
 import com.zak.pressmark.data.local.db.DbSchema.Artwork
 import com.zak.pressmark.data.local.entity.ArtworkEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ArtworkDao {
@@ -40,6 +41,15 @@ interface ArtworkDao {
         """
     )
     suspend fun artworksForRelease(releaseId: String): List<ArtworkEntity>
+
+    @Query(
+        """
+        SELECT * FROM ${Artwork.TABLE}
+        WHERE ${Artwork.RELEASE_ID} = :releaseId
+        ORDER BY ${Artwork.IS_PRIMARY} DESC, ${Artwork.ID} DESC
+        """
+    )
+    fun observeArtworksForRelease(releaseId: String): Flow<List<ArtworkEntity>>
 
     /**
      * Primary artwork used for list-row thumbnail.
