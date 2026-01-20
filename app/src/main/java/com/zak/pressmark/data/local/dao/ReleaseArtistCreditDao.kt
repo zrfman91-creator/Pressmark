@@ -57,6 +57,23 @@ interface ReleaseArtistCreditDao {
 
     @Query(
         """
+        SELECT
+            c.${ReleaseArtistCredit.ARTIST_ID} AS credit_artist_id,
+            c.${ReleaseArtistCredit.ROLE} AS credit_role,
+            c.${ReleaseArtistCredit.POSITION} AS credit_position,
+            c.${ReleaseArtistCredit.DISPLAY_HINT} AS credit_display_hint,
+            a.${Artist.DISPLAY_NAME} AS artist_display_name
+        FROM ${ReleaseArtistCredit.TABLE} c
+        INNER JOIN ${Artist.TABLE} a
+          ON a.${Artist.ID} = c.${ReleaseArtistCredit.ARTIST_ID}
+        WHERE c.${ReleaseArtistCredit.RELEASE_ID} = :releaseId
+        ORDER BY c.${ReleaseArtistCredit.POSITION} ASC, c.${ReleaseArtistCredit.ID} ASC
+        """
+    )
+    suspend fun creditRowsForRelease(releaseId: String): List<ReleaseCreditRow>
+
+    @Query(
+        """
         SELECT * FROM ${ReleaseArtistCredit.TABLE}
         WHERE ${ReleaseArtistCredit.RELEASE_ID} = :releaseId
         ORDER BY ${ReleaseArtistCredit.POSITION} ASC, ${ReleaseArtistCredit.ID} ASC

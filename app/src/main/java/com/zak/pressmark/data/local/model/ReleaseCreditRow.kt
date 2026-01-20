@@ -3,8 +3,9 @@ package com.zak.pressmark.data.local.model
 import androidx.room.ColumnInfo
 import com.zak.pressmark.data.local.entity.CreditRole
 
-// Flat credit row joined with artist display name for Release details rendering.
-
+/**
+ * Flat credit row joined with artist display name for Release details rendering.
+ */
 data class ReleaseCreditRow(
     @ColumnInfo(name = "credit_artist_id")
     val artistId: Long,

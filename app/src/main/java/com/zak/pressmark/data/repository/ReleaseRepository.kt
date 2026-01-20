@@ -227,6 +227,35 @@ class ReleaseRepository(
         }
     }
 
+    suspend fun updateReleaseMetadata(
+        releaseId: String,
+        releaseYear: Int?,
+        label: String?,
+        catalogNo: String?,
+        format: String?,
+        country: String?,
+        releaseType: String?,
+        notes: String?,
+        discogsReleaseId: Long?,
+    ): Boolean {
+        return db.withTransaction {
+            val existing = releaseDao.getById(releaseId) ?: return@withTransaction false
+            releaseDao.update(
+                existing.copy(
+                    releaseYear = releaseYear,
+                    label = label?.trim()?.takeIf { it.isNotBlank() },
+                    catalogNo = catalogNo?.trim()?.takeIf { it.isNotBlank() },
+                    format = format?.trim()?.takeIf { it.isNotBlank() },
+                    country = country?.trim()?.takeIf { it.isNotBlank() },
+                    releaseType = releaseType?.trim()?.takeIf { it.isNotBlank() },
+                    notes = notes?.trim()?.takeIf { it.isNotBlank() },
+                    discogsReleaseId = discogsReleaseId ?: existing.discogsReleaseId,
+                )
+            )
+            true
+        }
+    }
+
     suspend fun setLocalCover(releaseId: String, coverUri: String?) {
         setArtworkSelection(
             releaseId = releaseId,
