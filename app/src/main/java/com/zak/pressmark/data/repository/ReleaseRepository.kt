@@ -132,6 +132,8 @@ class ReleaseRepository(
             .map { rows -> ReleaseListItemMapper.fromFlatRows(rows) }
     }
 
+    fun observeRelease(releaseId: String): Flow<ReleaseEntity?> = releaseDao.observeById(releaseId)
+
     suspend fun getRelease(releaseId: String): ReleaseEntity? = releaseDao.getById(releaseId)
 
     suspend fun deleteRelease(releaseId: String) {
