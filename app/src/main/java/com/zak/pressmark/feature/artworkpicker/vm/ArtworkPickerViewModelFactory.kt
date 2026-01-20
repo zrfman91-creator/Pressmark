@@ -3,10 +3,10 @@ package com.zak.pressmark.feature.artworkpicker.vm
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.zak.pressmark.data.remote.discogs.DiscogsApiService
-import com.zak.pressmark.data.repository.AlbumRepository
+import com.zak.pressmark.data.repository.ReleaseRepository
 
 class ArtworkPickerViewModelFactory(
-    private val albumRepository: AlbumRepository,
+    private val releaseRepository: ReleaseRepository,
     private val discogsApi: DiscogsApiService,
 ) : ViewModelProvider.Factory {
 
@@ -14,7 +14,7 @@ class ArtworkPickerViewModelFactory(
         if (modelClass.isAssignableFrom(DiscogsCoverSearchViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
             return DiscogsCoverSearchViewModel(
-                albumRepository = albumRepository,
+                releaseRepository = releaseRepository,
                 discogsApi = discogsApi,
             ) as T
         }

@@ -46,7 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
-import com.zak.pressmark.data.local.model.ReleaseListItem
+import com.zak.pressmark.data.model.ReleaseSummary
 import com.zak.pressmark.feature.catalog.components.CatalogActionRail
 import com.zak.pressmark.feature.catalog.components.CatalogTopActionBar
 import com.zak.pressmark.feature.catalog.components.RailMode
@@ -57,7 +57,7 @@ import com.zak.pressmark.feature.catalog.vm.CatalogSort
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlbumListScreen(
-    releases: List<ReleaseListItem>,
+    releases: List<ReleaseSummary>,
     query: String,
     onQueryChange: (String) -> Unit,
     sort: CatalogSort,
@@ -66,7 +66,7 @@ fun AlbumListScreen(
     onSnackShown: () -> Unit,
     onAddAlbum: () -> Unit,
     onOpenRelease: (releaseId: String) -> Unit,
-    onDelete: (ReleaseListItem) -> Unit,
+    onDelete: (ReleaseSummary) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val screenContainerColor = MaterialTheme.colorScheme.background
@@ -217,11 +217,11 @@ fun AlbumListScreen(
                     ) {
                         items(
                             items = releases,
-                            key = { it.release.id },
+                            key = { it.releaseId },
                         ) { item ->
                             ReleaseRow(
                                 item = item,
-                                onClick = { onOpenRelease(item.release.id) },
+                                onClick = { onOpenRelease(item.releaseId) },
                                 onDelete = { onDelete(item) },
                             )
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -253,7 +253,7 @@ fun AlbumListScreen(
 
 @Composable
 private fun ReleaseRow(
-    item: ReleaseListItem,
+    item: ReleaseSummary,
     onClick: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -266,7 +266,7 @@ private fun ReleaseRow(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = item.release.title,
+                text = item.title,
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
@@ -280,7 +280,7 @@ private fun ReleaseRow(
                 maxLines = 1,
             )
 
-            val yearText = item.release.releaseYear?.toString()
+            val yearText = item.releaseYear?.toString()
             if (!yearText.isNullOrBlank()) {
                 Text(
                     text = yearText,

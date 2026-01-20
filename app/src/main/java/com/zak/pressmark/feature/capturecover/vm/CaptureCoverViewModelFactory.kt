@@ -2,10 +2,10 @@ package com.zak.pressmark.feature.capturecover.vm
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.zak.pressmark.data.repository.AlbumRepository
+import com.zak.pressmark.data.repository.ReleaseRepository
 
 class CaptureCoverFlowViewModelFactory(
-    private val albumRepository: AlbumRepository,
+    private val releaseRepository: ReleaseRepository,
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
@@ -14,7 +14,7 @@ class CaptureCoverFlowViewModelFactory(
             throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
         }
         return CaptureCoverFlowViewModel(
-            albumRepository = albumRepository,
+            releaseRepository = releaseRepository,
         ) as T
     }
 }
