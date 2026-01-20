@@ -1,4 +1,4 @@
-package com.zak.pressmark.data.local.repository
+package com.zak.pressmark.data.repository
 
 import androidx.room.withTransaction
 import com.zak.pressmark.core.credits.ArtistCreditFormatter
@@ -19,8 +19,6 @@ import com.zak.pressmark.data.model.ReleaseArtwork
 import com.zak.pressmark.data.model.ReleaseCredit
 import com.zak.pressmark.data.model.ReleaseDetails
 import com.zak.pressmark.data.model.ReleaseSummary
-import com.zak.pressmark.data.repository.ArtistRepository
-import com.zak.pressmark.data.repository.ReleaseArtistCreditsBuilder
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
