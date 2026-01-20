@@ -7,7 +7,6 @@ import androidx.lifecycle.viewModelScope
 import com.zak.pressmark.data.local.entity.ArtistEntity
 import com.zak.pressmark.data.local.entity.ReleaseEntity
 import com.zak.pressmark.data.repository.ReleaseRepository
-import com.zak.pressmark.data.repository.AlbumRepository
 import com.zak.pressmark.data.repository.ArtistRepository
 import com.zak.pressmark.feature.addalbum.model.AddAlbumFormState
 import kotlinx.coroutines.Dispatchers
@@ -22,6 +21,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.UUID
 
 sealed interface AddAlbumEvent {
     data object NavigateUp : AddAlbumEvent
@@ -38,7 +38,6 @@ enum class SaveIntent {
 }
 
 class AddAlbumViewModel(
-    private val albumRepository: AlbumRepository,
     private val artistRepository: ArtistRepository,
     private val releaseRepository: ReleaseRepository,
 ) : ViewModel() {
@@ -108,26 +107,10 @@ class AddAlbumViewModel(
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // Legacy album path still needs a single artistId FK.
-                val resolvedArtistId: Long? = when {
-                    form.artistId != null -> form.artistId
-                    else -> artistRepository.getOrCreateArtistId(cleanArtist)
-                }
-
-                // 1) Legacy Album insert (keeps current cover flow + details stable for now)
-                val albumId = albumRepository.addAlbumReturningId(
-                    title = cleanTitle,
-                    artistId = resolvedArtistId,
-                    releaseYear = year,
-                    label = cleanLabel,
-                    catalogNo = cleanCatalogNo,
-                    format = cleanFormat,
-                )
-
-                // 2) Canonical Release insert + parsed credits (this is what the new list reads)
                 val now = System.currentTimeMillis()
+                val releaseId = UUID.randomUUID().toString()
                 val release = ReleaseEntity(
-                    id = albumId,
+                    id = releaseId,
                     title = cleanTitle,
                     releaseYear = year,
                     label = cleanLabel,
@@ -145,7 +128,7 @@ class AddAlbumViewModel(
                 withContext(Dispatchers.Main) {
                     _events.emit(
                         AddAlbumEvent.SaveResult(
-                            albumId = albumId,
+                            albumId = releaseId,
                             intent = intent,
                         )
                     )

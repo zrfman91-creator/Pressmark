@@ -2,7 +2,7 @@ package com.zak.pressmark.feature.capturecover.vm
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.zak.pressmark.data.repository.AlbumRepository
+import com.zak.pressmark.data.repository.ReleaseRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,7 +20,7 @@ sealed interface CaptureCoverEffect {
 }
 
 class CaptureCoverFlowViewModel(
-    private val albumRepository: AlbumRepository,
+    private val releaseRepository: ReleaseRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CaptureCoverUiState())
@@ -30,10 +30,10 @@ class CaptureCoverFlowViewModel(
     val effects = _effects.asSharedFlow()
 
     fun saveCover(
-        albumId: String,
+        releaseId: String,
         coverUri: String?,
     ) {
-        if (albumId.isBlank()) {
+        if (releaseId.isBlank()) {
             _effects.tryEmit(CaptureCoverEffect.Done)
             return
         }
@@ -42,8 +42,8 @@ class CaptureCoverFlowViewModel(
             _uiState.value = CaptureCoverUiState(isSaving = true)
 
             runCatching {
-                albumRepository.setLocalCover(
-                    albumId = albumId,
+                releaseRepository.setLocalCover(
+                    releaseId = releaseId,
                     coverUri = coverUri,
                 )
             }.onFailure { t ->

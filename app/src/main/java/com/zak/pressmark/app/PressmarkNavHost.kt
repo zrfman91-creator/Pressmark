@@ -41,8 +41,6 @@ fun PressmarkNavHost(
         composable(PressmarkRoutes.LIST) {
             val listFactory = remember(graph) {
                 CatalogViewModelFactory(
-                    albumRepo = graph.albumRepository,
-                    artistRepo = graph.artistRepository,
                     releaseRepo = graph.releaseRepository,
                 )
             }
@@ -69,7 +67,6 @@ fun PressmarkNavHost(
 
             val factory = remember(graph) {
                 AddAlbumViewModelFactory(
-                    albumRepository = graph.albumRepository,
                     artistRepository = graph.artistRepository,
                     releaseRepository = graph.releaseRepository,
                 )
