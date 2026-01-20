@@ -17,23 +17,49 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ReleaseDao {
 
-    // -----------------------------
     // Writes
-    // -----------------------------
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(release: ReleaseEntity)
 
     @Update
     suspend fun update(release: ReleaseEntity)
 
+    @Query(
+        """
+        UPDATE ${Release.TABLE}
+        SET ${Release.TITLE} = :title,
+            ${Release.RELEASE_YEAR} = :releaseYear,
+            ${Release.LABEL} = :label,
+            ${Release.CATALOG_NO} = :catalogNo,
+            ${Release.FORMAT} = :format,
+            ${Release.BARCODE} = :barcode,
+            ${Release.COUNTRY} = :country,
+            ${Release.RELEASE_TYPE} = :releaseType,
+            ${Release.NOTES} = :notes,
+            ${Release.RATING} = :rating,
+            ${Release.LAST_PLAYED_AT} = :lastPlayedAt
+        WHERE ${Release.ID} = :releaseId
+        """
+    )
+    suspend fun updateReleaseDetails(
+        releaseId: String,
+        title: String,
+        releaseYear: Int?,
+        label: String?,
+        catalogNo: String?,
+        format: String?,
+        barcode: String?,
+        country: String?,
+        releaseType: String?,
+        notes: String?,
+        rating: Int?,
+        lastPlayedAt: Long?,
+    ): Int
+
     @Query("DELETE FROM ${Release.TABLE} WHERE ${Release.ID} = :releaseId")
     suspend fun deleteById(releaseId: String)
 
-    // -----------------------------
     // Reads
-    // -----------------------------
-
     @Query(
         """
         SELECT * FROM ${Release.TABLE}
@@ -69,19 +95,8 @@ interface ReleaseDao {
     )
     suspend fun searchByTitle(query: String): List<ReleaseEntity>
 
-    // -----------------------------
-    // Release list read-model (flat rows; group by release.id in higher layer)
-    // -----------------------------
 
-    /**
-     * Main list query without N+1:
-     * - ReleaseEntity columns (embedded)
-     * - Primary-or-latest artwork (id + uri)
-     * - Credit row (artistId/role/position/displayHint) + joined Artist.displayName
-     *
-     * Returns 0..N rows per release (one per credit). Releases with no credits still return 1 row
-     * with credit columns null due to LEFT JOIN.
-     */
+    // Release list read-model (flat rows; group by release.id in higher layer)
     @Query(
         """
         SELECT
@@ -122,12 +137,6 @@ interface ReleaseDao {
     )
     suspend fun listReleaseRowsFlat(): List<ReleaseListRowFlat>
 
-    /**
-     * Live (reactive) version of [listReleaseRowsFlat].
-     *
-     * Room will re-emit when any observed table in this query changes
-     * (Release, Artwork, ReleaseArtistCredit, Artist).
-     */
     @Query(
         """
         SELECT
