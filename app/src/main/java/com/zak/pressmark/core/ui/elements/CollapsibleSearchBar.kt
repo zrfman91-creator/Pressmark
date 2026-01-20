@@ -1,4 +1,4 @@
-// File: app/src/main/java/com/zak/pressmark/core/ui/elements/search/CollapsibleSearchBar.kt
+// FILE: app/src/main/java/com/zak/pressmark/core/ui/elements/search/CollapsibleSearchBar.kt
 package com.zak.pressmark.core.ui.elements
 
 import androidx.compose.animation.AnimatedVisibility

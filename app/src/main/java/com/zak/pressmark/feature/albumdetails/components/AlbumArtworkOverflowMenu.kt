@@ -1,6 +1,4 @@
-// =======================================================
-// file: app/src/main/java/com/zak/pressmark/feature/albumdetails/components/AlbumArtworkOverflowMenu.kt
-// =======================================================
+// FILE: app/src/main/java/com/zak/pressmark/feature/albumdetails/components/AlbumArtworkOverflowMenu.kt
 package com.zak.pressmark.feature.albumdetails.components
 
 import androidx.compose.foundation.layout.Box

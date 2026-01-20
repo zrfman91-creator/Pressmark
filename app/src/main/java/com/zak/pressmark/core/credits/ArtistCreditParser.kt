@@ -1,4 +1,4 @@
-// file: app/src/main/java/com/zak/pressmark/core/credits/ArtistCreditParser.kt
+// FILE: app/src/main/java/com/zak/pressmark/core/credits/ArtistCreditParser.kt
 package com.zak.pressmark.core.credits
 
 import com.zak.pressmark.core.util.Normalizer

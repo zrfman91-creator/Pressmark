@@ -1,6 +1,4 @@
-// =======================================================
-// file: app/src/main/java/com/zak/pressmark/ui/components/TopAppBar.kt
-// =======================================================
+// FILE: app/src/main/java/com/zak/pressmark/ui/components/TopAppBar.kt
 package com.zak.pressmark.feature.catalog.components
 
 import androidx.compose.foundation.layout.RowScope

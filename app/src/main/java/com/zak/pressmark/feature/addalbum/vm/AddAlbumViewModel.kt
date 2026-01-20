@@ -1,6 +1,5 @@
-// file: app/src/main/java/com/zak/pressmark/feature/addalbum/vm/AddAlbumViewModel.kt
+// FILE: app/src/main/java/com/zak/pressmark/feature/addalbum/vm/AddAlbumViewModel.kt
 @file:OptIn(ExperimentalCoroutinesApi::class)
-
 package com.zak.pressmark.feature.addalbum.vm
 
 import androidx.lifecycle.ViewModel

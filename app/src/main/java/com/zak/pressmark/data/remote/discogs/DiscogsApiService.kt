@@ -1,4 +1,4 @@
-// path: app/src/main/java/com/zak/pressmark/data/remote/discogs/DiscogsApiService.kt
+// FILE: app/src/main/java/com/zak/pressmark/data/remote/discogs/DiscogsApiService.kt
 package com.zak.pressmark.data.remote.discogs
 import retrofit2.http.GET
 import retrofit2.http.Path

@@ -1,3 +1,4 @@
+// FILE: app/src/main/java/com/zak/pressmark/data/local/entity/GenreEntity.kt
 package com.zak.pressmark.data.local.entity
 
 import androidx.room.ColumnInfo

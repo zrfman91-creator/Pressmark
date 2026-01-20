@@ -1,4 +1,4 @@
-// file: app/src/main/java/com/zak/pressmark/data/local/model/ReleaseListItem.kt
+// FILE: app/src/main/java/com/zak/pressmark/data/local/model/ReleaseListItem.kt
 package com.zak.pressmark.data.local.model
 
 import com.zak.pressmark.core.credits.ArtistCreditFormatter

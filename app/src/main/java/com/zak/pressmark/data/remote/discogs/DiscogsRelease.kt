@@ -1,4 +1,4 @@
-// path: app/src/main/java/com/zak/pressmark/data/remote/discogs/DiscogsRelease.kt
+// FILE: app/src/main/java/com/zak/pressmark/data/remote/discogs/DiscogsRelease.kt
 package com.zak.pressmark.data.remote.discogs
 
 import com.google.gson.annotations.SerializedName

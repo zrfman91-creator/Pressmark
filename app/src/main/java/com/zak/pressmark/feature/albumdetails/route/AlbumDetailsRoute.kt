@@ -1,3 +1,4 @@
+// FILE: app/src/main/java/com/zak/pressmark/feature/albumdetails/route/AlbumDetailsRoute.kt
 package com.zak.pressmark.feature.albumdetails.route
 
 import androidx.compose.material3.AlertDialog

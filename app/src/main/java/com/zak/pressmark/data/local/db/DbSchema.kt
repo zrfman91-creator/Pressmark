@@ -1,4 +1,4 @@
-// file: app/src/main/java/com/zak/pressmark/data/local/db/DbSchema.kt
+// FILE: app/src/main/java/com/zak/pressmark/data/local/db/DbSchema.kt
 package com.zak.pressmark.data.local.db
 
 /**

@@ -1,6 +1,4 @@
-// =======================================================
-// file: app/src/main/java/com/zak/pressmark/data/remote/musicbrainz/MusicBrainzArtworkRepository.kt
-// =======================================================
+// FILE: app/src/main/java/com/zak/pressmark/data/remote/musicbrainz/MusicBrainzArtworkRepository.kt
 package com.zak.pressmark.data.remote.musicbrainz
 
 import android.util.Log

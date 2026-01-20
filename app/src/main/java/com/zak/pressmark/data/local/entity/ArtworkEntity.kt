@@ -1,4 +1,4 @@
-// file: app/src/main/java/com/zak/pressmark/data/local/entity/ArtworkEntity.kt
+// FILE: app/src/main/java/com/zak/pressmark/data/local/entity/ArtworkEntity.kt
 package com.zak.pressmark.data.local.entity
 
 import androidx.room.ColumnInfo

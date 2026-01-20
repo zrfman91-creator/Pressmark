@@ -1,4 +1,4 @@
-// file: app/src/main/java/com/zak/pressmark/data/local/db/AppDatabase.kt
+// FILE: app/src/main/java/com/zak/pressmark/data/local/db/AppDatabase.kt
 package com.zak.pressmark.data.local.db
 
 import androidx.room.Database

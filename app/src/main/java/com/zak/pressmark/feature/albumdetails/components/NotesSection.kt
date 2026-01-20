@@ -1,8 +1,5 @@
-// =======================================================
-// file: app/src/main/java/com/zak/pressmark/feature/albumdetails/components/NotesSection.kt
-// =======================================================
+// FILE: app/src/main/java/com/zak/pressmark/feature/albumdetails/components/NotesSection.kt
 package com.zak.pressmark.feature.albumdetails.components
-
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth

@@ -1,4 +1,4 @@
-// file: app/src/main/java/com/zak/pressmark/feature/albumdetails/components/AlbumDetailsInfoSection.kt
+// FILE: app/src/main/java/com/zak/pressmark/feature/albumdetails/components/AlbumDetailsInfoSection.kt
 package com.zak.pressmark.feature.albumdetails.components
 
 import androidx.compose.foundation.layout.Arrangement

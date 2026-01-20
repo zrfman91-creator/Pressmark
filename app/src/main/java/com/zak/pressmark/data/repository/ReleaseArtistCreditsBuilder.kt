@@ -1,10 +1,9 @@
-// File: app/src/main/java/com/zak/pressmark/data/local/repository/ReleaseArtistCreditsBuilder.kt
-package com.zak.pressmark.data.local.repository
+// FILE: app/src/main/java/com/zak/pressmark/data/repository/ReleaseArtistCreditsBuilder.kt
+package com.zak.pressmark.data.repository
 
 import com.zak.pressmark.core.credits.ArtistCreditParser
 import com.zak.pressmark.data.local.entity.CreditRole
 import com.zak.pressmark.data.local.entity.ReleaseArtistCreditEntity
-import com.zak.pressmark.data.repository.ArtistRepository
 
 /**
  * Data-layer builder that:

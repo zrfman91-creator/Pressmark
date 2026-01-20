@@ -1,4 +1,4 @@
-// file: app/src/main/java/com/zak/pressmark/data/repository/ArtistRepository.kt
+// FILE: app/src/main/java/com/zak/pressmark/data/repository/ArtistRepository.kt
 package com.zak.pressmark.data.repository
 
 import kotlinx.coroutines.flow.Flow

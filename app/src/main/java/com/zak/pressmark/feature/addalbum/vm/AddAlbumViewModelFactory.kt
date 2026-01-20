@@ -1,4 +1,4 @@
-// file: app/src/main/java/com/zak/pressmark/feature/addalbum/vm/AddAlbumViewModelFactory.kt
+// FILE: app/src/main/java/com/zak/pressmark/feature/addalbum/vm/AddAlbumViewModelFactory.kt
 package com.zak.pressmark.feature.addalbum.vm
 
 import androidx.lifecycle.ViewModel

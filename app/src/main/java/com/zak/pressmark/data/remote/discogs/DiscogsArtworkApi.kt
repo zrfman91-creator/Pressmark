@@ -1,4 +1,4 @@
-// File: app/src/main/java/com/zak/pressmark/data/remote/discogs/DiscogsArtworkApi.kt
+// FILE: app/src/main/java/com/zak/pressmark/data/remote/discogs/DiscogsArtworkApi.kt
 package com.zak.pressmark.data.remote.discogs
 
 import android.util.Log

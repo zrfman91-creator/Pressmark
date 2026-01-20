@@ -1,4 +1,4 @@
-// file: app/src/main/java/com/zak/pressmark/app/di/AppGraph.kt
+// FILE: app/src/main/java/com/zak/pressmark/app/di/AppGraph.kt
 package com.zak.pressmark.app.di
 
 import android.content.Context
@@ -7,7 +7,6 @@ import com.zak.pressmark.BuildConfig
 import com.zak.pressmark.core.util.AppImageLoader
 import com.zak.pressmark.data.local.db.AppDatabase
 import com.zak.pressmark.data.local.db.DatabaseProvider
-import com.zak.pressmark.data.repository.ReleaseRepository
 import com.zak.pressmark.data.remote.discogs.DiscogsApiProvider
 import com.zak.pressmark.data.remote.discogs.DiscogsApiService
 import com.zak.pressmark.data.remote.musicbrainz.DefaultMusicBrainzArtworkRepository
@@ -15,6 +14,7 @@ import com.zak.pressmark.data.remote.musicbrainz.MusicBrainzArtworkApi
 import com.zak.pressmark.data.remote.musicbrainz.MusicBrainzArtworkRepository
 import com.zak.pressmark.data.repository.AlbumRepository
 import com.zak.pressmark.data.repository.ArtistRepository
+import com.zak.pressmark.data.repository.ReleaseRepository
 import okhttp3.Cache
 import okhttp3.OkHttpClient
 import java.io.File
@@ -33,14 +33,11 @@ class AppGraph(
     private val database: AppDatabase by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         DatabaseProvider.get(appContext)
     }
-
     private val okHttpClient: OkHttpClient by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         buildOkHttp(appContext)
     }
-
     private val appUserAgent: String by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
-        // Used by rate-limited public APIs (Discogs / MusicBrainz).
-        "Pressmark/${BuildConfig.VERSION_NAME}"
+        "Pressmark/${BuildConfig.VERSION_NAME}"   // Used by rate-limited public APIs (Discogs / MusicBrainz).
     }
 
     // --- API Service Singleton (keep for cover search feature) ---
@@ -67,7 +64,7 @@ class AppGraph(
 
     // --- Repositories (MUST MATCH repo constructors) ---
     val albumRepository: AlbumRepository by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
-        // ✅ AlbumRepository(dao: AlbumDao)
+        // AlbumRepository(dao: AlbumDao)
         AlbumRepository(database.albumDao())
     }
 

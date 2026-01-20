@@ -1,4 +1,4 @@
-// file: app/src/main/java/com/zak/pressmark/feature/albumlist/vm/AlbumListViewModelFactory.kt
+// FILE: app/src/main/java/com/zak/pressmark/feature/albumlist/vm/AlbumListViewModelFactory.kt
 package com.zak.pressmark.feature.catalog.vm
 
 import androidx.lifecycle.ViewModel

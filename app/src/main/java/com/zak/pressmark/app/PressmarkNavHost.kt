@@ -1,4 +1,4 @@
-// file: app/src/main/java/com/zak/pressmark/app/PressmarkNavHost.kt
+// FILE: app/src/main/java/com/zak/pressmark/app/PressmarkNavHost.kt
 package com.zak.pressmark.app
 
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -15,6 +15,7 @@ import com.zak.pressmark.app.di.AppGraph
 import com.zak.pressmark.feature.addalbum.route.AddAlbumRoute
 import com.zak.pressmark.feature.addalbum.vm.AddAlbumViewModel
 import com.zak.pressmark.feature.addalbum.vm.AddAlbumViewModelFactory
+import com.zak.pressmark.feature.addalbum.vm.SaveIntent.*
 import com.zak.pressmark.feature.albumdetails.route.AlbumDetailsRoute
 import com.zak.pressmark.feature.albumdetails.vm.AlbumDetailsViewModel
 import com.zak.pressmark.feature.albumdetails.vm.AlbumDetailsViewModelFactory
@@ -82,8 +83,8 @@ fun PressmarkNavHost(
                 onClearFormConsumed = { addSavedStateHandle?.consumeClearAddAlbumForm() },
                 onAlbumSaved = { albumId, artist, title, intent ->
                     val origin = when (intent) {
-                        com.zak.pressmark.feature.addalbum.vm.SaveIntent.SaveAndExit -> PressmarkRoutes.COVER_ORIGIN_LIST_SUCCESS
-                        com.zak.pressmark.feature.addalbum.vm.SaveIntent.AddAnother -> PressmarkRoutes.COVER_ORIGIN_ADD_ANOTHER
+                        SaveAndExit -> PressmarkRoutes.COVER_ORIGIN_LIST_SUCCESS
+                        AddAnother -> PressmarkRoutes.COVER_ORIGIN_ADD_ANOTHER
                     }
                     navController.navigate(
                         PressmarkRoutes.coverSearch(

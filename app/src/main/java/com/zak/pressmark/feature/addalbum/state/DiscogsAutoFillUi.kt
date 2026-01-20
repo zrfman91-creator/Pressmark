@@ -1,11 +1,6 @@
+// FILE: app/src/main/java/com/zak/pressmark/feature/addalbum/state/DiscogsAutoFillUi.kt
 package com.zak.pressmark.feature.addalbum.state
 
-/**
- * Batch E
- * UI model for Discogs autofill consent.
- *
- * IMPORTANT: Feature-scoped (only used by Add Album flow right now).
- */
 data class DiscogsAutofillUi(
     val albumId: Long,
     val details: AlbumAutofillDetails,
@@ -13,11 +8,7 @@ data class DiscogsAutofillUi(
     val discogsSubtitle: String = "",
 )
 
-/**
- * Fill-missing-only candidate fields.
- * Keep this minimal; add more later when you wire deeper Discogs parsing.
- */
-data class AlbumAutofillDetails(
+data class AlbumAutofillDetails(    // Fill-missing-only candidate fields.
     val year: Int? = null,
     val catNo: String? = null,
     val label: String? = null,

@@ -1,6 +1,4 @@
-// =======================================================
-// file: app/src/main/java/com/zak/pressmark/feature/artist/components/ArtistAlbumList.kt
-// =======================================================
+// FILE: app/src/main/java/com/zak/pressmark/feature/artist/components/ArtistAlbumList.kt
 package com.zak.pressmark.feature.artist.components
 
 import androidx.compose.foundation.layout.PaddingValues

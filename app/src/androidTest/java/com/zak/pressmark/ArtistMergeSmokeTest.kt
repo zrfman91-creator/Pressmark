@@ -1,4 +1,4 @@
-// file: app/src/androidTest/java/com/zak/pressmark/ArtistMergeSmokeTest.kt
+// FILE: app/src/androidTest/java/com/zak/pressmark/ArtistMergeSmokeTest.kt
 package com.zak.pressmark
 
 import androidx.room.Room
