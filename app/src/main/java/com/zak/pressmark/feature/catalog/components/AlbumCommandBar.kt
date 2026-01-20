@@ -1,14 +1,13 @@
 // =======================================================
-// file: app/src/main/java/com/zak/pressmark/ui/albumlist/components/AlbumCommandBar.kt
+// FILE: app/src/main/java/com/zak/pressmark/ui/albumlist/components/AlbumCommandBar.kt
 // =======================================================
 package com.zak.pressmark.feature.catalog.components
 
 import androidx.compose.foundation.layout.Arrangement
-import com.zak.pressmark.feature.catalog.model.AlbumGrouping
-
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,20 +18,25 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Surface
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -42,6 +46,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -52,22 +58,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.Row
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.DateRange
-
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.SmallFloatingActionButton
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
+import com.zak.pressmark.feature.catalog.model.AlbumGrouping
 
 @Immutable
 data class CommandOption(
     val id: String,
     val label: String,
 )
-
 @Composable
 fun AlbumCommandBar(
     query: String,
@@ -93,12 +90,8 @@ fun AlbumCommandBar(
 ) {
     val focusManager = LocalFocusManager.current
     var menuOpen by remember { mutableStateOf(false) }
-
-    // ✅ Command bar background (change this)
-    val barContainerColor = MaterialTheme.colorScheme.background
-
-    // ✅ Dropdown menu background (change this)
-    val menuContainerColor = MaterialTheme.colorScheme.secondaryContainer
+    val barContainerColor = MaterialTheme.colorScheme.background           //Command bar background (change this)
+    val menuContainerColor = MaterialTheme.colorScheme.secondaryContainer  //Dropdown menu background (change this)
 
     Surface(
         modifier = modifier.fillMaxWidth().padding(horizontal = 0.dp),
@@ -115,7 +108,6 @@ fun AlbumCommandBar(
                 selectionBar()
                 Spacer(Modifier.height(6.dp))
             }
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -139,15 +131,12 @@ fun AlbumCommandBar(
                     placeholder = { Text("Search artist or title…") },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
-                    // ✅ TextField background (optional)
-                    colors = OutlinedTextFieldDefaults.colors(
+                    colors = OutlinedTextFieldDefaults.colors(   //TextField background (optional)
                         focusedContainerColor = MaterialTheme.colorScheme.onPrimary,
                         unfocusedContainerColor = MaterialTheme.colorScheme.onPrimary,
                     )
                 )
-
                 Spacer(Modifier.width(6.dp))
-
                 Box {
                     IconButton(
                         onClick = { menuOpen = true },
@@ -155,7 +144,6 @@ fun AlbumCommandBar(
                     ) {
                         Icon(Icons.Filled.MoreVert, contentDescription = "Options")
                     }
-
                     DropdownMenu(
                         expanded = menuOpen,
                         onDismissRequest = { menuOpen = false },
@@ -163,7 +151,6 @@ fun AlbumCommandBar(
                         shadowElevation = 6.dp,
                         shape = MaterialTheme.shapes.large,
                     ) {
-
                         if (densityOptions.isNotEmpty()) {
                             MenuSectionHeader(text = "Row Density")
                             densityOptions.forEach { opt ->
@@ -180,9 +167,7 @@ fun AlbumCommandBar(
                     }
                 }
             }
-
             Spacer(modifier = Modifier.height(8.dp))
-
             GroupingFabRow(
                 grouping = grouping,
                 onGroupingChange = onGroupingChange,
@@ -190,9 +175,7 @@ fun AlbumCommandBar(
                     .fillMaxWidth()
                     .padding(top = 6.dp)
             )
-
             Spacer(modifier = Modifier.height(6.dp))
-
             CommandInfoRow(
                 countText = countText,
                 sortText = sortText,
@@ -204,7 +187,6 @@ fun AlbumCommandBar(
         }
     }
 }
-
 @Composable
 private fun CommandInfoRow(
     countText: String,
@@ -217,7 +199,6 @@ private fun CommandInfoRow(
         fontWeight = FontWeight.SemiBold,
         color = MaterialTheme.colorScheme.onSurface,
     )
-
     Text(
         text = buildAnnotatedString {
             append("Albums: ")
@@ -235,7 +216,6 @@ private fun CommandInfoRow(
         overflow = TextOverflow.Ellipsis,
     )
 }
-
 @Composable
 private fun MenuSectionHeader(text: String) {
     Text(
@@ -245,7 +225,6 @@ private fun MenuSectionHeader(text: String) {
         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
     )
 }
-
 @Composable
 private fun MenuOptionItem(
     text: String,
@@ -266,7 +245,7 @@ private fun MenuOptionItem(
         modifier = modifier,
         contentPadding = contentPadding,
         trailingIcon = { if (selected) TrailingDotIcon() },
-        // ✅ item text/icon colors (optional)
+        // item text/icon colors (optional)
         colors = MenuDefaults.itemColors(
             textColor = MaterialTheme.colorScheme.onSurface,
             trailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -274,7 +253,6 @@ private fun MenuOptionItem(
         ),
     )
 }
-
 @Composable
 private fun TrailingDotIcon() {
     Icon(
@@ -284,18 +262,12 @@ private fun TrailingDotIcon() {
         tint = MaterialTheme.colorScheme.primary,
     )
 }
-
 @Composable
 private fun GroupingFabRow(
     grouping: AlbumGrouping,
     onGroupingChange: (AlbumGrouping) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val selectedContainer = MaterialTheme.colorScheme.primaryContainer
-    val selectedContent = MaterialTheme.colorScheme.onPrimaryContainer
-    val unselectedContainer = MaterialTheme.colorScheme.surfaceVariant
-    val unselectedContent = MaterialTheme.colorScheme.onSurfaceVariant
-
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp)

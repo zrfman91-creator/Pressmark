@@ -1,4 +1,4 @@
-// file: app/src/main/java/com/zak/pressmark/data/local/dao/ReleaseArtistCreditDao.kt
+// FILE: app/src/main/java/com/zak/pressmark/data/local/dao/ReleaseArtistCreditDao.kt
 package com.zak.pressmark.data.local.dao
 
 import androidx.room.Dao

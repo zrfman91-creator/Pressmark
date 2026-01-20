@@ -1,4 +1,4 @@
-// file: app/src/main/java/com/zak/pressmark/data/local/model/ReleaseListRowFlat.kt
+// FILE: app/src/main/java/com/zak/pressmark/data/local/model/ReleaseListRowFlat.kt
 package com.zak.pressmark.data.local.model
 
 import androidx.room.ColumnInfo

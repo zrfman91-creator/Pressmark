@@ -1,4 +1,4 @@
-// file: core/src/main/java/com/zak/pressmark/core/ui/dialog/AlbumEditDialog.kt
+// FILE: core/src/main/java/com/zak/pressmark/core/ui/dialog/AlbumEditDialog.kt
 package com.zak.pressmark.core.ui.dialog
 
 import androidx.compose.foundation.layout.Arrangement

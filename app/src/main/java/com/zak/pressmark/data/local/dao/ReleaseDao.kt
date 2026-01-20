@@ -1,4 +1,4 @@
-// file: app/src/main/java/com/zak/pressmark/data/local/dao/ReleaseDao.kt
+// FILE: app/src/main/java/com/zak/pressmark/data/local/dao/ReleaseDao.kt
 package com.zak.pressmark.data.local.dao
 
 import androidx.room.Dao
@@ -17,10 +17,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ReleaseDao {
 
-    // -----------------------------
     // Writes
-    // -----------------------------
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(release: ReleaseEntity)
 
@@ -62,10 +59,7 @@ interface ReleaseDao {
     @Query("DELETE FROM ${Release.TABLE} WHERE ${Release.ID} = :releaseId")
     suspend fun deleteById(releaseId: String)
 
-    // -----------------------------
     // Reads
-    // -----------------------------
-
     @Query(
         """
         SELECT * FROM ${Release.TABLE}
@@ -101,19 +95,8 @@ interface ReleaseDao {
     )
     suspend fun searchByTitle(query: String): List<ReleaseEntity>
 
-    // -----------------------------
-    // Release list read-model (flat rows; group by release.id in higher layer)
-    // -----------------------------
 
-    /**
-     * Main list query without N+1:
-     * - ReleaseEntity columns (embedded)
-     * - Primary-or-latest artwork (id + uri)
-     * - Credit row (artistId/role/position/displayHint) + joined Artist.displayName
-     *
-     * Returns 0..N rows per release (one per credit). Releases with no credits still return 1 row
-     * with credit columns null due to LEFT JOIN.
-     */
+    // Release list read-model (flat rows; group by release.id in higher layer)
     @Query(
         """
         SELECT
@@ -154,12 +137,6 @@ interface ReleaseDao {
     )
     suspend fun listReleaseRowsFlat(): List<ReleaseListRowFlat>
 
-    /**
-     * Live (reactive) version of [listReleaseRowsFlat].
-     *
-     * Room will re-emit when any observed table in this query changes
-     * (Release, Artwork, ReleaseArtistCredit, Artist).
-     */
     @Query(
         """
         SELECT

@@ -1,4 +1,4 @@
-// file: app/src/test/java/com/zak/pressmark/core/credits/ArtistCreditsParserFormatterTest.kt
+// FILE: app/src/test/java/com/zak/pressmark/core/credits/ArtistCreditsParserFormatterTest.kt
 package com.zak.pressmark.core.credits
 
 import org.junit.Assert.assertEquals

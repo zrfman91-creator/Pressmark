@@ -1,3 +1,4 @@
+// FILE: app/src/main/java/com/zak/pressmark/feature/artist/screen/ArtistScreen.kt
 package com.zak.pressmark.feature.artist.screen
 
 import androidx.compose.foundation.layout.Arrangement

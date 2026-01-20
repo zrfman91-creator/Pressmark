@@ -1,5 +1,5 @@
 // =======================================================
-// file: app/src/main/java/com/zak/pressmark/feature/albumlist/components/AlbumCommandBar.kt
+// FILE: app/src/main/java/com/zak/pressmark/feature/albumlist/components/AlbumCommandBar.kt
 // =======================================================
 package com.zak.pressmark.feature.catalog.components
 

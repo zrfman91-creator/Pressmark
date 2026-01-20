@@ -1,6 +1,4 @@
-// =======================================================
-// file: app/src/main/java/com/zak/pressmark/feature/albumdetails/components/AlbumDetailsCoverActions.kt
-// =======================================================
+// FILE: app/src/main/java/com/zak/pressmark/feature/albumdetails/components/AlbumDetailsCoverActions.kt
 package com.zak.pressmark.feature.albumdetails.components
 
 import androidx.compose.foundation.layout.Arrangement

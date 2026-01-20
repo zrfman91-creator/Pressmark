@@ -1,4 +1,4 @@
-// file: app/src/main/java/com/zak/pressmark/core/credits/ArtistCreditFormatter.kt
+// FILE: app/src/main/java/com/zak/pressmark/core/credits/ArtistCreditFormatter.kt
 package com.zak.pressmark.core.credits
 
 /**

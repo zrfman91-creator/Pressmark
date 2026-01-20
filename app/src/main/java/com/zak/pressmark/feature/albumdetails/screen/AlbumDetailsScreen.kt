@@ -1,3 +1,4 @@
+// FILE: app/src/main/java/com/zak/pressmark/feature/albumdetails/screen/AlbumDetailsScreen.kt
 package com.zak.pressmark.feature.albumdetails.screen
 
 import androidx.compose.foundation.layout.Arrangement

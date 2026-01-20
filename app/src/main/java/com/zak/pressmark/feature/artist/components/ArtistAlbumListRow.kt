@@ -1,6 +1,4 @@
-// =======================================================
-// file: app/src/main/java/com/zak/pressmark/feature/artist/components/ArtistAlbumListRow.kt
-// =======================================================
+// FILE: app/src/main/java/com/zak/pressmark/feature/artist/components/ArtistAlbumListRow.kt
 package com.zak.pressmark.feature.artist.components
 
 import androidx.compose.foundation.layout.Column

@@ -1,4 +1,4 @@
-// file: app/src/main/java/com/zak/pressmark/data/local/model/ArtistCreditFormatMapper.kt
+// FILE: app/src/main/java/com/zak/pressmark/data/local/model/ArtistCreditFormatMapper.kt
 package com.zak.pressmark.data.local.model
 
 import com.zak.pressmark.core.credits.ArtistCreditFormatter

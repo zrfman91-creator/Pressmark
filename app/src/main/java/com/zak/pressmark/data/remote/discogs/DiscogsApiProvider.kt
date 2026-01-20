@@ -1,4 +1,4 @@
-// path: app/src/main/java/com/zak/pressmark/data/remote/discogs/DiscogsApiProvider.kt
+// FILE: app/src/main/java/com/zak/pressmark/data/remote/discogs/DiscogsApiProvider.kt
 package com.zak.pressmark.data.remote.discogs
 
 import com.zak.pressmark.BuildConfig
