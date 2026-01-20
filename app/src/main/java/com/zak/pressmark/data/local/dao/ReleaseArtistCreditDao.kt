@@ -82,6 +82,21 @@ interface ReleaseArtistCreditDao {
         role: String? = null, // pass "PRIMARY", "ORCHESTRA", etc.
     ): List<ArtistEntity>
 
+    @Query(
+        """
+        SELECT a.* FROM ${Artist.TABLE} a
+        INNER JOIN ${ReleaseArtistCredit.TABLE} c
+          ON c.${ReleaseArtistCredit.ARTIST_ID} = a.${Artist.ID}
+        WHERE c.${ReleaseArtistCredit.RELEASE_ID} = :releaseId
+          AND (:role IS NULL OR c.${ReleaseArtistCredit.ROLE} = :role)
+        ORDER BY c.${ReleaseArtistCredit.POSITION} ASC, c.${ReleaseArtistCredit.ID} ASC
+        """
+    )
+    fun observeArtistsForRelease(
+        releaseId: String,
+        role: String? = null, // pass "PRIMARY", "ORCHESTRA", etc.
+    ): Flow<List<ArtistEntity>>
+
     // -----------------------------
     // Browse/Search support
     // -----------------------------
