@@ -46,11 +46,6 @@ import androidx.compose.ui.unit.dp
 private val ChipWidth: Dp = 120.dp
 private val MenuShape = RoundedCornerShape(12.dp)
 
-data class CatalogOption(
-    val id: String,
-    val label: String,
-)
-
 /**
  * Display-only compaction to keep fixed-width dropdown rows single-line.
  * Selection values remain the original option strings.
@@ -79,15 +74,15 @@ fun CatalogTopActionBar(
     sortExpanded: Boolean,
     filterExpanded: Boolean,
     groupExpanded: Boolean,
-    selectedSortId: String?,
-    selectedFilterId: String?,
-    selectedGroupId: String?,
+    selectedSort: String?,
+    selectedFilter: String?,
+    selectedGroup: String?,
     onSortToggle: () -> Unit,
     onFilterToggle: () -> Unit,
     onGroupToggle: () -> Unit,
-    sortOptions: List<CommandOption>,
-    filterOptions: List<CommandOption>,
-    groupOptions: List<CommandOption>,
+    sortOptions: List<String>,
+    filterOptions: List<String>,
+    groupOptions: List<String>,
     onSortSelect: (String) -> Unit,
     onFilterSelect: (String) -> Unit,
     onGroupSelect: (String) -> Unit,
@@ -96,9 +91,6 @@ fun CatalogTopActionBar(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
-        val selectedSort = sortOptions.firstOrNull { it.id == selectedSortId }?.label
-        val selectedFilter = filterOptions.firstOrNull { it.id == selectedFilterId }?.label
-        val selectedGroup = groupOptions.firstOrNull { it.id == selectedGroupId }?.label
 
         // Clear action above selection labels, centered.
         AnimatedVisibility(
@@ -176,7 +168,7 @@ private fun ActionPillDropdown(
     selectedValue: String?,
     expanded: Boolean,
     onToggle: () -> Unit,
-    options: List<CommandOption>,
+    options: List<String>,
     onSelect: (String) -> Unit,
     width: Dp,
 ) {
@@ -253,7 +245,7 @@ private fun ActionPillDropdown(
             ) {
                 options.forEach { option ->
                     // Keep menu items single-line within fixed width.
-                    val displayOption = compactOptionLabel(option.label)
+                    val displayOption = compactOptionLabel(option)
                     val optionTextStyle = when {
                         displayOption.length >= 24 -> MaterialTheme.typography.labelSmall
                         displayOption.length >= 18 -> MaterialTheme.typography.labelMedium
@@ -270,7 +262,7 @@ private fun ActionPillDropdown(
                                 overflow = TextOverflow.Ellipsis,
                             )
                         },
-                        onClick = { onSelect(option.id) },
+                        onClick = { onSelect(option) },
                         // No checkmark needed; selection is shown above the pill.
                         // Keep a consistent left inset for the menu content.
                         contentPadding = PaddingValues(

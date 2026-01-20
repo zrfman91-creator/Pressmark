@@ -18,10 +18,14 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.PlaylistAdd
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.LibraryAdd
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.QrCodeScanner
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.SortByAlpha
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -44,51 +48,20 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
 import com.zak.pressmark.data.local.model.ReleaseListItem
 import com.zak.pressmark.feature.catalog.components.CatalogActionRail
-import com.zak.pressmark.feature.catalog.components.CatalogOption
 import com.zak.pressmark.feature.catalog.components.CatalogTopActionBar
-import com.zak.pressmark.feature.catalog.components.CommandOption
 import com.zak.pressmark.feature.catalog.components.RailMode
 import com.zak.pressmark.feature.catalog.components.TopAppBar
-import com.zak.pressmark.feature.catalog.model.CatalogFilter
-import com.zak.pressmark.feature.catalog.model.CatalogGrouping
-import com.zak.pressmark.feature.catalog.model.CatalogListItem
 import com.zak.pressmark.feature.catalog.vm.CatalogSort
-
-private data class CatalogOption<T>(
-    val value: T,
-    val label: String,
-)
-
-private val SortOptions = listOf(
-    CatalogOption(CatalogSort.AddedNewest, "Added newest"),
-    CatalogOption(CatalogSort.TitleAZ, "Title A–Z"),
-    CatalogOption(CatalogSort.ArtistAZ, "Artist A–Z"),
-    CatalogOption(CatalogSort.YearNewest, "Year newest"),
-)
-
-private val FilterOptions = listOf(
-    CatalogOption(CatalogFilter.HAS_BARCODE, "Has barcode"),
-    CatalogOption(CatalogFilter.NO_BARCODE, "No barcode"),
-)
-
-private val GroupOptions = listOf(
-    CatalogOption(CatalogGrouping.ARTIST, "Artist"),
-    CatalogOption(CatalogGrouping.YEAR, "Year"),
-)
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlbumListScreen(
-    listItems: List<CatalogListItem>,
+    releases: List<ReleaseListItem>,
     query: String,
     onQueryChange: (String) -> Unit,
     sort: CatalogSort,
     onSortChange: (CatalogSort) -> Unit,
-    filter: CatalogFilter,
-    onFilterChange: (CatalogFilter) -> Unit,
-    grouping: CatalogGrouping,
-    onGroupingChange: (CatalogGrouping) -> Unit,
     snackMessage: String?,
     onSnackShown: () -> Unit,
     onAddAlbum: () -> Unit,
@@ -113,14 +86,18 @@ fun AlbumListScreen(
     var filterExpanded by rememberSaveable { mutableStateOf(false) }
     var groupExpanded by rememberSaveable { mutableStateOf(false) }
 
-    val selectedSort = SortOptions.firstOrNull { it.value == sort }?.label
-    val selectedFilter = FilterOptions.firstOrNull { it.value == filter }?.label
-        ?.takeIf { filter != CatalogFilter.ALL }
-    val selectedGroup = GroupOptions.firstOrNull { it.value == grouping }?.label
-        ?.takeIf { grouping != CatalogGrouping.NONE }
+    var selectedFilter by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedGroup by rememberSaveable { mutableStateOf<String?>(null) }
 
-    val showClearSelections =
-        sort != CatalogSort.AddedNewest || filter != CatalogFilter.ALL || grouping != CatalogGrouping.NONE
+    // Sort selection is VM-owned; show label only when non-default.
+    val selectedSortLabel: String? = when (sort) {
+        CatalogSort.TitleAZ -> null
+        CatalogSort.AddedNewest -> "Added newest"
+        CatalogSort.ArtistAZ -> "Artist A–Z"
+        CatalogSort.YearNewest -> "Year newest"
+    }
+
+    val showClearSelections = selectedSortLabel != null || selectedFilter != null || selectedGroup != null
 
 // Scroll state to collapse menus on scroll
     val listState = rememberLazyListState()
@@ -174,9 +151,9 @@ fun AlbumListScreen(
                         filterExpanded = filterExpanded,
                         groupExpanded = groupExpanded,
 
-                        selectedSortId = selectedSortId,
-                        selectedFilterId = selectedFilterId,
-                        selectedGroupId = selectedGroupId,
+                        selectedSort = selectedSortLabel,
+                        selectedFilter = selectedFilter,
+                        selectedGroup = selectedGroup,
 
                         onSortToggle = {
                             isSortExpanded = !isSortExpanded
@@ -194,31 +171,35 @@ fun AlbumListScreen(
                             filterExpanded = false
                         },
 
-                        sortOptions = SortOptions.map { it.label },
-                        filterOptions = FilterOptions.map { it.label },
-                        groupOptions = GroupOptions.map { it.label },
+                        sortOptions = listOf("Added newest", "Title A–Z", "Artist A–Z", "Year newest"),
+                        filterOptions = listOf("Has barcode", "No barcode"),
+                        groupOptions = listOf("Artist", "Year"),
 
-                        onSortSelect = {
-                            val selected = SortOptions.firstOrNull { option -> option.label == it } ?: return@CatalogTopActionBar
-                            onSortChange(selected.value)
+                        onSortSelect = { label ->
+                            val selected = when (label) {
+                                "Title A–Z" -> CatalogSort.TitleAZ
+                                "Artist A–Z" -> CatalogSort.ArtistAZ
+                                "Year newest" -> CatalogSort.YearNewest
+                                "Added newest" -> CatalogSort.AddedNewest
+                                else -> CatalogSort.TitleAZ
+                            }
+                            onSortChange(selected)
                             isSortExpanded = false
                         },
                         onFilterSelect = {
-                            val selected = FilterOptions.firstOrNull { option -> option.label == it } ?: return@CatalogTopActionBar
-                            onFilterChange(selected.value)
+                            selectedFilter = it
                             filterExpanded = false
                         },
                         onGroupSelect = {
-                            val selected = GroupOptions.firstOrNull { option -> option.label == it } ?: return@CatalogTopActionBar
-                            onGroupingChange(selected.value)
+                            selectedGroup = it
                             groupExpanded = false
                         },
 
                         showClear = showClearSelections,
                         onClearSelections = {
-                            onSortChange(CatalogSort.AddedNewest)
-                            onFilterChange(CatalogFilter.ALL)
-                            onGroupingChange(CatalogGrouping.NONE)
+                            onSortChange(CatalogSort.TitleAZ)
+                            selectedFilter = null
+                            selectedGroup = null
                             isSortExpanded = false
                             filterExpanded = false
                             groupExpanded = false
@@ -235,23 +216,15 @@ fun AlbumListScreen(
                         contentPadding = PaddingValues(bottom = 120.dp),
                     ) {
                         items(
-                            items = listItems,
-                            key = { it.key },
+                            items = releases,
+                            key = { it.release.id },
                         ) { item ->
-                            when (item) {
-                                is CatalogListItem.Header -> {
-                                    ReleaseGroupHeader(title = item.title, subtitle = item.subtitle)
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                                }
-                                is CatalogListItem.ReleaseRow -> {
-                                    ReleaseRow(
-                                        item = item.item,
-                                        onClick = { onOpenRelease(item.item.release.id) },
-                                        onDelete = { onDelete(item.item) },
-                                    )
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                                }
-                            }
+                            ReleaseRow(
+                                item = item,
+                                onClick = { onOpenRelease(item.release.id) },
+                                onDelete = { onDelete(item) },
+                            )
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         }
                     }
                 }
@@ -323,31 +296,5 @@ private fun ReleaseRow(
         TextButton(onClick = onDelete) {
             Text("Delete")
         }
-    }
-}
-
-@Composable
-private fun ReleaseGroupHeader(
-    title: String,
-    subtitle: String,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-        )
-        Text(
-            text = subtitle,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-        )
     }
 }

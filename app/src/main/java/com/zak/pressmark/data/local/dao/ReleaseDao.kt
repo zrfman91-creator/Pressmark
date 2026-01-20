@@ -54,6 +54,15 @@ interface ReleaseDao {
     @Query(
         """
         SELECT * FROM ${Release.TABLE}
+        WHERE ${Release.ID} = :releaseId
+        LIMIT 1
+        """
+    )
+    fun observeById(releaseId: String): Flow<ReleaseEntity?>
+
+    @Query(
+        """
+        SELECT * FROM ${Release.TABLE}
         WHERE ${Release.TITLE} LIKE '%' || :query || '%'
         ORDER BY ${Release.ADDED_AT} DESC
         """
