@@ -29,7 +29,7 @@ fun AlbumListRoute(
 
         onAddAlbum = onAddAlbum,
         onOpenRelease = onOpenRelease,
-        onDelete = { item -> vm.deleteRelease(item.release) },
+        onDelete = { item -> vm.deleteRelease(item) },
 
         sort = sort,
         onSortChange = vm::setSort,
