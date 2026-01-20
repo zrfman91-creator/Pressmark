@@ -10,6 +10,7 @@ import com.zak.pressmark.data.local.db.DbSchema.Artist
 import com.zak.pressmark.data.local.db.DbSchema.ReleaseArtistCredit
 import com.zak.pressmark.data.local.entity.ArtistEntity
 import com.zak.pressmark.data.local.entity.ReleaseArtistCreditEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ReleaseArtistCreditDao {
@@ -52,6 +53,15 @@ interface ReleaseArtistCreditDao {
         """
     )
     suspend fun creditsForRelease(releaseId: String): List<ReleaseArtistCreditEntity>
+
+    @Query(
+        """
+        SELECT * FROM ${ReleaseArtistCredit.TABLE}
+        WHERE ${ReleaseArtistCredit.RELEASE_ID} = :releaseId
+        ORDER BY ${ReleaseArtistCredit.POSITION} ASC, ${ReleaseArtistCredit.ID} ASC
+        """
+    )
+    fun observeCreditsForRelease(releaseId: String): Flow<List<ReleaseArtistCreditEntity>>
 
     /**
      * Get artists for a release (ordered), optionally filtered by role.
