@@ -7,7 +7,7 @@ import com.zak.pressmark.BuildConfig
 import com.zak.pressmark.core.util.AppImageLoader
 import com.zak.pressmark.data.local.db.AppDatabase
 import com.zak.pressmark.data.local.db.DatabaseProvider
-import com.zak.pressmark.data.local.repository.ReleaseRepository
+import com.zak.pressmark.data.repository.ReleaseRepository
 import com.zak.pressmark.data.remote.discogs.DiscogsApiProvider
 import com.zak.pressmark.data.remote.discogs.DiscogsApiService
 import com.zak.pressmark.data.remote.musicbrainz.DefaultMusicBrainzArtworkRepository

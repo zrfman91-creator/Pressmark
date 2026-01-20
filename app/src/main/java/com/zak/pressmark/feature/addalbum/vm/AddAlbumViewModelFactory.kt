@@ -3,7 +3,7 @@ package com.zak.pressmark.feature.addalbum.vm
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.zak.pressmark.data.local.repository.ReleaseRepository
+import com.zak.pressmark.data.repository.ReleaseRepository
 import com.zak.pressmark.data.repository.AlbumRepository
 import com.zak.pressmark.data.repository.ArtistRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi

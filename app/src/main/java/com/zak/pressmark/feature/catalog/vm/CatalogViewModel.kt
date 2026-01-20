@@ -8,7 +8,7 @@ import com.zak.pressmark.data.local.entity.AlbumEntity
 import com.zak.pressmark.data.local.entity.ReleaseEntity
 import com.zak.pressmark.data.local.model.AlbumWithArtistName
 import com.zak.pressmark.data.local.model.ReleaseListItem
-import com.zak.pressmark.data.local.repository.ReleaseRepository
+import com.zak.pressmark.data.repository.ReleaseRepository
 import com.zak.pressmark.data.repository.AlbumRepository
 import com.zak.pressmark.data.repository.ArtistRepository
 import kotlinx.coroutines.Dispatchers
