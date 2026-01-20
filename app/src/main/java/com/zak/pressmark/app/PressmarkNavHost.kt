@@ -16,9 +16,6 @@ import com.zak.pressmark.feature.addalbum.route.AddAlbumRoute
 import com.zak.pressmark.feature.addalbum.vm.AddAlbumViewModel
 import com.zak.pressmark.feature.addalbum.vm.AddAlbumViewModelFactory
 import com.zak.pressmark.feature.addalbum.vm.SaveIntent.*
-import com.zak.pressmark.feature.albumdetails.route.AlbumDetailsRoute
-import com.zak.pressmark.feature.albumdetails.vm.AlbumDetailsViewModel
-import com.zak.pressmark.feature.albumdetails.vm.AlbumDetailsViewModelFactory
 import com.zak.pressmark.feature.catalog.route.AlbumListRoute
 import com.zak.pressmark.feature.catalog.vm.AlbumListViewModel
 import com.zak.pressmark.feature.catalog.vm.CatalogViewModelFactory
@@ -27,6 +24,9 @@ import com.zak.pressmark.feature.artist.vm.ArtistViewModel
 import com.zak.pressmark.feature.artist.vm.ArtistViewModelFactory
 import com.zak.pressmark.feature.artworkpicker.route.CoverSearchRoute
 import com.zak.pressmark.feature.capturecover.route.CaptureCoverFlowRoute
+import com.zak.pressmark.feature.releasedetails.route.ReleaseDetailsRoute
+import com.zak.pressmark.feature.releasedetails.vm.ReleaseDetailsViewModel
+import com.zak.pressmark.feature.releasedetails.vm.ReleaseDetailsViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -101,22 +101,19 @@ fun PressmarkNavHost(
                 type = NavType.StringType
             }),
         ) { backStackEntry ->
-            val albumId =
+            val releaseId =
                 backStackEntry.arguments?.getString(PressmarkRoutes.ARG_ALBUM_ID).orEmpty()
 
             val factory =
-                remember(graph, albumId) { AlbumDetailsViewModelFactory(graph, albumId) }
-            val vm: AlbumDetailsViewModel = viewModel(
-                key = "album_details_$albumId",
+                remember(graph, releaseId) { ReleaseDetailsViewModelFactory(graph, releaseId) }
+            val vm: ReleaseDetailsViewModel = viewModel(
+                key = "release_details_$releaseId",
                 factory = factory,
             )
 
-            AlbumDetailsRoute(
+            ReleaseDetailsRoute(
                 vm = vm,
                 onBack = { navController.popBackStack() },
-                onOpenArtist = { artistId ->
-                    navController.navigate(PressmarkRoutes.artist(artistId))
-                },
             )
         }
 
@@ -138,7 +135,7 @@ fun PressmarkNavHost(
                 },
             ),
         ) { backStackEntry ->
-            val albumId =
+            val releaseId =
                 backStackEntry.arguments?.getString(PressmarkRoutes.ARG_ALBUM_ID).orEmpty()
             val artist =
                 backStackEntry.arguments?.getString(PressmarkRoutes.ARG_COVER_ARTIST).orEmpty()
@@ -151,7 +148,7 @@ fun PressmarkNavHost(
             fun closeCoverFlow() {
                 when (origin) {
                     PressmarkRoutes.COVER_ORIGIN_DETAILS -> {
-                        navController.navigate(PressmarkRoutes.details(albumId)) {
+                        navController.navigate(PressmarkRoutes.details(releaseId)) {
                             popUpTo(PressmarkRoutes.LIST) { inclusive = false }
                         }
                     }
@@ -160,7 +157,7 @@ fun PressmarkNavHost(
                         runCatching {
                             navController.getBackStackEntry(PressmarkRoutes.LIST)
                                 .savedStateHandle
-                                .setSavedAlbumId(albumId)
+                                .setSavedAlbumId(releaseId)
                         }
                         navController.popBackStack(PressmarkRoutes.LIST, false)
                     }
@@ -178,14 +175,14 @@ fun PressmarkNavHost(
 
             CoverSearchRoute(
                 graph = graph,
-                albumId = albumId,
+                releaseId = releaseId,
                 artist = artist,
                 title = title,
                 shouldPromptAutofill = (origin == PressmarkRoutes.COVER_ORIGIN_LIST_SUCCESS),
                 onTakePhoto = {
                     navController.navigate(
                         PressmarkRoutes.coverCapture(
-                            albumId = albumId,
+                            albumId = releaseId,
                             origin = origin,
                         )
                     )
@@ -204,14 +201,14 @@ fun PressmarkNavHost(
                 },
             ),
         ) { backStackEntry ->
-            val albumId = backStackEntry.arguments?.getString(PressmarkRoutes.ARG_ALBUM_ID).orEmpty()
+            val releaseId = backStackEntry.arguments?.getString(PressmarkRoutes.ARG_ALBUM_ID).orEmpty()
             val origin = backStackEntry.arguments?.getString(PressmarkRoutes.ARG_COVER_ORIGIN)
                 ?: PressmarkRoutes.COVER_ORIGIN_BACK
 
             fun closeAfterCapture() {
                 when (origin) {
                     PressmarkRoutes.COVER_ORIGIN_DETAILS -> {
-                        navController.navigate(PressmarkRoutes.details(albumId)) {
+                        navController.navigate(PressmarkRoutes.details(releaseId)) {
                             popUpTo(PressmarkRoutes.LIST) { inclusive = false }
                         }
                     }
@@ -220,7 +217,7 @@ fun PressmarkNavHost(
                         runCatching {
                             navController.getBackStackEntry(PressmarkRoutes.LIST)
                                 .savedStateHandle
-                                .setSavedAlbumId(albumId)
+                                .setSavedAlbumId(releaseId)
                         }
                         navController.popBackStack(PressmarkRoutes.LIST, false)
                     }
@@ -242,8 +239,8 @@ fun PressmarkNavHost(
             }
 
             CaptureCoverFlowRoute(
-                albumId = albumId,
-                albumRepository = graph.albumRepository,
+                releaseId = releaseId,
+                releaseRepository = graph.releaseRepository,
                 onBack = { navController.popBackStack() },
                 onDone = { closeAfterCapture() },
             )

@@ -38,7 +38,7 @@ import kotlinx.coroutines.flow.collect
 @Composable
 fun CoverSearchRoute(
     graph: AppGraph,
-    albumId: String,
+    releaseId: String,
     artist: String,
     title: String,
     shouldPromptAutofill: Boolean,
@@ -47,13 +47,13 @@ fun CoverSearchRoute(
 ) {
     val factory = remember(graph) {
         ArtworkPickerViewModelFactory(
-            albumRepository = graph.albumRepository,
+            releaseRepository = graph.releaseRepository,
             discogsApi = graph.discogsApiService,
         )
     }
 
     val vm: DiscogsCoverSearchViewModel = viewModel(
-        key = "cover_search_$albumId",
+        key = "cover_search_$releaseId",
         factory = factory,
     )
 
@@ -67,10 +67,10 @@ fun CoverSearchRoute(
     }
 
     // Kick off / update search when inputs change.
-    LaunchedEffect(albumId, artist, title) {
-        if (albumId.isNotBlank()) {
+    LaunchedEffect(releaseId, artist, title) {
+        if (releaseId.isNotBlank()) {
             vm.start(
-                albumId = albumId,
+                releaseId = releaseId,
                 artist = artist,
                 title = title,
             )
@@ -142,7 +142,7 @@ fun CoverSearchRoute(
                 primaryAction = "Retry",
                 onPrimary = {
                     vm.start(
-                        albumId = albumId,
+                        releaseId = releaseId,
                         artist = artist,
                         title = title,
                     )
@@ -161,7 +161,7 @@ fun CoverSearchRoute(
                 primaryAction = "Retry",
                 onPrimary = {
                     vm.start(
-                        albumId = albumId,
+                        releaseId = releaseId,
                         artist = artist,
                         title = title,
                     )
