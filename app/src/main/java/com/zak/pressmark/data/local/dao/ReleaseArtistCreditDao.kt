@@ -10,6 +10,7 @@ import com.zak.pressmark.data.local.db.DbSchema.Artist
 import com.zak.pressmark.data.local.db.DbSchema.ReleaseArtistCredit
 import com.zak.pressmark.data.local.entity.ArtistEntity
 import com.zak.pressmark.data.local.entity.ReleaseArtistCreditEntity
+import com.zak.pressmark.data.local.model.ReleaseCreditRow
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -56,12 +57,46 @@ interface ReleaseArtistCreditDao {
 
     @Query(
         """
+        SELECT
+            c.${ReleaseArtistCredit.ARTIST_ID} AS credit_artist_id,
+            c.${ReleaseArtistCredit.ROLE} AS credit_role,
+            c.${ReleaseArtistCredit.POSITION} AS credit_position,
+            c.${ReleaseArtistCredit.DISPLAY_HINT} AS credit_display_hint,
+            a.${Artist.DISPLAY_NAME} AS artist_display_name
+        FROM ${ReleaseArtistCredit.TABLE} c
+        INNER JOIN ${Artist.TABLE} a
+          ON a.${Artist.ID} = c.${ReleaseArtistCredit.ARTIST_ID}
+        WHERE c.${ReleaseArtistCredit.RELEASE_ID} = :releaseId
+        ORDER BY c.${ReleaseArtistCredit.POSITION} ASC, c.${ReleaseArtistCredit.ID} ASC
+        """
+    )
+    suspend fun creditRowsForRelease(releaseId: String): List<ReleaseCreditRow>
+
+    @Query(
+        """
         SELECT * FROM ${ReleaseArtistCredit.TABLE}
         WHERE ${ReleaseArtistCredit.RELEASE_ID} = :releaseId
         ORDER BY ${ReleaseArtistCredit.POSITION} ASC, ${ReleaseArtistCredit.ID} ASC
         """
     )
     fun observeCreditsForRelease(releaseId: String): Flow<List<ReleaseArtistCreditEntity>>
+
+    @Query(
+        """
+        SELECT
+            c.${ReleaseArtistCredit.ARTIST_ID} AS credit_artist_id,
+            c.${ReleaseArtistCredit.ROLE} AS credit_role,
+            c.${ReleaseArtistCredit.POSITION} AS credit_position,
+            c.${ReleaseArtistCredit.DISPLAY_HINT} AS credit_display_hint,
+            a.${Artist.DISPLAY_NAME} AS artist_display_name
+        FROM ${ReleaseArtistCredit.TABLE} c
+        INNER JOIN ${Artist.TABLE} a
+          ON a.${Artist.ID} = c.${ReleaseArtistCredit.ARTIST_ID}
+        WHERE c.${ReleaseArtistCredit.RELEASE_ID} = :releaseId
+        ORDER BY c.${ReleaseArtistCredit.POSITION} ASC, c.${ReleaseArtistCredit.ID} ASC
+        """
+    )
+    fun observeCreditRowsForRelease(releaseId: String): Flow<List<ReleaseCreditRow>>
 
     /**
      * Get artists for a release (ordered), optionally filtered by role.

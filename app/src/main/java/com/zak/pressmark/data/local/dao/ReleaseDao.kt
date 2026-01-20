@@ -27,6 +27,38 @@ interface ReleaseDao {
     @Update
     suspend fun update(release: ReleaseEntity)
 
+    @Query(
+        """
+        UPDATE ${Release.TABLE}
+        SET ${Release.TITLE} = :title,
+            ${Release.RELEASE_YEAR} = :releaseYear,
+            ${Release.LABEL} = :label,
+            ${Release.CATALOG_NO} = :catalogNo,
+            ${Release.FORMAT} = :format,
+            ${Release.BARCODE} = :barcode,
+            ${Release.COUNTRY} = :country,
+            ${Release.RELEASE_TYPE} = :releaseType,
+            ${Release.NOTES} = :notes,
+            ${Release.RATING} = :rating,
+            ${Release.LAST_PLAYED_AT} = :lastPlayedAt
+        WHERE ${Release.ID} = :releaseId
+        """
+    )
+    suspend fun updateReleaseDetails(
+        releaseId: String,
+        title: String,
+        releaseYear: Int?,
+        label: String?,
+        catalogNo: String?,
+        format: String?,
+        barcode: String?,
+        country: String?,
+        releaseType: String?,
+        notes: String?,
+        rating: Int?,
+        lastPlayedAt: Long?,
+    ): Int
+
     @Query("DELETE FROM ${Release.TABLE} WHERE ${Release.ID} = :releaseId")
     suspend fun deleteById(releaseId: String)
 

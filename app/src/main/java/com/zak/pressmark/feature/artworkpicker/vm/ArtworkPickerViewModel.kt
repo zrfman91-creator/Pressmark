@@ -6,9 +6,11 @@ import com.zak.pressmark.feature.artworkpicker.util.FuzzyMatch
 import com.zak.pressmark.core.util.Normalizer
 import com.zak.pressmark.data.remote.discogs.DiscogsApiService
 import com.zak.pressmark.data.remote.discogs.DiscogsAutofillCandidate
+import com.zak.pressmark.data.remote.discogs.DiscogsReleaseMetadata
 import com.zak.pressmark.data.remote.discogs.DiscogsSearchResult
+import com.zak.pressmark.data.remote.discogs.toReleaseMetadata
 import com.zak.pressmark.data.remote.discogs.toAutofillCandidate
-import com.zak.pressmark.data.repository.AlbumRepository
+import com.zak.pressmark.data.repository.ReleaseRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -23,11 +25,13 @@ data class CoverSearchState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val pendingAutofill: DiscogsAutofillCandidate? = null,
+    val pendingMetadata: DiscogsReleaseMetadata? = null,
+    val pendingAutofillReleaseId: Long? = null,
     val willFillLabels: List<String> = emptyList(),
 )
 
 data class CoverSearchRequest(
-    val albumId: String,
+    val releaseId: String,
     val artist: String,
     val title: String,
 )
@@ -37,7 +41,7 @@ sealed interface CoverSearchEffect {
 }
 
 class DiscogsCoverSearchViewModel(
-    private val albumRepository: AlbumRepository,
+    private val releaseRepository: ReleaseRepository,
     private val discogsApi: DiscogsApiService,
 ) : ViewModel() {
 
@@ -54,12 +58,12 @@ class DiscogsCoverSearchViewModel(
     private var searchSeq: Long = 0L
 
     fun start(
-        albumId: String,
+        releaseId: String,
         artist: String,
         title: String,
     ) {
         val request = CoverSearchRequest(
-            albumId = albumId,
+            releaseId = releaseId,
             artist = artist.trim(),
             title = title.trim(),
         )
@@ -247,13 +251,11 @@ class DiscogsCoverSearchViewModel(
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                albumRepository.setArtworkSelection(
-                    albumId = request.albumId,
+                releaseRepository.setDiscogsCover(
+                    releaseId = request.releaseId,
                     coverUrl = result.coverImage ?: result.thumb ?: "",
-                    provider = "discogs",
-                    providerItemId = result.id.toString(),
+                    discogsReleaseId = result.id,
                 )
-                // ✅ Removed: albumRepository.refreshFromDiscogs(...)
             } catch (t: Throwable) {
                 _uiState.value = _uiState.value.copy(
                     error = t.message ?: "Failed to save cover",
@@ -270,19 +272,25 @@ class DiscogsCoverSearchViewModel(
         if (!shouldPromptAutofill) return
 
         viewModelScope.launch(Dispatchers.IO) {
-            val album = albumRepository.getById(request.albumId)
-            if (album == null) {
+            val release = releaseRepository.getRelease(request.releaseId)
+            if (release == null) {
                 _effects.tryEmit(CoverSearchEffect.Close)
                 return@launch
             }
 
             val extracted = picked.toAutofillCandidate()
+            val metadata = runCatching { discogsApi.getRelease(picked.id).toReleaseMetadata() }
+                .getOrNull()
             val labels = computeWillFillLabels(
-                existingReleaseYear = album.releaseYear,
-                existingCatalogNo = album.catalogNo,
-                existingLabel = album.label,
-                existingFormat = album.format,
+                existingReleaseYear = release.releaseYear,
+                existingCatalogNo = release.catalogNo,
+                existingLabel = release.label,
+                existingFormat = release.format,
+                existingCountry = release.country,
+                existingReleaseType = release.releaseType,
+                existingNotes = release.notes,
                 candidate = extracted,
+                metadata = metadata,
             )
 
             if (labels.isEmpty()) {
@@ -290,6 +298,8 @@ class DiscogsCoverSearchViewModel(
             } else {
                 _uiState.value = _uiState.value.copy(
                     pendingAutofill = extracted,
+                    pendingMetadata = metadata,
+                    pendingAutofillReleaseId = picked.id,
                     willFillLabels = labels,
                 )
             }
@@ -299,6 +309,8 @@ class DiscogsCoverSearchViewModel(
     fun dismissAutofillPrompt() {
         _uiState.value = _uiState.value.copy(
             pendingAutofill = null,
+            pendingMetadata = null,
+            pendingAutofillReleaseId = null,
             willFillLabels = emptyList(),
         )
     }
@@ -306,15 +318,35 @@ class DiscogsCoverSearchViewModel(
     fun applyDiscogsFillMissing() {
         val request = currentRequest ?: return
         val c = _uiState.value.pendingAutofill ?: return
+        val metadata = _uiState.value.pendingMetadata
+        val discogsReleaseId = _uiState.value.pendingAutofillReleaseId
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                albumRepository.fillMissingFields(
-                    albumId = request.albumId,
-                    releaseYear = c.releaseYear,
-                    catalogNo = c.catalogNo,
-                    label = c.label,
-                    format = c.format,
+                val release = releaseRepository.getRelease(request.releaseId)
+                if (release == null) {
+                    _effects.tryEmit(CoverSearchEffect.Close)
+                    return@launch
+                }
+
+                val releaseYear = release.releaseYear ?: c.releaseYear
+                val catalogNo = release.catalogNo ?: c.catalogNo
+                val label = release.label ?: c.label
+                val format = release.format ?: metadata?.format ?: c.format
+                val country = release.country ?: metadata?.country
+                val releaseType = release.releaseType ?: metadata?.releaseType
+                val notes = release.notes ?: metadata?.notes
+
+                releaseRepository.updateReleaseMetadata(
+                    releaseId = request.releaseId,
+                    releaseYear = releaseYear,
+                    label = label,
+                    catalogNo = catalogNo,
+                    format = format,
+                    country = country,
+                    releaseType = releaseType,
+                    notes = notes,
+                    discogsReleaseId = discogsReleaseId,
                 )
 
                 dismissAutofillPrompt()
@@ -332,12 +364,22 @@ class DiscogsCoverSearchViewModel(
         existingCatalogNo: String?,
         existingLabel: String?,
         existingFormat: String?,
+        existingCountry: String?,
+        existingReleaseType: String?,
+        existingNotes: String?,
         candidate: DiscogsAutofillCandidate,
+        metadata: DiscogsReleaseMetadata?,
     ): List<String> = buildList {
         if (existingReleaseYear == null && candidate.releaseYear != null) add("Year: ${candidate.releaseYear}")
         if (existingCatalogNo.isNullOrBlank() && !candidate.catalogNo.isNullOrBlank()) add("Catalog #: ${candidate.catalogNo}")
         if (existingLabel.isNullOrBlank() && !candidate.label.isNullOrBlank()) add("Label: ${candidate.label}")
-        if (existingFormat.isNullOrBlank() && !candidate.format.isNullOrBlank()) add("Format: ${candidate.format}")
+        val normalizedFormat = candidate.format ?: metadata?.format
+        if (existingFormat.isNullOrBlank() && !normalizedFormat.isNullOrBlank()) add("Format: $normalizedFormat")
+        if (existingCountry.isNullOrBlank() && !metadata?.country.isNullOrBlank()) add("Country: ${metadata?.country}")
+        if (existingReleaseType.isNullOrBlank() && !metadata?.releaseType.isNullOrBlank()) {
+            add("Release type: ${metadata?.releaseType}")
+        }
+        if (existingNotes.isNullOrBlank() && !metadata?.notes.isNullOrBlank()) add("Notes")
     }
 
 }
