@@ -2,6 +2,8 @@ package com.zak.pressmark.feature.scanconveyor.vm
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.zak.pressmark.data.model.inbox.CsvImportRow
+import com.zak.pressmark.data.model.inbox.CsvImportSummary
 import com.zak.pressmark.data.repository.InboxRepository
 import com.zak.pressmark.data.repository.ReleaseRepository
 import kotlinx.coroutines.flow.SharingStarted
@@ -33,5 +35,9 @@ class ScanConveyorViewModel(
             val id = inboxRepository.createBarcode(barcode)
             onDone(id)
         }
+    }
+
+    suspend fun importCsv(rows: List<CsvImportRow>): CsvImportSummary {
+        return inboxRepository.createCsvImport(rows)
     }
 }

@@ -24,6 +24,17 @@ class InboxEligibilityTest {
     }
 
     @Test
+    fun `ocr not eligible without photo`() {
+        val item = baseItem(
+            ocrStatus = OcrStatus.NOT_STARTED,
+            photoUris = emptyList(),
+            nextOcrAt = now,
+        )
+
+        assertFalse(InboxEligibility.isOcrEligible(item, now))
+    }
+
+    @Test
     fun `lookup eligible requires signals`() {
         val item = baseItem(
             lookupStatus = LookupStatus.PENDING,
@@ -78,6 +89,7 @@ class InboxEligibilityTest {
             confidence = null,
             reasonsJson = null,
             wasUndone = false,
+            committedProviderItemId = null,
         )
     }
 }

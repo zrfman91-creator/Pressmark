@@ -27,14 +27,24 @@ class OcrDrainWorker(
             limit = 10,
         )
 
+        var shouldScheduleLookup = false
         for (item in items) {
             repo.markOcrInProgress(item.id)
-            val uri = item.photoUris.firstOrNull() ?: continue
+            val uri = item.photoUris.firstOrNull()
+            if (uri == null) {
+                repo.applyOcrResult(
+                    item.id,
+                    ExtractedFields(null, null, null, null),
+                    success = false,
+                )
+                continue
+            }
             val result = extractor.extract(android.net.Uri.parse(uri))
             if (result.isSuccess) {
                 val ocrResult = result.getOrThrow()
                 val extracted = OcrParser.parse(ocrResult.lines)
                 repo.applyOcrResult(item.id, extracted, success = true)
+                shouldScheduleLookup = true
             } else {
                 repo.applyOcrResult(
                     item.id,
@@ -42,6 +52,19 @@ class OcrDrainWorker(
                     success = false,
                 )
             }
+        }
+
+        if (shouldScheduleLookup) {
+            InboxPipelineScheduler.enqueueLookupDrain(applicationContext)
+        }
+
+        val remaining = dao.fetchOcrEligible(
+            status = OcrStatus.NOT_STARTED,
+            now = System.currentTimeMillis(),
+            limit = 1,
+        )
+        if (remaining.isNotEmpty()) {
+            InboxPipelineScheduler.enqueueOcrDrain(applicationContext)
         }
 
         Result.success()

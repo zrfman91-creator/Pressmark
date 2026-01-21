@@ -80,4 +80,7 @@ data class InboxItemEntity(
 
     @ColumnInfo(name = DbSchema.InboxItem.WAS_UNDONE)
     val wasUndone: Boolean,
+
+    @ColumnInfo(name = DbSchema.InboxItem.COMMITTED_PROVIDER_ITEM_ID)
+    val committedProviderItemId: String?,
 )

@@ -5,8 +5,11 @@ data class ProviderCandidate(
     val providerItemId: String,
     val title: String,
     val artist: String,
+    val year: Int? = null,
     val label: String? = null,
     val catalogNo: String? = null,
+    val formatSummary: String? = null,
+    val thumbUrl: String? = null,
     val barcode: String? = null,
     val rawJson: String,
 )

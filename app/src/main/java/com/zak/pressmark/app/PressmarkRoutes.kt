@@ -20,6 +20,7 @@ object PressmarkRoutes {
     const val ARG_INBOX_ID = "inboxId"
     const val RESOLVE_INBOX_PATTERN = "$RESOLVE_INBOX/{$ARG_INBOX_ID}"
     fun resolveInbox(inboxId: String): String = "$RESOLVE_INBOX/$inboxId"
+    const val INBOX_COVER_CAPTURE = "inbox_cover_capture"
 
     // Album Details
     const val DETAILS = "album_details"

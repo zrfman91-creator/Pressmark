@@ -6,6 +6,7 @@ import androidx.work.WorkerParameters
 import com.zak.pressmark.data.local.db.DatabaseProvider
 import com.zak.pressmark.data.model.inbox.InboxErrorCode
 import com.zak.pressmark.data.model.inbox.LookupStatus
+import com.zak.pressmark.data.remote.provider.RateLimitException
 import com.zak.pressmark.data.repository.InboxEligibility
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -19,7 +20,7 @@ class LookupDrainWorker(
         val db = DatabaseProvider.get(applicationContext)
         val dao = db.inboxItemDao()
         val repo = PipelineDependencies.inboxRepository(applicationContext)
-        val provider = PipelineDependencies.metadataProvider()
+        val provider = PipelineDependencies.metadataProvider(applicationContext)
 
         val now = System.currentTimeMillis()
         val items = dao.fetchLookupEligible(
@@ -28,6 +29,7 @@ class LookupDrainWorker(
             limit = 10,
         )
 
+        var rateLimited = false
         for (item in items) {
             if (!InboxEligibility.isLookupEligible(item, now)) continue
             dao.update(item.copy(lookupStatus = LookupStatus.IN_PROGRESS, lastTriedAt = now))
@@ -49,12 +51,38 @@ class LookupDrainWorker(
             if (candidates.isFailure) {
                 val errorCode = mapError(candidates.exceptionOrNull())
                 repo.applyLookupResults(item.id, emptyList(), errorCode)
-                if (errorCode == InboxErrorCode.RATE_LIMIT) break
+                if (errorCode == InboxErrorCode.RATE_LIMIT) {
+                    rateLimited = true
+                    break
+                }
             } else {
                 val list = candidates.getOrThrow()
                 val errorCode = if (list.isEmpty()) InboxErrorCode.NO_MATCH else InboxErrorCode.NONE
-                repo.applyLookupResults(item.id, list, errorCode)
+                val autoCommitCandidate = repo.applyLookupResults(item.id, list, errorCode)
+                if (autoCommitCandidate != null) {
+                    runCatching {
+                        val releaseRepository = PipelineDependencies.releaseRepository(applicationContext)
+                        releaseRepository.upsertFromProvider(
+                            provider = autoCommitCandidate.provider,
+                            providerItemId = autoCommitCandidate.providerItemId,
+                        )
+                    }.getOrNull()?.let {
+                        repo.markCommitted(
+                            inboxItemId = item.id,
+                            committedProviderItemId = autoCommitCandidate.providerItemId,
+                        )
+                    }
+                }
             }
+        }
+
+        val remaining = dao.fetchLookupEligible(
+            status = LookupStatus.PENDING,
+            now = System.currentTimeMillis(),
+            limit = 1,
+        )
+        if (!rateLimited && remaining.isNotEmpty()) {
+            InboxPipelineScheduler.enqueueLookupDrain(applicationContext)
         }
 
         Result.success()
@@ -68,5 +96,3 @@ class LookupDrainWorker(
         }
     }
 }
-
-class RateLimitException(message: String) : RuntimeException(message)

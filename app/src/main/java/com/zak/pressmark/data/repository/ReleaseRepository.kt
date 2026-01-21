@@ -26,9 +26,11 @@ import com.zak.pressmark.data.remote.discogs.DiscogsApiService
 import com.zak.pressmark.data.remote.discogs.DiscogsMarketplacePrice
 import com.zak.pressmark.data.remote.discogs.DiscogsRelease
 import com.zak.pressmark.data.remote.discogs.DiscogsSearchResult
+import com.zak.pressmark.data.remote.discogs.toReleaseMetadata
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import java.util.UUID
 
 /**
  * Bottom-up repository for the Release-first model.
@@ -271,6 +273,75 @@ class ReleaseRepository(
             provider = null,
             providerItemId = null,
         )
+    }
+
+    suspend fun upsertFromProvider(
+        provider: String,
+        providerItemId: String,
+    ): String? {
+        return when (provider.lowercase()) {
+            "discogs" -> upsertFromDiscogs(providerItemId)
+            else -> null
+        }
+    }
+
+    private suspend fun upsertFromDiscogs(providerItemId: String): String? {
+        val api = discogsApiService ?: return null
+        val discogsReleaseId = providerItemId.toLongOrNull() ?: return null
+        val release = api.getRelease(discogsReleaseId)
+        val existing = releaseDao.getByDiscogsReleaseId(discogsReleaseId)
+
+        val artistRaw = release.artists?.joinToString(", ") { it.name.trim() }
+            ?.trim()
+            ?.takeIf { it.isNotBlank() }
+            ?: "Unknown artist"
+        val label = release.labels?.firstOrNull()?.name?.trim()?.takeIf { it.isNotBlank() }
+        val catalogNo = release.labels?.firstOrNull()?.catalogNumber?.trim()?.takeIf { it.isNotBlank() }
+        val barcode = release.identifiers
+            ?.firstOrNull { it.type?.equals("barcode", ignoreCase = true) == true }
+            ?.value
+            ?.trim()
+            ?.takeIf { it.isNotBlank() }
+        val metadata = release.toReleaseMetadata()
+        val primaryImage = release.images
+            ?.firstOrNull { it.type.equals("primary", ignoreCase = true) }
+            ?: release.images?.firstOrNull()
+
+        val releaseEntity = ReleaseEntity(
+            id = existing?.id ?: UUID.randomUUID().toString(),
+            title = release.title.trim(),
+            releaseYear = release.year,
+            genre = existing?.genre ?: metadata.genres?.firstOrNull(),
+            label = label,
+            catalogNo = catalogNo,
+            barcode = barcode,
+            country = metadata.country,
+            releaseType = metadata.releaseType,
+            format = metadata.format,
+            discogsReleaseId = release.id,
+            masterId = release.masterId,
+            artworkProvider = existing?.artworkProvider,
+            artworkProviderItemId = existing?.artworkProviderItemId,
+            notes = metadata.notes ?: existing?.notes,
+            rating = existing?.rating,
+            addedAt = existing?.addedAt ?: System.currentTimeMillis(),
+            lastPlayedAt = existing?.lastPlayedAt,
+        )
+
+        upsertReleaseFromRawArtist(
+            release = releaseEntity,
+            rawArtist = artistRaw,
+        )
+
+        primaryImage?.uri?.trim()?.takeIf { it.isNotBlank() }?.let { coverUrl ->
+            setDiscogsCover(
+                releaseId = releaseEntity.id,
+                coverUrl = coverUrl,
+                discogsReleaseId = release.id,
+            )
+        }
+
+        return releaseEntity.id
     }
 
     suspend fun setDiscogsCover(

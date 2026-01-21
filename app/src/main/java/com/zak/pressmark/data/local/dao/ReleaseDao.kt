@@ -80,6 +80,15 @@ interface ReleaseDao {
     @Query(
         """
         SELECT * FROM ${Release.TABLE}
+        WHERE ${Release.DISCOGS_RELEASE_ID} = :discogsReleaseId
+        LIMIT 1
+        """
+    )
+    suspend fun getByDiscogsReleaseId(discogsReleaseId: Long): ReleaseEntity?
+
+    @Query(
+        """
+        SELECT * FROM ${Release.TABLE}
         WHERE ${Release.ID} = :releaseId
         LIMIT 1
         """

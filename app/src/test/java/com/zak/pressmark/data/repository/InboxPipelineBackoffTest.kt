@@ -21,4 +21,20 @@ class InboxPipelineBackoffTest {
 
         assertTrue(later > base)
     }
+
+    @Test
+    fun `rate limit backoff exceeds api error`() {
+        val apiError = InboxPipeline.computeBackoffMillis(
+            errorCode = InboxErrorCode.API_ERROR,
+            retryCount = 0,
+            random = Random(0),
+        )
+        val rateLimit = InboxPipeline.computeBackoffMillis(
+            errorCode = InboxErrorCode.RATE_LIMIT,
+            retryCount = 0,
+            random = Random(0),
+        )
+
+        assertTrue(rateLimit > apiError)
+    }
 }

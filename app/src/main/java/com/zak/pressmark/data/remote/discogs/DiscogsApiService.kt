@@ -13,6 +13,7 @@ interface DiscogsApiService {
         @Query("release_title") releaseTitle: String? = null,
         @Query("label") label: String? = null,
         @Query("catno") catno: String? = null,
+        @Query("barcode") barcode: String? = null,
         @Query("per_page") perPage: Int = 25,
         @Query("page") page: Int = 1,
     ): DiscogsSearchResponse
