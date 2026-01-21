@@ -36,6 +36,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
@@ -56,7 +57,6 @@ import com.zak.pressmark.data.local.entity.ArtistEntity
 import com.zak.pressmark.feature.addalbum.model.AddAlbumFormState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -112,7 +112,6 @@ fun AddAlbumScreen(
     val catalogFocus = remember { FocusRequester() }
     val barcodeFocus = remember { FocusRequester() }
     val formatFocus = remember { FocusRequester() }
-    val coroutineScope = rememberCoroutineScope()
     val titleBringIntoView = remember { BringIntoViewRequester() }
     val artistBringIntoView = remember { BringIntoViewRequester() }
     val yearBringIntoView = remember { BringIntoViewRequester() }
@@ -171,10 +170,9 @@ fun AddAlbumScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .imePadding()
                 .padding(16.dp)
-                .imePadding()
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(rememberScrollState())
+                .imePadding(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
