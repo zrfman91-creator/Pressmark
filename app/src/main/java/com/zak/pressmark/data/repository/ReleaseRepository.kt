@@ -653,6 +653,7 @@ class ReleaseRepository(
         }
     }
 
+
     private fun ReleaseListItem.toSummary(): ReleaseSummary =
         ReleaseSummary(
             releaseId = release.id,

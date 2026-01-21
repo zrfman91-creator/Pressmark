@@ -1,8 +1,6 @@
 package com.zak.pressmark.data.remote.discogs
 
-/**
- * Normalized metadata extracted from a Discogs release payload.
- */
+// Normalized metadata extracted from a Discogs release payload.
 data class DiscogsReleaseMetadata(
     val format: String?,
     val country: String?,
