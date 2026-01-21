@@ -39,8 +39,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -54,6 +55,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.zak.pressmark.data.local.entity.ArtistEntity
 import com.zak.pressmark.feature.addalbum.model.AddAlbumFormState
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -117,62 +119,13 @@ fun AddAlbumScreen(
     val catalogBringIntoView = remember { BringIntoViewRequester() }
     val barcodeBringIntoView = remember { BringIntoViewRequester() }
     val formatBringIntoView = remember { BringIntoViewRequester() }
-    var titleFocused by remember { mutableStateOf(false) }
-    var artistFocused by remember { mutableStateOf(false) }
-    var yearFocused by remember { mutableStateOf(false) }
-    var labelFocused by remember { mutableStateOf(false) }
-    var catalogFocused by remember { mutableStateOf(false) }
-    var barcodeFocused by remember { mutableStateOf(false) }
-    var formatFocused by remember { mutableStateOf(false) }
-
-    LaunchedEffect(titleFocused) {
-        if (titleFocused) {
-            delay(80)
-            titleBringIntoView.bringIntoView()
-        }
-    }
-
-    LaunchedEffect(artistFocused) {
-        if (artistFocused) {
-            delay(80)
-            artistBringIntoView.bringIntoView()
-        }
-    }
-
-    LaunchedEffect(yearFocused) {
-        if (yearFocused) {
-            delay(80)
-            yearBringIntoView.bringIntoView()
-        }
-    }
-
-    LaunchedEffect(labelFocused) {
-        if (labelFocused) {
-            delay(80)
-            labelBringIntoView.bringIntoView()
-        }
-    }
-
-    LaunchedEffect(catalogFocused) {
-        if (catalogFocused) {
-            delay(80)
-            catalogBringIntoView.bringIntoView()
-        }
-    }
-
-    LaunchedEffect(barcodeFocused) {
-        if (barcodeFocused) {
-            delay(80)
-            barcodeBringIntoView.bringIntoView()
-        }
-    }
-
-    LaunchedEffect(formatFocused) {
-        if (formatFocused) {
-            delay(80)
-            formatBringIntoView.bringIntoView()
-        }
-    }
+    var titleBringIntoViewJob by remember { mutableStateOf<Job?>(null) }
+    var artistBringIntoViewJob by remember { mutableStateOf<Job?>(null) }
+    var yearBringIntoViewJob by remember { mutableStateOf<Job?>(null) }
+    var labelBringIntoViewJob by remember { mutableStateOf<Job?>(null) }
+    var catalogBringIntoViewJob by remember { mutableStateOf<Job?>(null) }
+    var barcodeBringIntoViewJob by remember { mutableStateOf<Job?>(null) }
+    var formatBringIntoViewJob by remember { mutableStateOf<Job?>(null) }
 
     Scaffold(
         topBar = {
@@ -252,7 +205,16 @@ fun AddAlbumScreen(
                         .focusRequester(titleFocus)
                         .bringIntoViewRequester(titleBringIntoView)
                         .onFocusChanged { focusState ->
-                            titleFocused = focusState.isFocused
+                            if (focusState.isFocused) {
+                                titleBringIntoViewJob?.cancel()
+                                titleBringIntoViewJob = coroutineScope.launch {
+                                    delay(80)
+                                    titleBringIntoView.bringIntoView()
+                                }
+                            } else {
+                                titleBringIntoViewJob?.cancel()
+                                titleBringIntoViewJob = null
+                            }
                         }
                 )
 
@@ -275,7 +237,16 @@ fun AddAlbumScreen(
                         .focusRequester(artistFocus)
                         .bringIntoViewRequester(artistBringIntoView)
                         .onFocusChanged { focusState ->
-                            artistFocused = focusState.isFocused
+                            if (focusState.isFocused) {
+                                artistBringIntoViewJob?.cancel()
+                                artistBringIntoViewJob = coroutineScope.launch {
+                                    delay(80)
+                                    artistBringIntoView.bringIntoView()
+                                }
+                            } else {
+                                artistBringIntoViewJob?.cancel()
+                                artistBringIntoViewJob = null
+                            }
                         }
                 )
 
@@ -337,7 +308,16 @@ fun AddAlbumScreen(
                             .focusRequester(yearFocus)
                             .bringIntoViewRequester(yearBringIntoView)
                             .onFocusChanged { focusState ->
-                                yearFocused = focusState.isFocused
+                                if (focusState.isFocused) {
+                                    yearBringIntoViewJob?.cancel()
+                                    yearBringIntoViewJob = coroutineScope.launch {
+                                        delay(80)
+                                        yearBringIntoView.bringIntoView()
+                                    }
+                                } else {
+                                    yearBringIntoViewJob?.cancel()
+                                    yearBringIntoViewJob = null
+                                }
                             }
                     )
 
@@ -358,7 +338,16 @@ fun AddAlbumScreen(
                             .focusRequester(labelFocus)
                             .bringIntoViewRequester(labelBringIntoView)
                             .onFocusChanged { focusState ->
-                                labelFocused = focusState.isFocused
+                                if (focusState.isFocused) {
+                                    labelBringIntoViewJob?.cancel()
+                                    labelBringIntoViewJob = coroutineScope.launch {
+                                        delay(80)
+                                        labelBringIntoView.bringIntoView()
+                                    }
+                                } else {
+                                    labelBringIntoViewJob?.cancel()
+                                    labelBringIntoViewJob = null
+                                }
                             }
                     )
                 }
@@ -384,7 +373,16 @@ fun AddAlbumScreen(
                             .focusRequester(catalogFocus)
                             .bringIntoViewRequester(catalogBringIntoView)
                             .onFocusChanged { focusState ->
-                                catalogFocused = focusState.isFocused
+                                if (focusState.isFocused) {
+                                    catalogBringIntoViewJob?.cancel()
+                                    catalogBringIntoViewJob = coroutineScope.launch {
+                                        delay(80)
+                                        catalogBringIntoView.bringIntoView()
+                                    }
+                                } else {
+                                    catalogBringIntoViewJob?.cancel()
+                                    catalogBringIntoViewJob = null
+                                }
                             }
                     )
 
@@ -406,7 +404,16 @@ fun AddAlbumScreen(
                             .focusRequester(barcodeFocus)
                             .bringIntoViewRequester(barcodeBringIntoView)
                             .onFocusChanged { focusState ->
-                                barcodeFocused = focusState.isFocused
+                                if (focusState.isFocused) {
+                                    barcodeBringIntoViewJob?.cancel()
+                                    barcodeBringIntoViewJob = coroutineScope.launch {
+                                        delay(80)
+                                        barcodeBringIntoView.bringIntoView()
+                                    }
+                                } else {
+                                    barcodeBringIntoViewJob?.cancel()
+                                    barcodeBringIntoViewJob = null
+                                }
                             }
                     )
                 }
@@ -428,7 +435,16 @@ fun AddAlbumScreen(
                         .focusRequester(formatFocus)
                         .bringIntoViewRequester(formatBringIntoView)
                         .onFocusChanged { focusState ->
-                            formatFocused = focusState.isFocused
+                            if (focusState.isFocused) {
+                                formatBringIntoViewJob?.cancel()
+                                formatBringIntoViewJob = coroutineScope.launch {
+                                    delay(80)
+                                    formatBringIntoView.bringIntoView()
+                                }
+                            } else {
+                                formatBringIntoViewJob?.cancel()
+                                formatBringIntoViewJob = null
+                            }
                         }
                 )
             }
