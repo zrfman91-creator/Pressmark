@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
@@ -27,9 +28,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import com.zak.pressmark.data.local.entity.InboxItemEntity
 import com.zak.pressmark.data.local.entity.ProviderSnapshotEntity
+import org.json.JSONObject
 
 @Composable
 fun ResolveInboxItemScreen(
@@ -90,12 +94,27 @@ fun ResolveInboxItemScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(candidates, key = { it.id }) { candidate ->
+                    val imageUrl = remember(candidate.rawJson) {
+                        extractCandidateImageUrl(candidate.rawJson)
+                    }
                     Column(modifier = Modifier.fillMaxWidth()) {
-                        Row {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
                             RadioButton(
                                 selected = candidate.id == selectedCandidateId,
                                 onClick = { onSelectCandidate(candidate.id) },
                             )
+                            if (imageUrl != null) {
+                                AsyncImage(
+                                    model = imageUrl,
+                                    contentDescription = "Cover for ${candidate.title}",
+                                    modifier = Modifier
+                                        .padding(end = 12.dp)
+                                        .height(56.dp)
+                                        .width(56.dp),
+                                )
+                            }
                             Column(modifier = Modifier.padding(top = 6.dp)) {
                                 Text(candidate.title, style = MaterialTheme.typography.bodyLarge)
                                 Text(
@@ -174,4 +193,14 @@ private fun summarizeReasons(rawJson: String): String {
             .orEmpty()
         reasons.take(2).joinToString(" • ")
     }.getOrDefault("")
+}
+
+private fun extractCandidateImageUrl(rawJson: String): String? {
+    return runCatching {
+        val json = JSONObject(rawJson)
+        val cover = json.optString("cover_image").trim()
+        if (cover.isNotBlank()) return cover
+        val thumb = json.optString("thumb").trim()
+        thumb.takeIf { it.isNotBlank() }
+    }.getOrNull()
 }
