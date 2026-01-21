@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -39,12 +37,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
@@ -56,7 +55,6 @@ import androidx.compose.ui.unit.dp
 import com.zak.pressmark.data.local.entity.ArtistEntity
 import com.zak.pressmark.feature.addalbum.model.AddAlbumFormState
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -112,7 +110,6 @@ fun AddAlbumScreen(
     val catalogFocus = remember { FocusRequester() }
     val barcodeFocus = remember { FocusRequester() }
     val formatFocus = remember { FocusRequester() }
-    val coroutineScope = rememberCoroutineScope()
     val titleBringIntoView = remember { BringIntoViewRequester() }
     val artistBringIntoView = remember { BringIntoViewRequester() }
     val yearBringIntoView = remember { BringIntoViewRequester() }
@@ -120,6 +117,13 @@ fun AddAlbumScreen(
     val catalogBringIntoView = remember { BringIntoViewRequester() }
     val barcodeBringIntoView = remember { BringIntoViewRequester() }
     val formatBringIntoView = remember { BringIntoViewRequester() }
+    var titleFocused by remember { mutableStateOf(false) }
+    var artistFocused by remember { mutableStateOf(false) }
+    var yearFocused by remember { mutableStateOf(false) }
+    var labelFocused by remember { mutableStateOf(false) }
+    var catalogFocused by remember { mutableStateOf(false) }
+    var barcodeFocused by remember { mutableStateOf(false) }
+    var formatFocused by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -199,14 +203,13 @@ fun AddAlbumScreen(
                         .fillMaxWidth()
                         .focusRequester(titleFocus)
                         .bringIntoViewRequester(titleBringIntoView)
-                        .onFocusChanged { state ->
-                            if (state.isFocused) {
-                                coroutineScope.launch {
-                                    delay(80)
-                                    titleBringIntoView.bringIntoView()
-                                }
-                            }
+                        .onFocusChanged { focusState ->
+                            titleFocused = focusState.isFocused
                         }
+                )
+                FocusedBringIntoViewEffect(
+                    isFocused = titleFocused,
+                    requester = titleBringIntoView,
                 )
 
                 OutlinedTextField(
@@ -227,14 +230,13 @@ fun AddAlbumScreen(
                         .fillMaxWidth()
                         .focusRequester(artistFocus)
                         .bringIntoViewRequester(artistBringIntoView)
-                        .onFocusChanged { state ->
-                            if (state.isFocused) {
-                                coroutineScope.launch {
-                                    delay(80)
-                                    artistBringIntoView.bringIntoView()
-                                }
-                            }
+                        .onFocusChanged { focusState ->
+                            artistFocused = focusState.isFocused
                         }
+                )
+                FocusedBringIntoViewEffect(
+                    isFocused = artistFocused,
+                    requester = artistBringIntoView,
                 )
 
                 if (showSuggestions) {
@@ -294,14 +296,13 @@ fun AddAlbumScreen(
                             .weight(1f)
                             .focusRequester(yearFocus)
                             .bringIntoViewRequester(yearBringIntoView)
-                            .onFocusChanged { state ->
-                                if (state.isFocused) {
-                                    coroutineScope.launch {
-                                        delay(80)
-                                        yearBringIntoView.bringIntoView()
-                                    }
-                                }
+                            .onFocusChanged { focusState ->
+                                yearFocused = focusState.isFocused
                             }
+                    )
+                    FocusedBringIntoViewEffect(
+                        isFocused = yearFocused,
+                        requester = yearBringIntoView,
                     )
 
                     OutlinedTextField(
@@ -320,14 +321,13 @@ fun AddAlbumScreen(
                             .weight(1f)
                             .focusRequester(labelFocus)
                             .bringIntoViewRequester(labelBringIntoView)
-                            .onFocusChanged { state ->
-                                if (state.isFocused) {
-                                    coroutineScope.launch {
-                                        delay(80)
-                                        labelBringIntoView.bringIntoView()
-                                    }
-                                }
+                            .onFocusChanged { focusState ->
+                                labelFocused = focusState.isFocused
                             }
+                    )
+                    FocusedBringIntoViewEffect(
+                        isFocused = labelFocused,
+                        requester = labelBringIntoView,
                     )
                 }
 
@@ -351,14 +351,13 @@ fun AddAlbumScreen(
                             .weight(1f)
                             .focusRequester(catalogFocus)
                             .bringIntoViewRequester(catalogBringIntoView)
-                            .onFocusChanged { state ->
-                                if (state.isFocused) {
-                                    coroutineScope.launch {
-                                        delay(80)
-                                        catalogBringIntoView.bringIntoView()
-                                    }
-                                }
+                            .onFocusChanged { focusState ->
+                                catalogFocused = focusState.isFocused
                             }
+                    )
+                    FocusedBringIntoViewEffect(
+                        isFocused = catalogFocused,
+                        requester = catalogBringIntoView,
                     )
 
                     OutlinedTextField(
@@ -378,14 +377,13 @@ fun AddAlbumScreen(
                             .weight(1f)
                             .focusRequester(barcodeFocus)
                             .bringIntoViewRequester(barcodeBringIntoView)
-                            .onFocusChanged { state ->
-                                if (state.isFocused) {
-                                    coroutineScope.launch {
-                                        delay(80)
-                                        barcodeBringIntoView.bringIntoView()
-                                    }
-                                }
+                            .onFocusChanged { focusState ->
+                                barcodeFocused = focusState.isFocused
                             }
+                    )
+                    FocusedBringIntoViewEffect(
+                        isFocused = barcodeFocused,
+                        requester = barcodeBringIntoView,
                     )
                 }
 
@@ -405,14 +403,13 @@ fun AddAlbumScreen(
                         .fillMaxWidth()
                         .focusRequester(formatFocus)
                         .bringIntoViewRequester(formatBringIntoView)
-                        .onFocusChanged { state ->
-                            if (state.isFocused) {
-                                coroutineScope.launch {
-                                    delay(80)
-                                    formatBringIntoView.bringIntoView()
-                                }
-                            }
+                        .onFocusChanged { focusState ->
+                            formatFocused = focusState.isFocused
                         }
+                )
+                FocusedBringIntoViewEffect(
+                    isFocused = formatFocused,
+                    requester = formatBringIntoView,
                 )
             }
 
@@ -452,6 +449,19 @@ private fun SectionCard(
 
             Spacer(Modifier.height(2.dp))
             content()
+        }
+    }
+}
+
+@Composable
+private fun FocusedBringIntoViewEffect(
+    isFocused: Boolean,
+    requester: BringIntoViewRequester,
+) {
+    LaunchedEffect(isFocused) {
+        if (isFocused) {
+            delay(80)
+            requester.bringIntoView()
         }
     }
 }
