@@ -41,10 +41,10 @@ class InboxTypeConverters {
     }
 
     @TypeConverter
-    fun fromPhotoUris(uris: List<String>?): String? {
-        if (uris.isNullOrEmpty()) return null
+    fun fromPhotoUris(uris: List<String>?): String {
+        // Must NEVER return null because inbox_items.photo_uris_json is NOT NULL.
         val array = JSONArray()
-        uris.forEach { array.put(it) }
-        return array.toString()
+        uris.orEmpty().forEach { array.put(it) }
+        return array.toString() // "[]" when empty
     }
 }
