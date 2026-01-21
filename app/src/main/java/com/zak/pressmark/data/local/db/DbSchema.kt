@@ -180,6 +180,7 @@ object DbSchema {
         const val CONFIDENCE = "confidence"
         const val REASONS_JSON = "reasons_json"
         const val WAS_UNDONE = "was_undone"
+        const val COMMITTED_PROVIDER_ITEM_ID = "committed_provider_item_id"
     }
 
     object ProviderSnapshot {

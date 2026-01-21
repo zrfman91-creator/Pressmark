@@ -13,8 +13,11 @@ class CandidateScoringTest {
             providerItemId = "1",
             title = "Test Title",
             artist = "Test Artist",
+            year = null,
             label = null,
             catalogNo = null,
+            formatSummary = null,
+            thumbUrl = null,
             barcode = "123",
             rawJson = "{}",
         )
@@ -29,5 +32,22 @@ class CandidateScoringTest {
 
         assertTrue(score.confidence >= 50)
         assertEquals(true, score.reasonsJson.contains("barcode_match"))
+    }
+
+    @Test
+    fun `auto commit requires high score and gap`() {
+        val shouldCommit = InboxPipeline.shouldAutoCommit(
+            topScore = 96,
+            secondScore = 80,
+            wasUndone = false,
+        )
+        val shouldNotCommitGap = InboxPipeline.shouldAutoCommit(
+            topScore = 96,
+            secondScore = 90,
+            wasUndone = false,
+        )
+
+        assertTrue(shouldCommit)
+        assertEquals(false, shouldNotCommitGap)
     }
 }

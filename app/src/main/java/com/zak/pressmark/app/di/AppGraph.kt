@@ -12,7 +12,7 @@ import com.zak.pressmark.data.remote.discogs.DiscogsApiService
 import com.zak.pressmark.data.remote.musicbrainz.DefaultMusicBrainzArtworkRepository
 import com.zak.pressmark.data.remote.musicbrainz.MusicBrainzArtworkApi
 import com.zak.pressmark.data.remote.musicbrainz.MusicBrainzArtworkRepository
-import com.zak.pressmark.data.remote.provider.DiscogsProviderStub
+import com.zak.pressmark.data.remote.provider.DiscogsMetadataProvider
 import com.zak.pressmark.data.remote.provider.MetadataProvider
 import com.zak.pressmark.data.repository.AlbumRepository
 import com.zak.pressmark.data.repository.ArtistRepository
@@ -92,7 +92,7 @@ class AppGraph(
     }
 
     val metadataProvider: MetadataProvider by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
-        DiscogsProviderStub()
+        DiscogsMetadataProvider(discogsApiService)
     }
 
     val ingestSettingsRepository: IngestSettingsRepository by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {

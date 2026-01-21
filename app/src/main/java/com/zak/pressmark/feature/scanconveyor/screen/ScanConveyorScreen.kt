@@ -38,15 +38,17 @@ import androidx.compose.ui.unit.dp
 fun ScanConveyorScreen(
     inboxCount: Int,
     libraryCount: Int,
-    onScanBarcode: () -> Unit,
+    onScanBarcode: (String) -> Unit,
     onCaptureCover: () -> Unit,
     onQuickAdd: (title: String, artist: String) -> Unit,
+    onImportCsv: () -> Unit,
     onOpenInbox: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showQuickAdd by remember { mutableStateOf(false) }
     var title by remember { mutableStateOf("") }
     var artist by remember { mutableStateOf("") }
+    var showBarcodeEntry by remember { mutableStateOf(false) }
 
     LaunchedEffect(showQuickAdd) {
         if (!showQuickAdd) {
@@ -75,7 +77,7 @@ fun ScanConveyorScreen(
             )
 
             Button(
-                onClick = onScanBarcode,
+                onClick = { showBarcodeEntry = true },
                 modifier = Modifier.widthIn(min = 240.dp),
             ) {
                 Icon(Icons.Outlined.QrCodeScanner, contentDescription = null)
@@ -113,13 +115,12 @@ fun ScanConveyorScreen(
             }
 
             Button(
-                onClick = {},
-                enabled = false,
+                onClick = onImportCsv,
                 modifier = Modifier.widthIn(min = 240.dp),
             ) {
                 Icon(Icons.Outlined.CollectionsBookmark, contentDescription = null)
                 Spacer(modifier = Modifier.width(12.dp))
-                Text("CSV import (coming soon)")
+                Text("CSV import")
             }
         }
     }
@@ -159,6 +160,16 @@ fun ScanConveyorScreen(
                 TextButton(onClick = { showQuickAdd = false }) {
                     Text("Cancel")
                 }
+            },
+        )
+    }
+
+    if (showBarcodeEntry) {
+        BarcodeEntryDialog(
+            onDismiss = { showBarcodeEntry = false },
+            onSave = { barcode ->
+                onScanBarcode(barcode)
+                showBarcodeEntry = false
             },
         )
     }

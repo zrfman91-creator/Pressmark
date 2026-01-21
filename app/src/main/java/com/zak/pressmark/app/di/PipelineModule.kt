@@ -7,7 +7,10 @@ import com.zak.pressmark.data.local.dao.InboxItemDao
 import com.zak.pressmark.data.local.dao.ProviderSnapshotDao
 import com.zak.pressmark.data.local.db.AppDatabase
 import com.zak.pressmark.data.local.db.DatabaseProvider
-import com.zak.pressmark.data.remote.provider.DiscogsProviderStub
+import com.zak.pressmark.BuildConfig
+import com.zak.pressmark.data.remote.discogs.DiscogsApiProvider
+import com.zak.pressmark.data.remote.http.HttpClients
+import com.zak.pressmark.data.remote.provider.DiscogsMetadataProvider
 import com.zak.pressmark.data.remote.provider.MetadataProvider
 import com.zak.pressmark.data.repository.DefaultInboxRepository
 import com.zak.pressmark.data.repository.InboxRepository
@@ -49,7 +52,16 @@ object PipelineModule {
 
     @Provides
     @Singleton
-    fun provideMetadataProvider(): MetadataProvider = DiscogsProviderStub()
+    fun provideMetadataProvider(
+        @ApplicationContext context: Context,
+    ): MetadataProvider {
+        val api = DiscogsApiProvider.create(
+            token = BuildConfig.DISCOGS_TOKEN.trim(),
+            userAgent = "Pressmark/${BuildConfig.VERSION_NAME}",
+            baseClient = HttpClients.cached(context.applicationContext),
+        )
+        return DiscogsMetadataProvider(api)
+    }
 
     @Provides
     @Singleton

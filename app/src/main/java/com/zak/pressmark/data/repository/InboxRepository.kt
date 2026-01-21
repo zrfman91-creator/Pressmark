@@ -6,6 +6,8 @@ import com.zak.pressmark.data.local.dao.ProviderSnapshotDao
 import com.zak.pressmark.data.local.entity.InboxItemEntity
 import com.zak.pressmark.data.local.entity.ProviderSnapshotEntity
 import com.zak.pressmark.data.model.inbox.CandidateScore
+import com.zak.pressmark.data.model.inbox.CsvImportRow
+import com.zak.pressmark.data.model.inbox.CsvImportSummary
 import com.zak.pressmark.data.model.inbox.InboxErrorCode
 import com.zak.pressmark.data.model.inbox.InboxSourceType
 import com.zak.pressmark.data.model.inbox.LookupStatus
@@ -36,10 +38,24 @@ interface InboxRepository {
         inboxItemId: String,
         candidates: List<ProviderCandidate>,
         errorCode: InboxErrorCode,
+    ): ProviderCandidate?
+
+    suspend fun markCommitted(
+        inboxItemId: String,
+        committedProviderItemId: String?,
+    )
+    suspend fun retryLookup(inboxItemId: String)
+
+    suspend fun updateManualDetails(
+        inboxItemId: String,
+        title: String?,
+        artist: String?,
+        label: String?,
+        catalogNo: String?,
+        format: String?,
     )
 
-    suspend fun markCommitted(inboxItemId: String)
-    suspend fun retryLookup(inboxItemId: String)
+    suspend fun createCsvImport(rows: List<CsvImportRow>): CsvImportSummary
 }
 
 data class ExtractedFields(
@@ -151,23 +167,28 @@ class DefaultInboxRepository(
         inboxItemId: String,
         candidates: List<ProviderCandidate>,
         errorCode: InboxErrorCode,
-    ) {
+    ): ProviderCandidate? {
         val item = inboxItemDao.getById(inboxItemId) ?: return
         val now = System.currentTimeMillis()
         providerSnapshotDao.deleteForInboxItem(inboxItemId)
 
         if (candidates.isEmpty()) {
-            val nextAt = now + InboxPipeline.computeBackoffMillis(errorCode, item.retryCount)
+            val shouldRetry = errorCode != InboxErrorCode.NO_MATCH
+            val nextAt = if (shouldRetry) {
+                now + InboxPipeline.computeBackoffMillis(errorCode, item.retryCount)
+            } else {
+                null
+            }
             inboxItemDao.update(
                 item.copy(
                     updatedAt = now,
-                    lookupStatus = LookupStatus.FAILED,
+                    lookupStatus = if (shouldRetry) LookupStatus.PENDING else LookupStatus.FAILED,
                     errorCode = errorCode,
                     retryCount = item.retryCount + 1,
                     nextLookupAt = nextAt,
                 )
             )
-            return
+            return null
         }
 
         val snapshots = candidates.map { candidate ->
@@ -184,7 +205,13 @@ class DefaultInboxRepository(
         providerSnapshotDao.insertAll(snapshots)
 
         val top = snapshots.first()
-        val status = if (top.confidence >= 85) LookupStatus.COMMITTED else LookupStatus.NEEDS_REVIEW
+        val second = snapshots.getOrNull(1)
+        val shouldAutoCommit = InboxPipeline.shouldAutoCommit(
+            topScore = top.confidence,
+            secondScore = second?.confidence,
+            wasUndone = item.wasUndone,
+        )
+        val status = LookupStatus.NEEDS_REVIEW
 
         inboxItemDao.update(
             item.copy(
@@ -196,14 +223,24 @@ class DefaultInboxRepository(
                 nextLookupAt = null,
             )
         )
+        return if (shouldAutoCommit) {
+            candidates.firstOrNull { it.providerItemId == top.providerItemId }
+        } else {
+            null
+        }
     }
 
-    override suspend fun markCommitted(inboxItemId: String) {
+    override suspend fun markCommitted(
+        inboxItemId: String,
+        committedProviderItemId: String?,
+    ) {
         val item = inboxItemDao.getById(inboxItemId) ?: return
         inboxItemDao.update(
             item.copy(
                 updatedAt = System.currentTimeMillis(),
                 lookupStatus = LookupStatus.COMMITTED,
+                committedProviderItemId = committedProviderItemId,
+                errorCode = InboxErrorCode.NONE,
             )
         )
     }
@@ -216,6 +253,98 @@ class DefaultInboxRepository(
                 lookupStatus = LookupStatus.PENDING,
                 nextLookupAt = System.currentTimeMillis(),
             )
+        )
+    }
+
+    override suspend fun updateManualDetails(
+        inboxItemId: String,
+        title: String?,
+        artist: String?,
+        label: String?,
+        catalogNo: String?,
+        format: String?,
+    ) {
+        val item = inboxItemDao.getById(inboxItemId) ?: return
+        val now = System.currentTimeMillis()
+        providerSnapshotDao.deleteForInboxItem(inboxItemId)
+        val normalizedFormat = format?.trim()?.takeIf { it.isNotBlank() }
+        val rawJson = if (item.rawRowJson == null && normalizedFormat != null) {
+            org.json.JSONObject()
+                .put("title", title)
+                .put("artist", artist)
+                .put("label", label)
+                .put("catalogNo", catalogNo)
+                .put("format", normalizedFormat)
+                .toString()
+        } else {
+            item.rawRowJson
+        }
+        inboxItemDao.update(
+            item.copy(
+                updatedAt = now,
+                rawTitle = title?.trim()?.takeIf { it.isNotBlank() },
+                rawArtist = artist?.trim()?.takeIf { it.isNotBlank() },
+                extractedLabel = label?.trim()?.takeIf { it.isNotBlank() },
+                extractedCatalogNo = catalogNo?.trim()?.takeIf { it.isNotBlank() },
+                rawRowJson = rawJson,
+                lookupStatus = LookupStatus.PENDING,
+                nextLookupAt = now,
+                errorCode = InboxErrorCode.NONE,
+                confidence = null,
+                reasonsJson = null,
+            )
+        )
+    }
+
+    override suspend fun createCsvImport(rows: List<CsvImportRow>): CsvImportSummary {
+        var imported = 0
+        rows.forEach { row ->
+            val title = row.title?.trim()?.takeIf { it.isNotBlank() }
+            val artist = row.artist?.trim()?.takeIf { it.isNotBlank() }
+            val barcode = row.barcode?.trim()?.takeIf { it.isNotBlank() }
+            val catalogNo = row.catalogNo?.trim()?.takeIf { it.isNotBlank() }
+            val label = row.label?.trim()?.takeIf { it.isNotBlank() }
+
+            if (title == null && artist == null && barcode == null && catalogNo == null) {
+                return@forEach
+            }
+
+            val now = System.currentTimeMillis()
+            val id = UUID.randomUUID().toString()
+            val item = InboxItemEntity(
+                id = id,
+                sourceType = InboxSourceType.CSV_IMPORT,
+                createdAt = now,
+                updatedAt = now,
+                barcode = barcode,
+                rawTitle = title,
+                rawArtist = artist,
+                rawRowJson = row.rawJson,
+                photoUris = emptyList(),
+                ocrStatus = OcrStatus.NOT_STARTED,
+                lookupStatus = LookupStatus.PENDING,
+                errorCode = InboxErrorCode.NONE,
+                retryCount = 0,
+                nextOcrAt = null,
+                nextLookupAt = now,
+                lastTriedAt = null,
+                extractedTitle = null,
+                extractedArtist = null,
+                extractedLabel = label,
+                extractedCatalogNo = catalogNo,
+                confidence = null,
+                reasonsJson = null,
+                wasUndone = false,
+                committedProviderItemId = null,
+            )
+            inboxItemDao.upsert(item)
+            imported += 1
+        }
+
+        return CsvImportSummary(
+            totalRows = rows.size,
+            importedRows = imported,
+            skippedRows = rows.size - imported,
         )
     }
 
@@ -255,6 +384,7 @@ class DefaultInboxRepository(
             confidence = null,
             reasonsJson = null,
             wasUndone = false,
+            committedProviderItemId = null,
         )
         inboxItemDao.upsert(item)
         return id
