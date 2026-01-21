@@ -217,6 +217,10 @@ fun AddAlbumScreen(
                             }
                         }
                 )
+                FocusedBringIntoViewEffect(
+                    isFocused = titleFocused,
+                    requester = titleBringIntoView,
+                )
 
                 OutlinedTextField(
                     value = state.artist,
@@ -248,6 +252,10 @@ fun AddAlbumScreen(
                                 artistBringIntoViewJob = null
                             }
                         }
+                )
+                FocusedBringIntoViewEffect(
+                    isFocused = artistFocused,
+                    requester = artistBringIntoView,
                 )
 
                 if (showSuggestions) {
@@ -320,6 +328,10 @@ fun AddAlbumScreen(
                                 }
                             }
                     )
+                    FocusedBringIntoViewEffect(
+                        isFocused = yearFocused,
+                        requester = yearBringIntoView,
+                    )
 
                     OutlinedTextField(
                         value = state.label,
@@ -349,6 +361,10 @@ fun AddAlbumScreen(
                                     labelBringIntoViewJob = null
                                 }
                             }
+                    )
+                    FocusedBringIntoViewEffect(
+                        isFocused = labelFocused,
+                        requester = labelBringIntoView,
                     )
                 }
 
@@ -385,6 +401,10 @@ fun AddAlbumScreen(
                                 }
                             }
                     )
+                    FocusedBringIntoViewEffect(
+                        isFocused = catalogFocused,
+                        requester = catalogBringIntoView,
+                    )
 
                     OutlinedTextField(
                         value = state.barcode,
@@ -416,6 +436,10 @@ fun AddAlbumScreen(
                                 }
                             }
                     )
+                    FocusedBringIntoViewEffect(
+                        isFocused = barcodeFocused,
+                        requester = barcodeBringIntoView,
+                    )
                 }
 
                 OutlinedTextField(
@@ -446,6 +470,10 @@ fun AddAlbumScreen(
                                 formatBringIntoViewJob = null
                             }
                         }
+                )
+                FocusedBringIntoViewEffect(
+                    isFocused = formatFocused,
+                    requester = formatBringIntoView,
                 )
             }
 
@@ -485,6 +513,19 @@ private fun SectionCard(
 
             Spacer(Modifier.height(2.dp))
             content()
+        }
+    }
+}
+
+@Composable
+private fun FocusedBringIntoViewEffect(
+    isFocused: Boolean,
+    requester: BringIntoViewRequester,
+) {
+    LaunchedEffect(isFocused) {
+        if (isFocused) {
+            delay(80)
+            requester.bringIntoView()
         }
     }
 }
