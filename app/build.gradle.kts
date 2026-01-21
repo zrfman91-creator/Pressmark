@@ -29,6 +29,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.google.services)
     alias(libs.plugins.firebase.appdistribution)
+    alias(libs.plugins.hilt.android)
 }
 
 android {
@@ -114,6 +115,10 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.exifinterface)
+    implementation(libs.androidx.work.runtime)
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.mlkit.text.recognition)
+    implementation(libs.hilt.android)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 
@@ -126,6 +131,7 @@ dependencies {
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
+    ksp(libs.hilt.compiler)
 
     // Networking
     implementation(libs.retrofit)

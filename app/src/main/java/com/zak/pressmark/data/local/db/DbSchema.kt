@@ -150,4 +150,63 @@ object DbSchema {
         const val HEIGHT = "height"
         const val CREATED_AT = "created_at"
     }
+
+    object InboxItem {
+        const val TABLE = "inbox_items"
+
+        const val ID = "id"
+        const val SOURCE_TYPE = "source_type"
+        const val CREATED_AT = "created_at"
+        const val UPDATED_AT = "updated_at"
+
+        const val BARCODE = "barcode"
+        const val RAW_TITLE = "raw_title"
+        const val RAW_ARTIST = "raw_artist"
+        const val RAW_ROW_JSON = "raw_row_json"
+        const val PHOTO_URIS_JSON = "photo_uris_json"
+
+        const val OCR_STATUS = "ocr_status"
+        const val LOOKUP_STATUS = "lookup_status"
+        const val ERROR_CODE = "error_code"
+        const val RETRY_COUNT = "retry_count"
+        const val NEXT_OCR_AT = "next_ocr_at"
+        const val NEXT_LOOKUP_AT = "next_lookup_at"
+        const val LAST_TRIED_AT = "last_tried_at"
+
+        const val EXTRACTED_TITLE = "extracted_title"
+        const val EXTRACTED_ARTIST = "extracted_artist"
+        const val EXTRACTED_LABEL = "extracted_label"
+        const val EXTRACTED_CATNO = "extracted_catno"
+        const val CONFIDENCE = "confidence"
+        const val REASONS_JSON = "reasons_json"
+        const val WAS_UNDONE = "was_undone"
+    }
+
+    object ProviderSnapshot {
+        const val TABLE = "provider_snapshots"
+
+        const val ID = "id"
+        const val INBOX_ITEM_ID = "inbox_item_id"
+        const val PROVIDER = "provider"
+        const val PROVIDER_ITEM_ID = "provider_item_id"
+        const val TITLE = "title"
+        const val ARTIST = "artist"
+        const val LABEL = "label"
+        const val CATALOG_NO = "catalog_no"
+        const val BARCODE = "barcode"
+        const val RAW_JSON = "raw_json"
+        const val CONFIDENCE = "confidence"
+        const val REASONS_JSON = "reasons_json"
+    }
+
+    object ImportBatch {
+        const val TABLE = "import_batches"
+
+        const val ID = "id"
+        const val CREATED_AT = "created_at"
+        const val MAPPING_JSON = "mapping_json"
+        const val TOTAL_COUNT = "total_count"
+        const val SUCCESS_COUNT = "success_count"
+        const val FAILURE_COUNT = "failure_count"
+    }
 }
