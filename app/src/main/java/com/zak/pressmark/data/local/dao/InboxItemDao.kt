@@ -25,6 +25,9 @@ interface InboxItemDao {
     @Query("SELECT * FROM ${DbSchema.InboxItem.TABLE} WHERE ${DbSchema.InboxItem.ID} = :id")
     fun observeById(id: String): Flow<InboxItemEntity?>
 
+    @Query("DELETE FROM ${DbSchema.InboxItem.TABLE} WHERE ${DbSchema.InboxItem.ID} = :id")
+    suspend fun deleteById(id: String)
+
     @Query("SELECT COUNT(*) FROM ${DbSchema.InboxItem.TABLE}")
     fun observeInboxCount(): Flow<Int>
 

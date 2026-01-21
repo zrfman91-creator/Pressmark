@@ -237,15 +237,8 @@ class DefaultInboxRepository(
         inboxItemId: String,
         committedProviderItemId: String?,
     ) {
-        val item = inboxItemDao.getById(inboxItemId) ?: return
-        inboxItemDao.update(
-            item.copy(
-                updatedAt = System.currentTimeMillis(),
-                lookupStatus = LookupStatus.COMMITTED,
-                committedProviderItemId = committedProviderItemId,
-                errorCode = InboxErrorCode.NONE,
-            )
-        )
+        providerSnapshotDao.deleteForInboxItem(inboxItemId)
+        inboxItemDao.deleteById(inboxItemId)
     }
 
     override suspend fun retryLookup(inboxItemId: String) {

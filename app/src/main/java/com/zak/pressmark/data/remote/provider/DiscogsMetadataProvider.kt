@@ -11,7 +11,8 @@ class DiscogsMetadataProvider(
     private val gson: Gson = Gson(),
 ) : MetadataProvider {
     override suspend fun lookupByBarcode(barcode: String): List<ProviderCandidate> {
-        return runSearch("barcode") {
+        val normalizedBarcode = barcode.trim().takeIf { it.isNotBlank() }
+        return runSearch("barcode", normalizedBarcode) {
             api.searchReleases(barcode = barcode, perPage = 25).results
         }
     }
@@ -41,10 +42,11 @@ class DiscogsMetadataProvider(
 
     private suspend fun runSearch(
         searchLabel: String,
+        fallbackBarcode: String? = null,
         block: suspend () -> List<DiscogsSearchResult>,
     ): List<ProviderCandidate> {
         return try {
-            block().mapNotNull { it.toCandidate(gson) }
+            block().mapNotNull { it.toCandidate(gson, fallbackBarcode) }
         } catch (error: Throwable) {
             if (error is HttpException && error.code() == 429) {
                 throw RateLimitException("Discogs rate limited on $searchLabel.")
@@ -54,7 +56,10 @@ class DiscogsMetadataProvider(
     }
 }
 
-private fun DiscogsSearchResult.toCandidate(gson: Gson): ProviderCandidate? {
+private fun DiscogsSearchResult.toCandidate(
+    gson: Gson,
+    fallbackBarcode: String? = null,
+): ProviderCandidate? {
     val rawTitle = title?.trim().orEmpty()
     if (rawTitle.isBlank()) return null
 
@@ -63,6 +68,7 @@ private fun DiscogsSearchResult.toCandidate(gson: Gson): ProviderCandidate? {
     val yearInt = year?.trim()?.toIntOrNull()
     val thumb = thumb?.trim()?.takeIf { it.isNotBlank() }
     val summary = buildFormatSummary(yearInt, labelName, catno)
+    val normalizedBarcode = fallbackBarcode?.trim()?.takeIf { it.isNotBlank() }
 
     return ProviderCandidate(
         provider = "discogs",
@@ -74,7 +80,7 @@ private fun DiscogsSearchResult.toCandidate(gson: Gson): ProviderCandidate? {
         catalogNo = catno?.trim()?.takeIf { it.isNotBlank() },
         formatSummary = summary,
         thumbUrl = thumb,
-        barcode = null,
+        barcode = normalizedBarcode,
         rawJson = gson.toJson(this),
     )
 }

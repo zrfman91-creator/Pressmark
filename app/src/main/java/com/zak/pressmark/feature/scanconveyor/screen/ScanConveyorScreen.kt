@@ -50,6 +50,7 @@ fun ScanConveyorScreen(
     var title by remember { mutableStateOf("") }
     var artist by remember { mutableStateOf("") }
     var showBarcodeEntry by remember { mutableStateOf(false) }
+    var showBarcodeScanner by remember { mutableStateOf(false) }
 
     LaunchedEffect(showQuickAdd) {
         if (!showQuickAdd) {
@@ -78,7 +79,7 @@ fun ScanConveyorScreen(
             )
 
             Button(
-                onClick = { showBarcodeEntry = true },
+                onClick = { showBarcodeScanner = true },
                 modifier = Modifier.widthIn(min = 240.dp),
             ) {
                 Icon(Icons.Outlined.QrCodeScanner, contentDescription = null)
@@ -171,6 +172,20 @@ fun ScanConveyorScreen(
             onSave = { barcode ->
                 onScanBarcode(barcode)
                 showBarcodeEntry = false
+            },
+        )
+    }
+
+    if (showBarcodeScanner) {
+        BarcodeScannerDialog(
+            onDismiss = { showBarcodeScanner = false },
+            onDetected = { barcode ->
+                onScanBarcode(barcode)
+                showBarcodeScanner = false
+            },
+            onManualEntry = {
+                showBarcodeScanner = false
+                showBarcodeEntry = true
             },
         )
     }

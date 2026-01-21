@@ -33,7 +33,7 @@ fun BarcodeEntryDialog(
         title = { Text("Scan barcode") },
         text = {
             Column {
-                Text("Enter a barcode (placeholder until scanner is wired).")
+                Text("Enter a barcode.")
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
                     value = barcode,
