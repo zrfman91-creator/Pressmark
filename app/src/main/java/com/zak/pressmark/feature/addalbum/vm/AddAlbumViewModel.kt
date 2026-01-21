@@ -103,6 +103,7 @@ class AddAlbumViewModel(
 
         val cleanLabel = form.label.trim().takeIf { it.isNotBlank() }
         val cleanCatalogNo = form.catalogNo.trim().takeIf { it.isNotBlank() }
+        val cleanBarcode = form.barcode.trim().takeIf { it.isNotBlank() }
         val cleanFormat = form.format.trim().takeIf { it.isNotBlank() }
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -116,6 +117,7 @@ class AddAlbumViewModel(
                     label = cleanLabel,
                     catalogNo = cleanCatalogNo,
                     format = cleanFormat,
+                    barcode = cleanBarcode,
                     addedAt = now,
                 )
 

@@ -21,4 +21,9 @@ interface DiscogsApiService {
     suspend fun getRelease(
         @Path("release_id") releaseId: Long,
     ): DiscogsRelease // Note: Uses the new DiscogsRelease data class
+
+    @GET("marketplace/stats/{release_id}")
+    suspend fun getMarketplaceStats(
+        @Path("release_id") releaseId: Long,
+    ): DiscogsMarketplaceStats
 }

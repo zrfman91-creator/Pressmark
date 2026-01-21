@@ -14,7 +14,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -26,10 +25,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.zak.pressmark.app.di.AppGraph
-import com.zak.pressmark.feature.artworkpicker.components.ArtworkPickerDialog
-import com.zak.pressmark.feature.artworkpicker.components.DiscogsConfirmDetailsSheet
-import com.zak.pressmark.feature.artworkpicker.model.ArtworkCandidate
-import com.zak.pressmark.feature.artworkpicker.model.ArtworkProviderId
+import com.zak.pressmark.feature.artworkpicker.components.DiscogsPressingPickerDialog
 import com.zak.pressmark.feature.artworkpicker.vm.ArtworkPickerViewModelFactory
 import com.zak.pressmark.feature.artworkpicker.vm.DiscogsCoverSearchViewModel
 import kotlinx.coroutines.flow.collect
@@ -38,22 +34,24 @@ import kotlinx.coroutines.flow.collect
 @Composable
 fun CoverSearchRoute(
     graph: AppGraph,
-    albumId: String,
+    releaseId: String,
     artist: String,
     title: String,
-    shouldPromptAutofill: Boolean,
+    releaseYearText: String,
+    label: String,
+    catalogNo: String,
+    barcode: String,
     onTakePhoto: () -> Unit,
     onClose: () -> Unit,
 ) {
     val factory = remember(graph) {
         ArtworkPickerViewModelFactory(
-            albumRepository = graph.albumRepository,
-            discogsApi = graph.discogsApiService,
+            releaseRepository = graph.releaseRepository,
         )
     }
 
     val vm: DiscogsCoverSearchViewModel = viewModel(
-        key = "cover_search_$albumId",
+        key = "cover_search_$releaseId",
         factory = factory,
     )
 
@@ -67,56 +65,22 @@ fun CoverSearchRoute(
     }
 
     // Kick off / update search when inputs change.
-    LaunchedEffect(albumId, artist, title) {
-        if (albumId.isNotBlank()) {
+    LaunchedEffect(releaseId, artist, title, releaseYearText, label, catalogNo, barcode) {
+        if (releaseId.isNotBlank()) {
             vm.start(
-                albumId = albumId,
+                releaseId = releaseId,
                 artist = artist,
                 title = title,
+                releaseYear = releaseYearText.toIntOrNull(),
+                label = label,
+                catalogNo = catalogNo,
+                barcode = barcode,
             )
         }
     }
 
-    val discogsResults = state.results
-    val discogsById = remember(discogsResults) {
-        discogsResults.associateBy { it.id.toString() }
-    }
-
-    val candidates: List<ArtworkCandidate> = remember(discogsResults) {
-        discogsResults.map { r ->
-            ArtworkCandidate(
-                provider = ArtworkProviderId.DISCOGS,
-                providerItemId = r.id.toString(),
-                imageUrl = r.coverImage ?: r.thumb,
-                thumbUrl = r.thumb,
-                displayTitle = r.title.toString(),
-                displayArtist = null,
-                subtitle = null,
-            )
-        }
-    }
-
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    if (state.pendingAutofill != null) {
-        DiscogsConfirmDetailsSheet(
-            sheetState = sheetState,
-            willFillLabels = state.willFillLabels,
-            onUseDiscogsFillMissing = {
-                vm.applyDiscogsFillMissing()
-            },
-            onKeepMyEntry = {
-                vm.dismissAutofillPrompt()
-                onClose()
-            },
-            onDismiss = {
-                vm.dismissAutofillPrompt()
-                onClose()
-            },
-        )
-    }
-
-    val noResults = !state.isLoading && candidates.isEmpty() &&
-            (state.error == null || state.error!!.contains("no results", ignoreCase = true))
+    val noResults = !state.isLoading && state.candidates.isEmpty() &&
+        (state.error == null || state.error!!.contains("no results", ignoreCase = true))
 
     val errorMessage = state.error?.takeIf { !noResults }
 
@@ -142,9 +106,13 @@ fun CoverSearchRoute(
                 primaryAction = "Retry",
                 onPrimary = {
                     vm.start(
-                        albumId = albumId,
+                        releaseId = releaseId,
                         artist = artist,
                         title = title,
+                        releaseYear = releaseYearText.toIntOrNull(),
+                        label = label,
+                        catalogNo = catalogNo,
+                        barcode = barcode,
                     )
                 },
                 onTakePhoto = onTakePhoto,
@@ -161,9 +129,13 @@ fun CoverSearchRoute(
                 primaryAction = "Retry",
                 onPrimary = {
                     vm.start(
-                        albumId = albumId,
+                        releaseId = releaseId,
                         artist = artist,
                         title = title,
+                        releaseYear = releaseYearText.toIntOrNull(),
+                        label = label,
+                        catalogNo = catalogNo,
+                        barcode = barcode,
                     )
                 },
                 onTakePhoto = onTakePhoto,
@@ -173,31 +145,13 @@ fun CoverSearchRoute(
         }
 
         else -> {
-            ArtworkPickerDialog(
+            DiscogsPressingPickerDialog(
                 artist = artist,
                 title = title,
-                results = candidates,
-                onPick = { candidate ->
-                    val picked = discogsById[candidate.providerItemId]
-                    if (picked == null) {
-                        onClose()
-                        return@ArtworkPickerDialog
-                    }
-
-                    // Always set the cover selection first.
-                    vm.pickResult(picked)
-
-                    // Only prompt in Save & Exit flow (list success origin).
-                    if (!shouldPromptAutofill) {
-                        onClose()
-                        return@ArtworkPickerDialog
-                    }
-
-                    vm.prepareAutofillPromptIfNeeded(
-                        picked = picked,
-                        shouldPromptAutofill = true,
-                    )
-                },
+                candidates = state.candidates,
+                selectedId = state.selectedCandidateId,
+                onSelectCandidate = vm::selectCandidate,
+                onConfirm = vm::applySelectedCandidate,
                 onSkip = onClose,
                 onTakePhoto = onTakePhoto,
                 onDismiss = onClose,

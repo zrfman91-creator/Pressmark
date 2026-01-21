@@ -8,6 +8,8 @@ data class DiscogsReleaseMetadata(
     val country: String?,
     val releaseType: String?,
     val notes: String?,
+    val genres: List<String>?,
+    val styles: List<String>?,
 )
 
 fun DiscogsRelease.toReleaseMetadata(): DiscogsReleaseMetadata {
@@ -16,6 +18,8 @@ fun DiscogsRelease.toReleaseMetadata(): DiscogsReleaseMetadata {
         country = country?.trim()?.takeIf { it.isNotBlank() },
         releaseType = normalizeReleaseType(styles, genres),
         notes = notes?.trim()?.takeIf { it.isNotBlank() },
+        genres = genres?.map { it.trim() }?.filter { it.isNotBlank() },
+        styles = styles?.map { it.trim() }?.filter { it.isNotBlank() },
     )
 }
 
