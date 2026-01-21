@@ -43,11 +43,14 @@ import androidx.compose.ui.unit.dp
 import com.zak.pressmark.core.ui.elements.AlbumArtwork
 import com.zak.pressmark.core.ui.elements.AlbumDetailsHero
 import com.zak.pressmark.data.model.ReleaseDetails
+import com.zak.pressmark.data.model.ReleaseDiscogsExtras
+import com.zak.pressmark.data.model.ReleaseMarketPrice
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReleaseDetailsScreen(
     details: ReleaseDetails?,
+    discogsExtras: ReleaseDiscogsExtras?,
     snackMessage: String?,
     onSnackShown: () -> Unit,
     didDelete: Boolean,
@@ -189,7 +192,9 @@ fun ReleaseDetailsScreen(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
                 )
 
-                ReleaseInfoSection(details = details)
+                ReleaseInfoSection(details = details, discogsExtras = discogsExtras)
+
+                ReleaseDiscogsSection(extras = discogsExtras)
 
                 details.notes?.takeIf { it.isNotBlank() }?.let { notes ->
                     ReleaseNotesSection(notes = notes)
@@ -255,12 +260,19 @@ private fun ReleaseMetaRow(details: ReleaseDetails) {
 }
 
 @Composable
-private fun ReleaseInfoSection(details: ReleaseDetails) {
+private fun ReleaseInfoSection(
+    details: ReleaseDetails,
+    discogsExtras: ReleaseDiscogsExtras?,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         InfoRow(label = "Format", value = details.format)
         InfoRow(label = "Barcode", value = details.barcode)
         InfoRow(label = "Country", value = details.country)
         InfoRow(label = "Release type", value = details.releaseType)
+        val genres = discogsExtras?.genres?.joinToString(", ")?.takeIf { it.isNotBlank() }
+        val styles = discogsExtras?.styles?.joinToString(", ")?.takeIf { it.isNotBlank() }
+        InfoRow(label = "Genres", value = genres)
+        InfoRow(label = "Styles", value = styles)
 
         if (details.credits.isNotEmpty()) {
             Spacer(Modifier.height(6.dp))
@@ -274,6 +286,29 @@ private fun ReleaseInfoSection(details: ReleaseDetails) {
                 InfoRow(label = label, value = credit.artistName)
             }
         }
+    }
+}
+
+@Composable
+private fun ReleaseDiscogsSection(extras: ReleaseDiscogsExtras?) {
+    val lastSoldDate = extras?.lastSoldDate?.takeIf { it.isNotBlank() }
+    val lowest = extras?.lowestPrice?.formatPrice()
+    val median = extras?.medianPrice?.formatPrice()
+    val highest = extras?.highestPrice?.formatPrice()
+
+    if (lastSoldDate == null && lowest == null && median == null && highest == null) return
+
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = "Discogs market",
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        InfoRow(label = "Last sold", value = lastSoldDate)
+        InfoRow(label = "Low", value = lowest)
+        InfoRow(label = "Median", value = median)
+        InfoRow(label = "High", value = highest)
     }
 }
 
@@ -302,4 +337,9 @@ private fun InfoRow(
         Text(text = label, style = MaterialTheme.typography.bodySmall)
         Text(text = value, style = MaterialTheme.typography.bodySmall)
     }
+}
+
+private fun ReleaseMarketPrice.formatPrice(): String? {
+    if (currency.isBlank()) return null
+    return "%s %.2f".format(currency, value)
 }

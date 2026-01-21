@@ -18,7 +18,11 @@ import com.zak.pressmark.data.local.model.ReleaseListItemMapper
 import com.zak.pressmark.data.model.ReleaseArtwork
 import com.zak.pressmark.data.model.ReleaseCredit
 import com.zak.pressmark.data.model.ReleaseDetails
+import com.zak.pressmark.data.model.ReleaseDiscogsExtras
+import com.zak.pressmark.data.model.ReleaseMarketPrice
 import com.zak.pressmark.data.model.ReleaseSummary
+import com.zak.pressmark.data.remote.discogs.DiscogsApiService
+import com.zak.pressmark.data.remote.discogs.DiscogsMarketplacePrice
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
@@ -40,6 +44,7 @@ class ReleaseRepository(
     // Defaults keep this plug-and-play with existing call sites.
     private val artistRepository: ArtistRepository = ArtistRepository(db.artistDao()),
     private val creditsBuilder: ReleaseArtistCreditsBuilder = ReleaseArtistCreditsBuilder(artistRepository),
+    private val discogsApiService: DiscogsApiService? = null,
 ) {
     data class ReleaseDetailsSnapshot(
         val release: ReleaseEntity?,
@@ -370,6 +375,7 @@ class ReleaseRepository(
             barcode = release.barcode,
             country = release.country,
             releaseType = release.releaseType,
+            discogsReleaseId = release.discogsReleaseId,
             notes = release.notes,
             rating = release.rating,
             addedAt = release.addedAt,
@@ -394,6 +400,35 @@ class ReleaseRepository(
                     displayHint = row.displayHint,
                 )
             },
+        )
+    }
+
+    suspend fun fetchDiscogsExtras(releaseId: String): ReleaseDiscogsExtras? {
+        val api = discogsApiService ?: return null
+        val release = releaseDao.getById(releaseId) ?: return null
+        val discogsReleaseId = release.discogsReleaseId ?: return null
+
+        return runCatching {
+            val discogsRelease = api.getRelease(discogsReleaseId)
+            val stats = runCatching { api.getMarketplaceStats(discogsReleaseId) }.getOrNull()
+
+            ReleaseDiscogsExtras(
+                genres = discogsRelease.genres?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList(),
+                styles = discogsRelease.styles?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList(),
+                lastSoldDate = stats?.lastSoldDate,
+                lowestPrice = stats?.lowestPrice?.toMarketPrice(),
+                medianPrice = stats?.medianPrice?.toMarketPrice(),
+                highestPrice = stats?.highestPrice?.toMarketPrice(),
+            )
+        }.getOrNull()
+    }
+
+    private fun DiscogsMarketplacePrice.toMarketPrice(): ReleaseMarketPrice? {
+        val amount = value ?: return null
+        val currencyCode = currency?.trim()?.takeIf { it.isNotBlank() } ?: return null
+        return ReleaseMarketPrice(
+            value = amount,
+            currency = currencyCode,
         )
     }
 

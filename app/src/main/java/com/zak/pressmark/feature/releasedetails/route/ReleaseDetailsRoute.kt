@@ -20,9 +20,11 @@ fun ReleaseDetailsRoute(
 ) {
     val release by vm.release.collectAsStateWithLifecycle()
     val ui by vm.ui.collectAsStateWithLifecycle()
+    val discogsExtras by vm.discogsExtras.collectAsStateWithLifecycle()
 
     ReleaseDetailsScreen(
         details = release,
+        discogsExtras = discogsExtras,
         snackMessage = ui.snackMessage,
         onSnackShown = { vm.dismissSnack() },
         didDelete = ui.didDelete,

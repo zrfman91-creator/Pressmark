@@ -3,12 +3,15 @@ package com.zak.pressmark.feature.releasedetails.vm
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zak.pressmark.data.model.ReleaseDetails
+import com.zak.pressmark.data.model.ReleaseDiscogsExtras
 import com.zak.pressmark.data.repository.ReleaseRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -31,6 +34,13 @@ class ReleaseDetailsViewModel(
 
     private val _ui = MutableStateFlow(ReleaseDetailsUiState())
     val ui: StateFlow<ReleaseDetailsUiState> = _ui.asStateFlow()
+
+    private val _discogsExtras = MutableStateFlow<ReleaseDiscogsExtras?>(null)
+    val discogsExtras: StateFlow<ReleaseDiscogsExtras?> = _discogsExtras.asStateFlow()
+
+    init {
+        observeDiscogsExtras()
+    }
 
     fun openEdit() {
         _ui.value = _ui.value.copy(editOpen = true)
@@ -151,6 +161,23 @@ class ReleaseDetailsViewModel(
 
     fun dismissSnack() {
         _ui.value = _ui.value.copy(snackMessage = null)
+    }
+
+    private fun observeDiscogsExtras() {
+        viewModelScope.launch(Dispatchers.IO) {
+            release
+                .map { it?.discogsReleaseId }
+                .distinctUntilChanged()
+                .collect { discogsId ->
+                    if (discogsId == null) {
+                        _discogsExtras.value = null
+                        return@collect
+                    }
+
+                    val extras = releaseRepository.fetchDiscogsExtras(releaseId)
+                    _discogsExtras.value = extras
+                }
+        }
     }
 
     private fun reportError(message: String) {
