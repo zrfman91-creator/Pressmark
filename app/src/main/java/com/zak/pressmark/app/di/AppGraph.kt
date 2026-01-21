@@ -12,8 +12,13 @@ import com.zak.pressmark.data.remote.discogs.DiscogsApiService
 import com.zak.pressmark.data.remote.musicbrainz.DefaultMusicBrainzArtworkRepository
 import com.zak.pressmark.data.remote.musicbrainz.MusicBrainzArtworkApi
 import com.zak.pressmark.data.remote.musicbrainz.MusicBrainzArtworkRepository
+import com.zak.pressmark.data.remote.provider.DiscogsProviderStub
+import com.zak.pressmark.data.remote.provider.MetadataProvider
 import com.zak.pressmark.data.repository.AlbumRepository
 import com.zak.pressmark.data.repository.ArtistRepository
+import com.zak.pressmark.data.repository.DefaultInboxRepository
+import com.zak.pressmark.data.repository.InboxRepository
+import com.zak.pressmark.data.repository.IngestSettingsRepository
 import com.zak.pressmark.data.repository.ReleaseRepository
 import okhttp3.Cache
 import okhttp3.OkHttpClient
@@ -77,6 +82,21 @@ class AppGraph(
             db = database,
             discogsApiService = discogsApiService,
         )
+    }
+
+    val inboxRepository: InboxRepository by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        DefaultInboxRepository(
+            inboxItemDao = database.inboxItemDao(),
+            providerSnapshotDao = database.providerSnapshotDao(),
+        )
+    }
+
+    val metadataProvider: MetadataProvider by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        DiscogsProviderStub()
+    }
+
+    val ingestSettingsRepository: IngestSettingsRepository by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        IngestSettingsRepository(appContext)
     }
 
     // --- UI Layer Dependencies ---

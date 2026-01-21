@@ -13,6 +13,14 @@ object PressmarkRoutes {
     const val LIST = "album_list"
     const val ADD = "add"
 
+    // Inbox pipeline
+    const val SCAN_CONVEYOR = "scan_conveyor"
+    const val INBOX = "inbox"
+    const val RESOLVE_INBOX = "resolve_inbox"
+    const val ARG_INBOX_ID = "inboxId"
+    const val RESOLVE_INBOX_PATTERN = "$RESOLVE_INBOX/{$ARG_INBOX_ID}"
+    fun resolveInbox(inboxId: String): String = "$RESOLVE_INBOX/$inboxId"
+
     // Album Details
     const val DETAILS = "album_details"
     const val ARG_ALBUM_ID = "albumId"
