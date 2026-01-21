@@ -47,7 +47,6 @@ fun CoverSearchRoute(
     val factory = remember(graph) {
         ArtworkPickerViewModelFactory(
             releaseRepository = graph.releaseRepository,
-            discogsApi = graph.discogsApiService,
         )
     }
 
