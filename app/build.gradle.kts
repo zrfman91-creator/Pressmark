@@ -119,6 +119,7 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.mlkit.text.recognition)
     implementation(libs.hilt.android)
+    implementation(libs.androidx.hilt.work)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 
@@ -132,6 +133,7 @@ dependencies {
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
     ksp(libs.hilt.compiler)
+    ksp(libs.androidx.hilt.compiler)
 
     // Networking
     implementation(libs.retrofit)
