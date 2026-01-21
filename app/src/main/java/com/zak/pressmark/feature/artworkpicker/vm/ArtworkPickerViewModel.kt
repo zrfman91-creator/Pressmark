@@ -2,14 +2,7 @@ package com.zak.pressmark.feature.artworkpicker.vm
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.zak.pressmark.feature.artworkpicker.util.FuzzyMatch
-import com.zak.pressmark.core.util.Normalizer
-import com.zak.pressmark.data.remote.discogs.DiscogsApiService
-import com.zak.pressmark.data.remote.discogs.DiscogsAutofillCandidate
-import com.zak.pressmark.data.remote.discogs.DiscogsReleaseMetadata
-import com.zak.pressmark.data.remote.discogs.DiscogsSearchResult
-import com.zak.pressmark.data.remote.discogs.toReleaseMetadata
-import com.zak.pressmark.data.remote.discogs.toAutofillCandidate
+import com.zak.pressmark.data.model.ReleaseDiscogsCandidate
 import com.zak.pressmark.data.repository.ReleaseRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -21,19 +14,25 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 data class CoverSearchState(
-    val results: List<DiscogsSearchResult> = emptyList(),
+    val candidates: List<DiscogsPressingCandidateUi> = emptyList(),
+    val selectedCandidateId: Long? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
-    val pendingAutofill: DiscogsAutofillCandidate? = null,
-    val pendingMetadata: DiscogsReleaseMetadata? = null,
-    val pendingAutofillReleaseId: Long? = null,
-    val willFillLabels: List<String> = emptyList(),
+)
+
+data class DiscogsPressingCandidateUi(
+    val candidate: ReleaseDiscogsCandidate,
+    val fillLabels: List<String>,
 )
 
 data class CoverSearchRequest(
     val releaseId: String,
     val artist: String,
     val title: String,
+    val releaseYear: Int?,
+    val label: String,
+    val catalogNo: String,
+    val barcode: String,
 )
 
 sealed interface CoverSearchEffect {
@@ -42,7 +41,6 @@ sealed interface CoverSearchEffect {
 
 class DiscogsCoverSearchViewModel(
     private val releaseRepository: ReleaseRepository,
-    private val discogsApi: DiscogsApiService,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CoverSearchState())
@@ -61,15 +59,23 @@ class DiscogsCoverSearchViewModel(
         releaseId: String,
         artist: String,
         title: String,
+        releaseYear: Int?,
+        label: String,
+        catalogNo: String,
+        barcode: String,
     ) {
         val request = CoverSearchRequest(
             releaseId = releaseId,
             artist = artist.trim(),
             title = title.trim(),
+            releaseYear = releaseYear,
+            label = label.trim(),
+            catalogNo = catalogNo.trim(),
+            barcode = barcode.trim(),
         )
 
         val sameRequest = currentRequest == request
-        if (sameRequest && (_uiState.value.isLoading || _uiState.value.results.isNotEmpty())) return
+        if (sameRequest && (_uiState.value.isLoading || _uiState.value.candidates.isNotEmpty())) return
 
         currentRequest = request
         search(request)
@@ -88,63 +94,40 @@ class DiscogsCoverSearchViewModel(
             _uiState.value = CoverSearchState(isLoading = true)
 
             try {
-                val userArtist = request.artist
-                val userTitle = request.title
+                val release = releaseRepository.getRelease(request.releaseId)
 
-                val titleQuery = userTitle.takeIf { it.isNotBlank() }
+                val results = releaseRepository.searchDiscogsCandidates(
+                    title = request.title,
+                    artist = request.artist,
+                    releaseYear = request.releaseYear,
+                    label = request.label.takeIf { it.isNotBlank() },
+                    catalogNo = request.catalogNo.takeIf { it.isNotBlank() },
+                    barcode = request.barcode.takeIf { it.isNotBlank() },
+                )
 
-                // First pass: strict-ish search using smart artist variants.
-                val artistVariants = Normalizer.artistSearchVariants(userArtist)
-                    .ifEmpty { listOf(userArtist).filter { it.isNotBlank() } }
-
-                val merged = LinkedHashMap<Long, DiscogsSearchResult>()
-                var lastError: Throwable? = null
-
-                for (artist in artistVariants.take(4)) {
-                    // Bail early if a newer search started.
-                    if (!isActive || mySeq != searchSeq) return@launch
-
-                    try {
-                        val response = discogsApi.searchReleases(
-                            artist = artist.ifBlank { null },
-                            releaseTitle = titleQuery,
-                            perPage = 25,
-                        )
-                        for (r in response.results) {
-                            merged.putIfAbsent(r.id, r)
-                            if (merged.size >= 30) break
-                        }
-                        if (merged.size >= 12) break
-                    } catch (t: Throwable) {
-                        lastError = t
-                    }
-                }
-
-                var results = merged.values.toList()
-
-                // Fuzzy fallback: if strict search produces nothing, broaden queries.
-                if (results.isEmpty()) {
-                    if (!isActive || mySeq != searchSeq) return@launch
-
-                    results = fuzzyFallbackSearch(
-                        userArtist = userArtist,
-                        userTitle = userTitle,
-                        titleQuery = titleQuery,
-                        artistVariants = artistVariants,
+                val summaries = results.map { candidate ->
+                    DiscogsPressingCandidateUi(
+                        candidate = candidate,
+                        fillLabels = buildFillLabels(
+                            releaseYear = release?.releaseYear,
+                            label = release?.label,
+                            catalogNo = release?.catalogNo,
+                            format = release?.format,
+                            barcode = release?.barcode,
+                            country = release?.country,
+                            releaseType = release?.releaseType,
+                            notes = release?.notes,
+                            candidate = candidate,
+                        ),
                     )
                 }
-
-                // Always rank results by fuzzy similarity so fat-fingers float the right match.
-                val ranked = rankResults(userArtist, userTitle, results)
-                    .take(20)
 
                 if (!isActive || mySeq != searchSeq) return@launch
 
                 _uiState.value = CoverSearchState(
-                    results = ranked,
-                    error = if (ranked.isEmpty()) {
-                        lastError?.message ?: "No results found"
-                    } else null,
+                    candidates = summaries,
+                    selectedCandidateId = summaries.firstOrNull()?.candidate?.discogsReleaseId,
+                    error = if (summaries.isEmpty()) "No results found" else null,
                 )
             } catch (t: Throwable) {
                 if (!isActive || mySeq != searchSeq) return@launch
@@ -153,233 +136,63 @@ class DiscogsCoverSearchViewModel(
         }
     }
 
-    private suspend fun fuzzyFallbackSearch(
-        userArtist: String,
-        userTitle: String,
-        titleQuery: String?,
-        artistVariants: List<String>,
-    ): List<DiscogsSearchResult> {
-        val merged = LinkedHashMap<Long, DiscogsSearchResult>()
-
-        // 1) Try title-only (best chance if artist is misspelled).
-        if (!titleQuery.isNullOrBlank()) {
-            val byTitle = runCatching {
-                discogsApi.searchReleases(
-                    artist = null,
-                    releaseTitle = titleQuery,
-                    perPage = 50,
-                ).results
-            }.getOrElse { emptyList() }
-
-            for (r in byTitle) merged.putIfAbsent(r.id, r)
-        }
-
-        // 2) Try artist-only (best chance if title is misspelled).
-        if (userArtist.isNotBlank()) {
-            // Prefer canonical-ish variants first.
-            val broadArtists = (artistVariants + listOf(
-                Normalizer.artistDisplay(userArtist),
-                Normalizer.artistSortName(userArtist),
-            ))
-                .map { it.trim() }
-                .filter { it.isNotBlank() }
-                .distinct()
-                .take(3)
-
-            for (artist in broadArtists) {
-                val byArtist = runCatching {
-                    discogsApi.searchReleases(
-                        artist = artist,
-                        releaseTitle = null,
-                        perPage = 50,
-                    ).results
-                }.getOrElse { emptyList() }
-
-                for (r in byArtist) {
-                    merged.putIfAbsent(r.id, r)
-                    if (merged.size >= 80) break
-                }
-                if (merged.size >= 40) break
-            }
-        }
-
-        // If both are blank, nothing to do.
-        if (merged.isEmpty() && userTitle.isBlank() && userArtist.isBlank()) return emptyList()
-
-        // Rank and return a wider set so UI still gets good top 20.
-        return rankResults(userArtist, userTitle, merged.values.toList())
-            .take(60)
+    fun selectCandidate(candidateId: Long?) {
+        _uiState.value = _uiState.value.copy(selectedCandidateId = candidateId)
     }
 
-    private fun rankResults(
-        userArtist: String,
-        userTitle: String,
-        results: List<DiscogsSearchResult>,
-    ): List<DiscogsSearchResult> {
-        if (results.isEmpty()) return emptyList()
-
-        return results
-            .distinctBy { it.id }
-            .sortedByDescending { r ->
-                val (candArtist, candTitle) = splitDiscogsTitle(r.title)
-
-                // Discogs often returns title as "Artist - Album".
-                // Score both artist and title, but gracefully handle missing pieces.
-                FuzzyMatch.artistTitleScore(
-                    userArtist = userArtist,
-                    userTitle = userTitle,
-                    candidateArtist = candArtist,
-                    candidateTitle = candTitle,
-                )
-            }
-    }
-
-    private fun splitDiscogsTitle(raw: String?): Pair<String, String> {
-        val t = raw?.trim().orEmpty()
-        if (t.isBlank()) return "" to ""
-
-        val parts = t.split(" - ", limit = 2)
-        return if (parts.size == 2) {
-            parts[0].trim() to parts[1].trim()
-        } else {
-            "" to t
-        }
-    }
-
-    fun pickResult(result: DiscogsSearchResult) {
+    fun applySelectedCandidate() {
         val request = currentRequest ?: return
+        val selected = _uiState.value.candidates
+            .firstOrNull { it.candidate.discogsReleaseId == _uiState.value.selectedCandidateId }
+            ?.candidate ?: return
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                releaseRepository.setDiscogsCover(
+                releaseRepository.applyDiscogsCandidateFillMissing(
                     releaseId = request.releaseId,
-                    coverUrl = result.coverImage ?: result.thumb ?: "",
-                    discogsReleaseId = result.id,
+                    candidate = selected,
                 )
-            } catch (t: Throwable) {
-                _uiState.value = _uiState.value.copy(
-                    error = t.message ?: "Failed to save cover",
-                )
-            }
-        }
-    }
 
-    fun prepareAutofillPromptIfNeeded(
-        picked: DiscogsSearchResult,
-        shouldPromptAutofill: Boolean,
-    ) {
-        val request = currentRequest ?: return
-        if (!shouldPromptAutofill) return
-
-        viewModelScope.launch(Dispatchers.IO) {
-            val release = releaseRepository.getRelease(request.releaseId)
-            if (release == null) {
-                _effects.tryEmit(CoverSearchEffect.Close)
-                return@launch
-            }
-
-            val extracted = picked.toAutofillCandidate()
-            val metadata = runCatching { discogsApi.getRelease(picked.id).toReleaseMetadata() }
-                .getOrNull()
-            val labels = computeWillFillLabels(
-                existingReleaseYear = release.releaseYear,
-                existingCatalogNo = release.catalogNo,
-                existingLabel = release.label,
-                existingFormat = release.format,
-                existingCountry = release.country,
-                existingReleaseType = release.releaseType,
-                existingNotes = release.notes,
-                candidate = extracted,
-                metadata = metadata,
-            )
-
-            if (labels.isEmpty()) {
-                _effects.tryEmit(CoverSearchEffect.Close)
-            } else {
-                _uiState.value = _uiState.value.copy(
-                    pendingAutofill = extracted,
-                    pendingMetadata = metadata,
-                    pendingAutofillReleaseId = picked.id,
-                    willFillLabels = labels,
-                )
-            }
-        }
-    }
-
-    fun dismissAutofillPrompt() {
-        _uiState.value = _uiState.value.copy(
-            pendingAutofill = null,
-            pendingMetadata = null,
-            pendingAutofillReleaseId = null,
-            willFillLabels = emptyList(),
-        )
-    }
-
-    fun applyDiscogsFillMissing() {
-        val request = currentRequest ?: return
-        val c = _uiState.value.pendingAutofill ?: return
-        val metadata = _uiState.value.pendingMetadata
-        val discogsReleaseId = _uiState.value.pendingAutofillReleaseId
-
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val release = releaseRepository.getRelease(request.releaseId)
-                if (release == null) {
-                    _effects.tryEmit(CoverSearchEffect.Close)
-                    return@launch
+                selected.coverUrl?.let { coverUrl ->
+                    releaseRepository.setDiscogsCover(
+                        releaseId = request.releaseId,
+                        coverUrl = coverUrl,
+                        discogsReleaseId = selected.discogsReleaseId,
+                    )
                 }
 
-                val releaseYear = release.releaseYear ?: c.releaseYear
-                val catalogNo = release.catalogNo ?: c.catalogNo
-                val label = release.label ?: c.label
-                val format = release.format ?: metadata?.format ?: c.format
-                val country = release.country ?: metadata?.country
-                val releaseType = release.releaseType ?: metadata?.releaseType
-                val notes = release.notes ?: metadata?.notes
-
-                releaseRepository.updateReleaseMetadata(
-                    releaseId = request.releaseId,
-                    releaseYear = releaseYear,
-                    label = label,
-                    catalogNo = catalogNo,
-                    format = format,
-                    country = country,
-                    releaseType = releaseType,
-                    notes = notes,
-                    discogsReleaseId = discogsReleaseId,
-                )
-
-                dismissAutofillPrompt()
                 _effects.tryEmit(CoverSearchEffect.Close)
             } catch (t: Throwable) {
                 _uiState.value = _uiState.value.copy(
-                    error = t.message ?: "Failed to update details",
+                    error = t.message ?: "Failed to apply Discogs data",
                 )
             }
         }
     }
 
-    private fun computeWillFillLabels(
-        existingReleaseYear: Int?,
-        existingCatalogNo: String?,
-        existingLabel: String?,
-        existingFormat: String?,
-        existingCountry: String?,
-        existingReleaseType: String?,
-        existingNotes: String?,
-        candidate: DiscogsAutofillCandidate,
-        metadata: DiscogsReleaseMetadata?,
+    private fun buildFillLabels(
+        releaseYear: Int?,
+        label: String?,
+        catalogNo: String?,
+        format: String?,
+        barcode: String?,
+        country: String?,
+        releaseType: String?,
+        notes: String?,
+        candidate: ReleaseDiscogsCandidate,
     ): List<String> = buildList {
-        if (existingReleaseYear == null && candidate.releaseYear != null) add("Year: ${candidate.releaseYear}")
-        if (existingCatalogNo.isNullOrBlank() && !candidate.catalogNo.isNullOrBlank()) add("Catalog #: ${candidate.catalogNo}")
-        if (existingLabel.isNullOrBlank() && !candidate.label.isNullOrBlank()) add("Label: ${candidate.label}")
-        val normalizedFormat = candidate.format ?: metadata?.format
-        if (existingFormat.isNullOrBlank() && !normalizedFormat.isNullOrBlank()) add("Format: $normalizedFormat")
-        if (existingCountry.isNullOrBlank() && !metadata?.country.isNullOrBlank()) add("Country: ${metadata?.country}")
-        if (existingReleaseType.isNullOrBlank() && !metadata?.releaseType.isNullOrBlank()) {
-            add("Release type: ${metadata?.releaseType}")
+        if (releaseYear == null && candidate.year != null) add("Year: ${candidate.year}")
+        if (label.isNullOrBlank() && !candidate.label.isNullOrBlank()) add("Label: ${candidate.label}")
+        if (catalogNo.isNullOrBlank() && !candidate.catalogNo.isNullOrBlank()) {
+            add("Catalog #: ${candidate.catalogNo}")
         }
-        if (existingNotes.isNullOrBlank() && !metadata?.notes.isNullOrBlank()) add("Notes")
+        if (format.isNullOrBlank() && !candidate.format.isNullOrBlank()) add("Format: ${candidate.format}")
+        if (barcode.isNullOrBlank() && !candidate.barcode.isNullOrBlank()) add("Barcode: ${candidate.barcode}")
+        if (country.isNullOrBlank() && !candidate.country.isNullOrBlank()) add("Country: ${candidate.country}")
+        if (releaseType.isNullOrBlank() && !candidate.releaseType.isNullOrBlank()) {
+            add("Release type: ${candidate.releaseType}")
+        }
+        if (notes.isNullOrBlank() && !candidate.notes.isNullOrBlank()) add("Notes")
     }
 
 }

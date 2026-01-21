@@ -73,7 +73,10 @@ class AppGraph(
     }
 
     val releaseRepository: ReleaseRepository by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
-        ReleaseRepository(database)
+        ReleaseRepository(
+            db = database,
+            discogsApiService = discogsApiService,
+        )
     }
 
     // --- UI Layer Dependencies ---

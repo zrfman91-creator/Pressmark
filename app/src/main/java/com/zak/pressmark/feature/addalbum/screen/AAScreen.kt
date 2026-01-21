@@ -9,7 +9,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -32,12 +35,10 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -88,8 +89,8 @@ fun AddAlbumScreen(
 
     val showSuggestions =
         state.artistId == null &&
-                state.artist.isNotBlank() &&
-                artistSuggestions.isNotEmpty()
+            state.artist.isNotBlank() &&
+            artistSuggestions.isNotEmpty()
 
     val focusManager = LocalFocusManager.current
     val titleFocus = remember { FocusRequester() }
@@ -97,12 +98,13 @@ fun AddAlbumScreen(
     val yearFocus = remember { FocusRequester() }
     val labelFocus = remember { FocusRequester() }
     val catalogFocus = remember { FocusRequester() }
+    val barcodeFocus = remember { FocusRequester() }
     val formatFocus = remember { FocusRequester() }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("New Album Entry") },
+                title = { Text("Find a Pressing") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateUp) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -126,13 +128,13 @@ fun AddAlbumScreen(
                         onClick = onAddAnother,
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Add Another")
+                        Text("Save Another")
                     }
                     Button(
                         onClick = onSaveAndExit,
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Save & Exit")
+                        Text("Find pressings")
                     }
                 }
             }
@@ -148,149 +150,221 @@ fun AddAlbumScreen(
         ) {
             Text(
                 modifier = Modifier.fillMaxWidth(),
-                text = "Enter the details for the new album.",
+                text = "Tell us what you know and we'll find the exact pressing. Discogs only fills fields you leave blank.",
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center
             )
 
-            OutlinedTextField(
-                value = state.title,
-                onValueChange = { onStateChange(state.copy(title = it)) },
-                label = { Text("Title *") },
-                isError = showValidationErrors && titleError,
-                supportingText = { if (showValidationErrors && titleError) Text("Required") },
-                colors = textFieldColors,
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    imeAction = ImeAction.Next,
-                ),
-                keyboardActions = KeyboardActions(
-                    onNext = { artistFocus.requestFocus() }
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(titleFocus)
-            )
+            SectionCard(
+                title = "Essentials",
+                subtitle = "Start with the basics to anchor the search.",
+            ) {
+                OutlinedTextField(
+                    value = state.title,
+                    onValueChange = { onStateChange(state.copy(title = it)) },
+                    label = { Text("Release title *") },
+                    isError = showValidationErrors && titleError,
+                    supportingText = { if (showValidationErrors && titleError) Text("Required") },
+                    colors = textFieldColors,
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        imeAction = ImeAction.Next,
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onNext = { artistFocus.requestFocus() }
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(titleFocus)
+                )
 
-            OutlinedTextField(
-                value = state.artist,
-                onValueChange = effectiveOnArtistChange,
-                label = { Text("Artist *") },
-                isError = showValidationErrors && artistError,
-                supportingText = { if (showValidationErrors && artistError) Text("Required") },
-                colors = textFieldColors,
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    imeAction = ImeAction.Next,
-                ),
-                keyboardActions = KeyboardActions(
-                    onNext = { yearFocus.requestFocus() }
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(artistFocus)
-            )
+                OutlinedTextField(
+                    value = state.artist,
+                    onValueChange = effectiveOnArtistChange,
+                    label = { Text("Artist *") },
+                    isError = showValidationErrors && artistError,
+                    supportingText = { if (showValidationErrors && artistError) Text("Required") },
+                    colors = textFieldColors,
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        imeAction = ImeAction.Next,
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onNext = { yearFocus.requestFocus() }
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(artistFocus)
+                )
 
-            if (showSuggestions) {
-                Surface(
-                    tonalElevation = 1.dp,
-                    shape = MaterialTheme.shapes.medium,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        val max = minOf(6, artistSuggestions.size)
-                        for (i in 0 until max) {
-                            val a = artistSuggestions[i]
-                            ListItem(
-                                headlineContent = { Text(a.displayName) },
-                                supportingContent = { Text(a.artistType.orEmpty()) },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        if (onArtistSuggestionClick != null) {
-                                            onArtistSuggestionClick(a)
-                                        } else {
-                                            onStateChange(state.copy(artist = a.displayName, artistId = a.id))
+                if (showSuggestions) {
+                    Surface(
+                        tonalElevation = 1.dp,
+                        shape = MaterialTheme.shapes.medium,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            val max = minOf(6, artistSuggestions.size)
+                            for (i in 0 until max) {
+                                val a = artistSuggestions[i]
+                                ListItem(
+                                    headlineContent = { Text(a.displayName) },
+                                    supportingContent = { Text(a.artistType.orEmpty()) },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            if (onArtistSuggestionClick != null) {
+                                                onArtistSuggestionClick(a)
+                                            } else {
+                                                onStateChange(state.copy(artist = a.displayName, artistId = a.id))
+                                            }
                                         }
-                                    }
-                            )
-                            if (i != max - 1) HorizontalDivider()
+                                )
+                                if (i != max - 1) HorizontalDivider()
+                            }
                         }
                     }
                 }
             }
 
-            OutlinedTextField(
-                value = state.releaseYear,
-                onValueChange = { onStateChange(state.copy(releaseYear = it)) },
-                label = { Text("Release Year") },
-                isError = yearError,
-                supportingText = { if (yearError) Text("Numbers only (e.g. 1984)") },
-                colors = textFieldColors,
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number,
-                    imeAction = ImeAction.Next,
-                ),
-                keyboardActions = KeyboardActions(
-                    onNext = { labelFocus.requestFocus() }
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(yearFocus)
-            )
+            SectionCard(
+                title = "Optional details",
+                subtitle = "More details = higher confidence match.",
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    OutlinedTextField(
+                        value = state.releaseYear,
+                        onValueChange = { onStateChange(state.copy(releaseYear = it)) },
+                        label = { Text("Year") },
+                        isError = yearError,
+                        supportingText = { if (yearError) Text("Numbers only") },
+                        colors = textFieldColors,
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number,
+                            imeAction = ImeAction.Next,
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onNext = { labelFocus.requestFocus() }
+                        ),
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(yearFocus)
+                    )
 
-            OutlinedTextField(
-                value = state.label,
-                onValueChange = { onStateChange(state.copy(label = it)) },
-                label = { Text("Label") },
-                colors = textFieldColors,
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    imeAction = ImeAction.Next,
-                ),
-                keyboardActions = KeyboardActions(
-                    onNext = { catalogFocus.requestFocus() }
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(labelFocus)
-            )
+                    OutlinedTextField(
+                        value = state.label,
+                        onValueChange = { onStateChange(state.copy(label = it)) },
+                        label = { Text("Label") },
+                        colors = textFieldColors,
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            imeAction = ImeAction.Next,
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onNext = { catalogFocus.requestFocus() }
+                        ),
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(labelFocus)
+                    )
+                }
 
-            OutlinedTextField(
-                value = state.catalogNo,
-                onValueChange = { onStateChange(state.copy(catalogNo = it)) },
-                label = { Text("Catalog #") },
-                colors = textFieldColors,
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    imeAction = ImeAction.Next,
-                ),
-                keyboardActions = KeyboardActions(
-                    onNext = { formatFocus.requestFocus() }
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(catalogFocus)
-            )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    OutlinedTextField(
+                        value = state.catalogNo,
+                        onValueChange = { onStateChange(state.copy(catalogNo = it)) },
+                        label = { Text("Catalog #") },
+                        colors = textFieldColors,
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            imeAction = ImeAction.Next,
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onNext = { barcodeFocus.requestFocus() }
+                        ),
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(catalogFocus)
+                    )
 
-            // ✅ NEW: Format
-            OutlinedTextField(
-                value = state.format,
-                onValueChange = { onStateChange(state.copy(format = it)) },
-                label = { Text("Format") },
-                colors = textFieldColors,
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    imeAction = ImeAction.Done,
-                ),
-                keyboardActions = KeyboardActions(
-                    onDone = { focusManager.clearFocus() }
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(formatFocus)
-            )
+                    OutlinedTextField(
+                        value = state.barcode,
+                        onValueChange = { onStateChange(state.copy(barcode = it)) },
+                        label = { Text("Barcode") },
+                        colors = textFieldColors,
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number,
+                            imeAction = ImeAction.Next,
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onNext = { formatFocus.requestFocus() }
+                        ),
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(barcodeFocus)
+                    )
+                }
+
+                OutlinedTextField(
+                    value = state.format,
+                    onValueChange = { onStateChange(state.copy(format = it)) },
+                    label = { Text("Format") },
+                    colors = textFieldColors,
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        imeAction = ImeAction.Done,
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = { focusManager.clearFocus() }
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(formatFocus)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionCard(
+    title: String,
+    subtitle: String,
+    content: @Composable () -> Unit,
+) {
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        tonalElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            Spacer(Modifier.height(2.dp))
+            content()
         }
     }
 }

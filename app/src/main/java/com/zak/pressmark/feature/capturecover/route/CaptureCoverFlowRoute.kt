@@ -5,7 +5,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.zak.pressmark.data.repository.AlbumRepository
+import com.zak.pressmark.data.repository.ReleaseRepository
 import com.zak.pressmark.feature.capturecover.screen.CameraCoverCaptureRoute
 import com.zak.pressmark.feature.capturecover.vm.CaptureCoverEffect
 import com.zak.pressmark.feature.capturecover.vm.CaptureCoverFlowViewModel
@@ -20,18 +20,18 @@ import com.zak.pressmark.feature.capturecover.vm.CaptureCoverFlowViewModelFactor
  */
 @Composable
 fun CaptureCoverFlowRoute(
-    albumId: String,
-    albumRepository: AlbumRepository,
+    releaseId: String,
+    releaseRepository: ReleaseRepository,
     onBack: () -> Unit,
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val factory = remember(albumRepository) {
-        CaptureCoverFlowViewModelFactory(albumRepository)
+    val factory = remember(releaseRepository) {
+        CaptureCoverFlowViewModelFactory(releaseRepository)
     }
 
     val vm: CaptureCoverFlowViewModel = viewModel(
-        key = "capture_cover_flow_$albumId",
+        key = "capture_cover_flow_$releaseId",
         factory = factory,
     )
 
@@ -49,7 +49,7 @@ fun CaptureCoverFlowRoute(
         onBack = onBack,
         onCaptured = { uri ->
             // Best-effort: persist and exit.
-            vm.saveCover(albumId = albumId, coverUri = uri.toString())
+            vm.saveCover(releaseId = releaseId, coverUri = uri.toString())
         },
     )
 }

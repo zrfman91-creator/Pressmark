@@ -31,6 +31,7 @@ data class DiscogsRelease(
     @SerializedName("videos") val videos: List<DiscogsVideo>?,
     @SerializedName("master_id") val masterId: Long?,
     @SerializedName("formats") val formats: List<DiscogsFormat>?,
+    @SerializedName("identifiers") val identifiers: List<DiscogsIdentifier>?,
 )
 data class DiscogsFormat(val name: String)
 // --- Sub-Objects ---
@@ -42,6 +43,12 @@ data class DiscogsArtist(
 data class DiscogsLabel(
     @SerializedName("name") val name: String,
     @SerializedName("catno") val catalogNumber: String
+)
+
+data class DiscogsIdentifier(
+    @SerializedName("type") val type: String?,
+    @SerializedName("value") val value: String?,
+    @SerializedName("description") val description: String?,
 )
 
 data class DiscogsTrack(

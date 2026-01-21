@@ -11,12 +11,27 @@ data class ReleaseDetails(
     val barcode: String?,
     val country: String?,
     val releaseType: String?,
+    val discogsReleaseId: Long?,
     val notes: String?,
     val rating: Int?,
     val addedAt: Long,
     val lastPlayedAt: Long?,
     val artwork: ReleaseArtwork?,
     val credits: List<ReleaseCredit>,
+)
+
+data class ReleaseDiscogsExtras(
+    val genres: List<String>,
+    val styles: List<String>,
+    val lastSoldDate: String?,
+    val lowestPrice: ReleaseMarketPrice?,
+    val medianPrice: ReleaseMarketPrice?,
+    val highestPrice: ReleaseMarketPrice?,
+)
+
+data class ReleaseMarketPrice(
+    val value: Double,
+    val currency: String,
 )
 
 data class ReleaseArtwork(

@@ -2,20 +2,17 @@ package com.zak.pressmark.feature.artworkpicker.vm
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.zak.pressmark.data.remote.discogs.DiscogsApiService
-import com.zak.pressmark.data.repository.AlbumRepository
+import com.zak.pressmark.data.repository.ReleaseRepository
 
 class ArtworkPickerViewModelFactory(
-    private val albumRepository: AlbumRepository,
-    private val discogsApi: DiscogsApiService,
+    private val releaseRepository: ReleaseRepository,
 ) : ViewModelProvider.Factory {
 
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(DiscogsCoverSearchViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
             return DiscogsCoverSearchViewModel(
-                albumRepository = albumRepository,
-                discogsApi = discogsApi,
+                releaseRepository = releaseRepository,
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")

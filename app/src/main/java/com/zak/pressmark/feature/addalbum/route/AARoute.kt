@@ -27,6 +27,10 @@ fun AddAlbumRoute(
         albumId: String,
         artist: String,
         title: String,
+        releaseYear: String,
+        label: String,
+        catalogNo: String,
+        barcode: String,
         intent: SaveIntent,
     ) -> Unit,
 ) {
@@ -61,6 +65,10 @@ fun AddAlbumRoute(
                         event.albumId,
                         form.artist,
                         form.title,
+                        form.releaseYear,
+                        form.label,
+                        form.catalogNo,
+                        form.barcode,
                         event.intent,
                     )
                 }
