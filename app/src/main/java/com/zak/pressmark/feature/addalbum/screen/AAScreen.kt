@@ -9,8 +9,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -34,9 +37,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
@@ -46,6 +51,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.zak.pressmark.data.local.entity.ArtistEntity
 import com.zak.pressmark.feature.addalbum.model.AddAlbumFormState
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -101,6 +108,26 @@ fun AddAlbumScreen(
     val catalogFocus = remember { FocusRequester() }
     val barcodeFocus = remember { FocusRequester() }
     val formatFocus = remember { FocusRequester() }
+    val titleBringIntoView = remember { BringIntoViewRequester() }
+    val artistBringIntoView = remember { BringIntoViewRequester() }
+    val yearBringIntoView = remember { BringIntoViewRequester() }
+    val labelBringIntoView = remember { BringIntoViewRequester() }
+    val catalogBringIntoView = remember { BringIntoViewRequester() }
+    val barcodeBringIntoView = remember { BringIntoViewRequester() }
+    val formatBringIntoView = remember { BringIntoViewRequester() }
+    val coroutineScope = rememberCoroutineScope()
+
+    fun Modifier.imeBringIntoView(
+        requester: BringIntoViewRequester,
+    ): Modifier = bringIntoViewRequester(requester)
+        .onFocusChanged { state ->
+            if (state.isFocused) {
+                coroutineScope.launch {
+                    delay(50)
+                    requester.bringIntoView()
+                }
+            }
+        }
 
     Scaffold(
         topBar = {
@@ -146,6 +173,7 @@ fun AddAlbumScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .padding(16.dp)
+                .imePadding()
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -177,6 +205,7 @@ fun AddAlbumScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(titleFocus)
+                        .imeBringIntoView(titleBringIntoView)
                 )
 
                 OutlinedTextField(
@@ -196,6 +225,7 @@ fun AddAlbumScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(artistFocus)
+                        .imeBringIntoView(artistBringIntoView)
                 )
 
                 if (showSuggestions) {
@@ -254,6 +284,7 @@ fun AddAlbumScreen(
                         modifier = Modifier
                             .weight(1f)
                             .focusRequester(yearFocus)
+                            .imeBringIntoView(yearBringIntoView)
                     )
 
                     OutlinedTextField(
@@ -271,6 +302,7 @@ fun AddAlbumScreen(
                         modifier = Modifier
                             .weight(1f)
                             .focusRequester(labelFocus)
+                            .imeBringIntoView(labelBringIntoView)
                     )
                 }
 
@@ -293,6 +325,7 @@ fun AddAlbumScreen(
                         modifier = Modifier
                             .weight(1f)
                             .focusRequester(catalogFocus)
+                            .imeBringIntoView(catalogBringIntoView)
                     )
 
                     OutlinedTextField(
@@ -311,6 +344,7 @@ fun AddAlbumScreen(
                         modifier = Modifier
                             .weight(1f)
                             .focusRequester(barcodeFocus)
+                            .imeBringIntoView(barcodeBringIntoView)
                     )
                 }
 
@@ -329,8 +363,11 @@ fun AddAlbumScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(formatFocus)
+                        .imeBringIntoView(formatBringIntoView)
                 )
             }
+
+            Spacer(Modifier.height(24.dp))
         }
     }
 }
