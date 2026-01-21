@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -37,11 +39,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.onFocusEvent
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
@@ -108,7 +111,6 @@ fun AddAlbumScreen(
     val catalogFocus = remember { FocusRequester() }
     val barcodeFocus = remember { FocusRequester() }
     val formatFocus = remember { FocusRequester() }
-    val focusScope = rememberCoroutineScope()
     val titleBringIntoView = remember { BringIntoViewRequester() }
     val artistBringIntoView = remember { BringIntoViewRequester() }
     val yearBringIntoView = remember { BringIntoViewRequester() }
@@ -116,6 +118,19 @@ fun AddAlbumScreen(
     val catalogBringIntoView = remember { BringIntoViewRequester() }
     val barcodeBringIntoView = remember { BringIntoViewRequester() }
     val formatBringIntoView = remember { BringIntoViewRequester() }
+    val coroutineScope = rememberCoroutineScope()
+
+    fun Modifier.imeBringIntoView(
+        requester: BringIntoViewRequester,
+    ): Modifier = bringIntoViewRequester(requester)
+        .onFocusChanged { state ->
+            if (state.isFocused) {
+                coroutineScope.launch {
+                    delay(50)
+                    requester.bringIntoView()
+                }
+            }
+        }
 
     Scaffold(
         topBar = {
@@ -161,8 +176,8 @@ fun AddAlbumScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .padding(16.dp)
-                .verticalScroll(rememberScrollState())
-                .imePadding(),
+                .imePadding()
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
@@ -193,15 +208,7 @@ fun AddAlbumScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(titleFocus)
-                        .bringIntoViewRequester(titleBringIntoView)
-                        .onFocusEvent { state ->
-                            if (state.isFocused) {
-                                focusScope.launch {
-                                    delay(50)
-                                    titleBringIntoView.bringIntoView()
-                                }
-                            }
-                        }
+                        .imeBringIntoView(titleBringIntoView)
                 )
 
                 OutlinedTextField(
@@ -221,15 +228,7 @@ fun AddAlbumScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(artistFocus)
-                        .bringIntoViewRequester(artistBringIntoView)
-                        .onFocusEvent { state ->
-                            if (state.isFocused) {
-                                focusScope.launch {
-                                    delay(50)
-                                    artistBringIntoView.bringIntoView()
-                                }
-                            }
-                        }
+                        .imeBringIntoView(artistBringIntoView)
                 )
 
                 if (showSuggestions) {
@@ -288,15 +287,7 @@ fun AddAlbumScreen(
                         modifier = Modifier
                             .weight(1f)
                             .focusRequester(yearFocus)
-                            .bringIntoViewRequester(yearBringIntoView)
-                            .onFocusEvent { state ->
-                                if (state.isFocused) {
-                                    focusScope.launch {
-                                        delay(50)
-                                        yearBringIntoView.bringIntoView()
-                                    }
-                                }
-                            }
+                            .imeBringIntoView(yearBringIntoView)
                     )
 
                     OutlinedTextField(
@@ -314,15 +305,7 @@ fun AddAlbumScreen(
                         modifier = Modifier
                             .weight(1f)
                             .focusRequester(labelFocus)
-                            .bringIntoViewRequester(labelBringIntoView)
-                            .onFocusEvent { state ->
-                                if (state.isFocused) {
-                                    focusScope.launch {
-                                        delay(50)
-                                        labelBringIntoView.bringIntoView()
-                                    }
-                                }
-                            }
+                            .imeBringIntoView(labelBringIntoView)
                     )
                 }
 
@@ -345,15 +328,7 @@ fun AddAlbumScreen(
                         modifier = Modifier
                             .weight(1f)
                             .focusRequester(catalogFocus)
-                            .bringIntoViewRequester(catalogBringIntoView)
-                            .onFocusEvent { state ->
-                                if (state.isFocused) {
-                                    focusScope.launch {
-                                        delay(50)
-                                        catalogBringIntoView.bringIntoView()
-                                    }
-                                }
-                            }
+                            .imeBringIntoView(catalogBringIntoView)
                     )
 
                     OutlinedTextField(
@@ -372,15 +347,7 @@ fun AddAlbumScreen(
                         modifier = Modifier
                             .weight(1f)
                             .focusRequester(barcodeFocus)
-                            .bringIntoViewRequester(barcodeBringIntoView)
-                            .onFocusEvent { state ->
-                                if (state.isFocused) {
-                                    focusScope.launch {
-                                        delay(50)
-                                        barcodeBringIntoView.bringIntoView()
-                                    }
-                                }
-                            }
+                            .imeBringIntoView(barcodeBringIntoView)
                     )
                 }
 
@@ -399,19 +366,11 @@ fun AddAlbumScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(formatFocus)
-                        .bringIntoViewRequester(formatBringIntoView)
-                        .onFocusEvent { state ->
-                            if (state.isFocused) {
-                                focusScope.launch {
-                                    delay(50)
-                                    formatBringIntoView.bringIntoView()
-                                }
-                            }
-                        }
+                        .imeBringIntoView(formatBringIntoView)
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(Modifier.height(24.dp))
         }
     }
 }
