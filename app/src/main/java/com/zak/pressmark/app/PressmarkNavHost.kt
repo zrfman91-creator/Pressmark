@@ -78,7 +78,7 @@ fun PressmarkNavHost(
                 onNavigateUp = { navController.popBackStack() },
                 clearFormRequested = clearAddForm,
                 onClearFormConsumed = { addSavedStateHandle?.consumeClearAddAlbumForm() },
-                onAlbumSaved = { albumId, artist, title, intent ->
+                onAlbumSaved = { albumId, artist, title, releaseYear, label, catalogNo, barcode, intent ->
                     val origin = when (intent) {
                         SaveAndExit -> PressmarkRoutes.COVER_ORIGIN_LIST_SUCCESS
                         AddAnother -> PressmarkRoutes.COVER_ORIGIN_ADD_ANOTHER
@@ -88,6 +88,10 @@ fun PressmarkNavHost(
                             albumId = albumId,
                             artist = artist,
                             title = title,
+                            releaseYear = releaseYear,
+                            label = label,
+                            catalogNo = catalogNo,
+                            barcode = barcode,
                             origin = origin,
                         )
                     )
@@ -129,6 +133,22 @@ fun PressmarkNavHost(
                     type = NavType.StringType
                     defaultValue = ""
                 },
+                navArgument(PressmarkRoutes.ARG_COVER_YEAR) {
+                    type = NavType.StringType
+                    defaultValue = ""
+                },
+                navArgument(PressmarkRoutes.ARG_COVER_LABEL) {
+                    type = NavType.StringType
+                    defaultValue = ""
+                },
+                navArgument(PressmarkRoutes.ARG_COVER_CATNO) {
+                    type = NavType.StringType
+                    defaultValue = ""
+                },
+                navArgument(PressmarkRoutes.ARG_COVER_BARCODE) {
+                    type = NavType.StringType
+                    defaultValue = ""
+                },
                 navArgument(PressmarkRoutes.ARG_COVER_ORIGIN) {
                     type = NavType.StringType
                     defaultValue = PressmarkRoutes.COVER_ORIGIN_BACK
@@ -141,6 +161,14 @@ fun PressmarkNavHost(
                 backStackEntry.arguments?.getString(PressmarkRoutes.ARG_COVER_ARTIST).orEmpty()
             val title =
                 backStackEntry.arguments?.getString(PressmarkRoutes.ARG_COVER_TITLE).orEmpty()
+            val releaseYearText =
+                backStackEntry.arguments?.getString(PressmarkRoutes.ARG_COVER_YEAR).orEmpty()
+            val label =
+                backStackEntry.arguments?.getString(PressmarkRoutes.ARG_COVER_LABEL).orEmpty()
+            val catalogNo =
+                backStackEntry.arguments?.getString(PressmarkRoutes.ARG_COVER_CATNO).orEmpty()
+            val barcode =
+                backStackEntry.arguments?.getString(PressmarkRoutes.ARG_COVER_BARCODE).orEmpty()
             val origin =
                 backStackEntry.arguments?.getString(PressmarkRoutes.ARG_COVER_ORIGIN)
                     ?: PressmarkRoutes.COVER_ORIGIN_BACK
@@ -178,7 +206,10 @@ fun PressmarkNavHost(
                 releaseId = releaseId,
                 artist = artist,
                 title = title,
-                shouldPromptAutofill = (origin == PressmarkRoutes.COVER_ORIGIN_LIST_SUCCESS),
+                releaseYearText = releaseYearText,
+                label = label,
+                catalogNo = catalogNo,
+                barcode = barcode,
                 onTakePhoto = {
                     navController.navigate(
                         PressmarkRoutes.coverCapture(

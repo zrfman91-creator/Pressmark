@@ -29,6 +29,10 @@ object PressmarkRoutes {
     const val COVER_SEARCH = "cover_search"
     const val ARG_COVER_ARTIST = "artist"
     const val ARG_COVER_TITLE = "title"
+    const val ARG_COVER_YEAR = "year"
+    const val ARG_COVER_LABEL = "label"
+    const val ARG_COVER_CATNO = "catno"
+    const val ARG_COVER_BARCODE = "barcode"
     const val ARG_COVER_ORIGIN = "origin"
 
     // Where should Cover Search return?
@@ -37,18 +41,35 @@ object PressmarkRoutes {
     const val COVER_ORIGIN_LIST_SUCCESS = "list_success" // after closing, go to Album List + success dialog
     const val COVER_ORIGIN_ADD_ANOTHER = "add_another"   // after closing, go back to Add Album and clear form
     const val COVER_SEARCH_PATTERN =
-        "$COVER_SEARCH/{$ARG_ALBUM_ID}?$ARG_COVER_ARTIST={$ARG_COVER_ARTIST}&$ARG_COVER_TITLE={$ARG_COVER_TITLE}&$ARG_COVER_ORIGIN={$ARG_COVER_ORIGIN}"
+        "$COVER_SEARCH/{$ARG_ALBUM_ID}?" +
+            "$ARG_COVER_ARTIST={$ARG_COVER_ARTIST}" +
+            "&$ARG_COVER_TITLE={$ARG_COVER_TITLE}" +
+            "&$ARG_COVER_YEAR={$ARG_COVER_YEAR}" +
+            "&$ARG_COVER_LABEL={$ARG_COVER_LABEL}" +
+            "&$ARG_COVER_CATNO={$ARG_COVER_CATNO}" +
+            "&$ARG_COVER_BARCODE={$ARG_COVER_BARCODE}" +
+            "&$ARG_COVER_ORIGIN={$ARG_COVER_ORIGIN}"
 
     fun coverSearch(
         albumId: String,
         artist: String,
         title: String,
+        releaseYear: String,
+        label: String,
+        catalogNo: String,
+        barcode: String,
         origin: String = COVER_ORIGIN_BACK,
     ): String {
         val a = Uri.encode(artist)
         val t = Uri.encode(title)
+        val y = Uri.encode(releaseYear)
+        val l = Uri.encode(label)
+        val c = Uri.encode(catalogNo)
+        val b = Uri.encode(barcode)
         val o = Uri.encode(origin)
-        return "$COVER_SEARCH/$albumId?$ARG_COVER_ARTIST=$a&$ARG_COVER_TITLE=$t&$ARG_COVER_ORIGIN=$o"
+        return "$COVER_SEARCH/$albumId?$ARG_COVER_ARTIST=$a&$ARG_COVER_TITLE=$t" +
+            "&$ARG_COVER_YEAR=$y&$ARG_COVER_LABEL=$l&$ARG_COVER_CATNO=$c" +
+            "&$ARG_COVER_BARCODE=$b&$ARG_COVER_ORIGIN=$o"
     }
 
     // Camera capture (local cover)
