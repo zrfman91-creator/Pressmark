@@ -39,13 +39,13 @@ class DiscogsMetadataProvider(
         }
     }
 
-    private fun runSearch(
+    private suspend fun runSearch(
         searchLabel: String,
         block: suspend () -> List<DiscogsSearchResult>,
     ): List<ProviderCandidate> {
-        return runCatching {
+        return try {
             block().mapNotNull { it.toCandidate(gson) }
-        }.getOrElse { error ->
+        } catch (error: Throwable) {
             if (error is HttpException && error.code() == 429) {
                 throw RateLimitException("Discogs rate limited on $searchLabel.")
             }

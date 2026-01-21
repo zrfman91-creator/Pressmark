@@ -6,13 +6,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ShortText
 import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.material.icons.outlined.Inventory2
-import androidx.compose.material.icons.outlined.QrCodeScanner
-import androidx.compose.material.icons.outlined.ShortText
 import androidx.compose.material.icons.outlined.PhotoCamera
+import androidx.compose.material.icons.outlined.QrCodeScanner
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -98,7 +99,7 @@ fun ScanConveyorScreen(
                 onClick = { showQuickAdd = true },
                 modifier = Modifier.widthIn(min = 240.dp),
             ) {
-                Icon(Icons.Outlined.ShortText, contentDescription = null)
+                Icon(Icons.AutoMirrored.Outlined.ShortText, contentDescription = null)
                 Spacer(modifier = Modifier.width(12.dp))
                 Text("Quick add")
             }

@@ -150,7 +150,7 @@ dependencies {
     implementation(libs.androidx.camera.camera2)
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
-    implementation("androidx.exifinterface:exifinterface:1.4.2")
+    implementation(libs.androidx.exifinterface)
 
     // Unit tests
     testImplementation(libs.junit)

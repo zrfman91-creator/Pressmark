@@ -134,14 +134,17 @@ class DefaultInboxRepository(
         val item = inboxItemDao.getById(inboxItemId) ?: return
         val now = System.currentTimeMillis()
         val nextLookup = if (success) now else null
-        val lookupStatus = if (success && InboxEligibility.isLookupEligible(item.copy(
-                extractedTitle = extractedFields.title,
-                extractedArtist = extractedFields.artist,
-                extractedLabel = extractedFields.label,
-                extractedCatalogNo = extractedFields.catalogNo,
-                lookupStatus = LookupStatus.PENDING,
-                nextLookupAt = nextLookup,
-            ), now)
+        val lookupStatus = if (success && InboxEligibility.isLookupEligible(
+                item.copy(
+                    extractedTitle = extractedFields.title,
+                    extractedArtist = extractedFields.artist,
+                    extractedLabel = extractedFields.label,
+                    extractedCatalogNo = extractedFields.catalogNo,
+                    lookupStatus = LookupStatus.PENDING,
+                    nextLookupAt = nextLookup,
+                ),
+                now
+            )
         ) {
             LookupStatus.PENDING
         } else {
@@ -168,7 +171,7 @@ class DefaultInboxRepository(
         candidates: List<ProviderCandidate>,
         errorCode: InboxErrorCode,
     ): ProviderCandidate? {
-        val item = inboxItemDao.getById(inboxItemId) ?: return
+        val item = inboxItemDao.getById(inboxItemId) ?: return null
         val now = System.currentTimeMillis()
         providerSnapshotDao.deleteForInboxItem(inboxItemId)
 

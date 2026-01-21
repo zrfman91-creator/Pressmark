@@ -48,11 +48,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.zak.pressmark.data.local.entity.ArtistEntity
 import com.zak.pressmark.feature.addalbum.model.AddAlbumFormState
@@ -80,6 +83,15 @@ fun AddAlbumScreen(
     val yearText = state.releaseYear.trim()
     val yearError = yearText.isNotEmpty() && yearText.toIntOrNull() == null
 
+    // Only provide supportingText when it will actually render; otherwise Material may reserve extra
+    // vertical space, which can make the row-to-row gaps look inconsistent.
+    val titleSupportingText: (@Composable () -> Unit)? =
+        if (showValidationErrors && titleError) ({ run { Text("Required") } }) else null
+    val artistSupportingText: (@Composable () -> Unit)? =
+        if (showValidationErrors && artistError) ({ run { Text("Required") } }) else null
+    val yearSupportingText: (@Composable () -> Unit)? =
+        if (yearError) ({ run { Text("Numbers only") } }) else null
+
     val textFieldColors = OutlinedTextFieldDefaults.colors(
         focusedContainerColor = Color.Transparent,
         unfocusedContainerColor = Color.Transparent,
@@ -103,7 +115,7 @@ fun AddAlbumScreen(
 
     val focusManager = LocalFocusManager.current
     val scope = rememberCoroutineScope()
-    val density = LocalDensity.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
 
     val scrollState = rememberScrollState()
 
@@ -213,21 +225,28 @@ fun AddAlbumScreen(
         ) {
             Text(
                 modifier = Modifier.fillMaxWidth(),
-                text = "Tell us what you know and we'll find the exact pressing. Discogs only fills fields you leave blank.",
-                style = MaterialTheme.typography.bodyLarge,
+                text = buildAnnotatedString {
+                    append("Share what you know—find ")
+                    withStyle(style = SpanStyle(fontStyle = FontStyle.Italic)) {
+                        append("your")
+                    }
+                    append(" pressing.")
+                },
+                style = MaterialTheme.typography.titleMedium,
                 textAlign = TextAlign.Center
             )
 
+
             SectionCard(
                 title = "Essentials",
-                subtitle = "Start with the basics to anchor the search.",
+                subtitle = "Minimum required information \u2014 Title & Artist",
             ) {
                 OutlinedTextField(
                     value = state.title,
                     onValueChange = { onStateChange(state.copy(title = it)) },
                     label = { Text("Release title *") },
                     isError = showValidationErrors && titleError,
-                    supportingText = { if (showValidationErrors && titleError) Text("Required") },
+                    supportingText = titleSupportingText,
                     colors = textFieldColors,
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
@@ -244,7 +263,7 @@ fun AddAlbumScreen(
                     onValueChange = effectiveOnArtistChange,
                     label = { Text("Artist *") },
                     isError = showValidationErrors && artistError,
-                    supportingText = { if (showValidationErrors && artistError) Text("Required") },
+                    supportingText = artistSupportingText,
                     colors = textFieldColors,
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
@@ -275,7 +294,12 @@ fun AddAlbumScreen(
                                             if (onArtistSuggestionClick != null) {
                                                 onArtistSuggestionClick(a)
                                             } else {
-                                                onStateChange(state.copy(artist = a.displayName, artistId = a.id))
+                                                onStateChange(
+                                                    state.copy(
+                                                        artist = a.displayName,
+                                                        artistId = a.id
+                                                    )
+                                                )
                                             }
                                             yearFocus.requestFocus()
                                         }
@@ -289,7 +313,7 @@ fun AddAlbumScreen(
 
             SectionCard(
                 title = "Optional details",
-                subtitle = "More details = higher confidence match.",
+                subtitle ="Add details to increase confidence.",
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -300,7 +324,7 @@ fun AddAlbumScreen(
                         onValueChange = { onStateChange(state.copy(releaseYear = it)) },
                         label = { Text("Year") },
                         isError = yearError,
-                        supportingText = { if (yearError) Text("Numbers only") },
+                        supportingText = yearSupportingText,
                         colors = textFieldColors,
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(
@@ -406,7 +430,7 @@ private fun SectionCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(text = title, style = MaterialTheme.typography.titleMedium)
