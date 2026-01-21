@@ -27,6 +27,15 @@ import com.zak.pressmark.feature.capturecover.route.CaptureCoverFlowRoute
 import com.zak.pressmark.feature.releasedetails.route.ReleaseDetailsRoute
 import com.zak.pressmark.feature.releasedetails.vm.ReleaseDetailsViewModel
 import com.zak.pressmark.feature.releasedetails.vm.ReleaseDetailsViewModelFactory
+import com.zak.pressmark.feature.inbox.route.InboxRoute
+import com.zak.pressmark.feature.inbox.vm.InboxViewModel
+import com.zak.pressmark.feature.inbox.vm.InboxViewModelFactory
+import com.zak.pressmark.feature.resolveinbox.route.ResolveInboxItemRoute
+import com.zak.pressmark.feature.resolveinbox.vm.ResolveInboxViewModel
+import com.zak.pressmark.feature.resolveinbox.vm.ResolveInboxViewModelFactory
+import com.zak.pressmark.feature.scanconveyor.route.ScanConveyorRoute
+import com.zak.pressmark.feature.scanconveyor.vm.ScanConveyorViewModel
+import com.zak.pressmark.feature.scanconveyor.vm.ScanConveyorViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,6 +59,7 @@ fun PressmarkNavHost(
             AlbumListRoute(
                 vm = vm,
                 onAddAlbum = { navController.navigate(PressmarkRoutes.ADD) },
+                onOpenScanConveyor = { navController.navigate(PressmarkRoutes.SCAN_CONVEYOR) },
                 onOpenRelease = { releaseId ->
                     navController.navigate(PressmarkRoutes.details(releaseId))
                 },
@@ -292,6 +302,56 @@ fun PressmarkNavHost(
             )
 
             ArtistRoute(
+                vm = vm,
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable(PressmarkRoutes.SCAN_CONVEYOR) {
+            val factory = remember(graph) {
+                ScanConveyorViewModelFactory(
+                    inboxRepository = graph.inboxRepository,
+                    releaseRepository = graph.releaseRepository,
+                )
+            }
+            val vm: ScanConveyorViewModel = viewModel(factory = factory)
+
+            ScanConveyorRoute(
+                vm = vm,
+                onScanBarcode = { /* TODO: integrate barcode scanner */ },
+                onCaptureCover = { /* TODO: integrate CameraX to inbox */ },
+                onOpenInbox = { navController.navigate(PressmarkRoutes.INBOX) },
+            )
+        }
+
+        composable(PressmarkRoutes.INBOX) {
+            val factory = remember(graph) { InboxViewModelFactory(graph.inboxRepository) }
+            val vm: InboxViewModel = viewModel(factory = factory)
+
+            InboxRoute(
+                vm = vm,
+                onResolveItem = { inboxId ->
+                    navController.navigate(PressmarkRoutes.resolveInbox(inboxId))
+                },
+            )
+        }
+
+        composable(
+            route = PressmarkRoutes.RESOLVE_INBOX_PATTERN,
+            arguments = listOf(navArgument(PressmarkRoutes.ARG_INBOX_ID) {
+                type = NavType.StringType
+            }),
+        ) { backStackEntry ->
+            val inboxId = backStackEntry.arguments?.getString(PressmarkRoutes.ARG_INBOX_ID).orEmpty()
+            val factory = remember(graph, inboxId) {
+                ResolveInboxViewModelFactory(inboxId, graph.inboxRepository)
+            }
+            val vm: ResolveInboxViewModel = viewModel(
+                key = "resolve_inbox_$inboxId",
+                factory = factory,
+            )
+
+            ResolveInboxItemRoute(
                 vm = vm,
                 onBack = { navController.popBackStack() },
             )

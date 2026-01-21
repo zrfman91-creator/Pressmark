@@ -65,6 +65,7 @@ fun AlbumListScreen(
     snackMessage: String?,
     onSnackShown: () -> Unit,
     onAddAlbum: () -> Unit,
+    onOpenScanConveyor: () -> Unit,
     onOpenRelease: (releaseId: String) -> Unit,
     onDelete: (ReleaseSummary) -> Unit,
     modifier: Modifier = Modifier,
@@ -242,7 +243,7 @@ fun AlbumListScreen(
                     scanIcon = Icons.Outlined.QrCodeScanner,
                     addAlbumIcon = Icons.Outlined.LibraryAdd,
                     onBulkAdd = { railMode = RailMode.Idle /* TODO */ },
-                    onScanBarcode = { railMode = RailMode.Idle /* TODO */ },
+                    onScanBarcode = { railMode = RailMode.Idle; onOpenScanConveyor() },
                     onAddAlbum = { railMode = RailMode.Idle; onAddAlbum() },
                     modifier = Modifier.fillMaxSize(),
                 )
