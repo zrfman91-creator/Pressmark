@@ -11,6 +11,7 @@ fun AlbumListRoute(
     vm: AlbumListViewModel,
     onAddAlbum: () -> Unit,
     onOpenRelease: (releaseId: String) -> Unit,
+    onOpenScanConveyor: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val releases = vm.releaseListItems.collectAsStateWithLifecycle().value
@@ -28,6 +29,7 @@ fun AlbumListRoute(
         onSnackShown = { vm.dismissSnack() },
 
         onAddAlbum = onAddAlbum,
+        onOpenScanConveyor = onOpenScanConveyor,
         onOpenRelease = onOpenRelease,
         onDelete = { item -> vm.deleteRelease(item) },
 
