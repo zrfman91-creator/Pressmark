@@ -11,12 +11,14 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.zak.pressmark.BuildConfig
 import com.zak.pressmark.app.di.AppGraph
 import com.zak.pressmark.feature.addalbum.route.AddAlbumRoute
 import com.zak.pressmark.feature.addalbum.vm.AddAlbumViewModel
 import com.zak.pressmark.feature.addalbum.vm.AddAlbumViewModelFactory
 import com.zak.pressmark.feature.addalbum.vm.SaveIntent.*
 import com.zak.pressmark.feature.catalog.route.AlbumListRoute
+import com.zak.pressmark.feature.devsettings.route.DevSettingsRoute
 import com.zak.pressmark.feature.catalog.vm.AlbumListViewModel
 import com.zak.pressmark.feature.catalog.vm.CatalogViewModelFactory
 import com.zak.pressmark.feature.artist.route.ArtistRoute
@@ -60,6 +62,7 @@ fun PressmarkNavHost(
             val listFactory = remember(graph) {
                 CatalogViewModelFactory(
                     releaseRepo = graph.releaseRepository,
+                    catalogSettingsRepository = graph.catalogSettingsRepository,
                 )
             }
             val vm: AlbumListViewModel = viewModel(factory = listFactory)
@@ -72,6 +75,8 @@ fun PressmarkNavHost(
                 onOpenRelease = { releaseId ->
                     navController.navigate(PressmarkRoutes.details(releaseId))
                 },
+                showDevSettings = BuildConfig.DEBUG,
+                onOpenDevSettings = { navController.navigate(PressmarkRoutes.DEV_SETTINGS) },
             )
         }
 
@@ -336,8 +341,17 @@ fun PressmarkNavHost(
         composable(PressmarkRoutes.INBOX_COVER_CAPTURE) {
             InboxCoverCaptureRoute(
                 inboxRepository = graph.inboxRepository,
+                textExtractor = graph.textExtractor,
+                devSettingsRepository = graph.devSettingsRepository,
                 onBack = { navController.popBackStack() },
                 onDone = { navController.popBackStack() },
+            )
+        }
+
+        composable(PressmarkRoutes.DEV_SETTINGS) {
+            DevSettingsRoute(
+                repository = graph.devSettingsRepository,
+                onBack = { navController.popBackStack() },
             )
         }
 

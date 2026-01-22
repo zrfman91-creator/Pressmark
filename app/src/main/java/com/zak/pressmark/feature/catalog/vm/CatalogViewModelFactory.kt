@@ -3,10 +3,12 @@ package com.zak.pressmark.feature.catalog.vm
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.zak.pressmark.data.repository.CatalogSettingsRepository
 import com.zak.pressmark.data.repository.ReleaseRepository
 
 class CatalogViewModelFactory(
     private val releaseRepo: ReleaseRepository,
+    private val catalogSettingsRepository: CatalogSettingsRepository,
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
@@ -16,6 +18,7 @@ class CatalogViewModelFactory(
         }
         return AlbumListViewModel(
             releaseRepository = releaseRepo,
+            catalogSettingsRepository = catalogSettingsRepository,
         ) as T
     }
 }

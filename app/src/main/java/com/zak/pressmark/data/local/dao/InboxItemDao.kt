@@ -28,13 +28,24 @@ interface InboxItemDao {
     @Query("DELETE FROM ${DbSchema.InboxItem.TABLE} WHERE ${DbSchema.InboxItem.ID} = :id")
     suspend fun deleteById(id: String)
 
-    @Query("SELECT COUNT(*) FROM ${DbSchema.InboxItem.TABLE}")
+    @Query(
+        "SELECT COUNT(*) FROM ${DbSchema.InboxItem.TABLE} " +
+            "WHERE ${DbSchema.InboxItem.DELETED_AT} IS NULL"
+    )
     fun observeInboxCount(): Flow<Int>
 
-    @Query("SELECT * FROM ${DbSchema.InboxItem.TABLE} ORDER BY ${DbSchema.InboxItem.CREATED_AT} DESC")
+    @Query(
+        "SELECT * FROM ${DbSchema.InboxItem.TABLE} " +
+            "WHERE ${DbSchema.InboxItem.DELETED_AT} IS NULL " +
+            "ORDER BY ${DbSchema.InboxItem.CREATED_AT} DESC"
+    )
     fun observeAll(): Flow<List<InboxItemEntity>>
 
-    @Query("SELECT ${DbSchema.InboxItem.ID} FROM ${DbSchema.InboxItem.TABLE} ORDER BY ${DbSchema.InboxItem.CREATED_AT} DESC")
+    @Query(
+        "SELECT ${DbSchema.InboxItem.ID} FROM ${DbSchema.InboxItem.TABLE} " +
+            "WHERE ${DbSchema.InboxItem.DELETED_AT} IS NULL " +
+            "ORDER BY ${DbSchema.InboxItem.CREATED_AT} DESC"
+    )
     suspend fun fetchOrderedIds(): List<String>
 
     @Query(
@@ -43,6 +54,7 @@ interface InboxItemDao {
         WHERE ${DbSchema.InboxItem.OCR_STATUS} = :status
           AND ${DbSchema.InboxItem.NEXT_OCR_AT} <= :now
           AND ${DbSchema.InboxItem.PHOTO_URIS_JSON} IS NOT NULL
+          AND ${DbSchema.InboxItem.DELETED_AT} IS NULL
         ORDER BY ${DbSchema.InboxItem.CREATED_AT} ASC
         LIMIT :limit
         """
@@ -58,6 +70,7 @@ interface InboxItemDao {
         SELECT * FROM ${DbSchema.InboxItem.TABLE}
         WHERE ${DbSchema.InboxItem.LOOKUP_STATUS} = :status
           AND ${DbSchema.InboxItem.NEXT_LOOKUP_AT} <= :now
+          AND ${DbSchema.InboxItem.DELETED_AT} IS NULL
         ORDER BY ${DbSchema.InboxItem.CREATED_AT} ASC
         LIMIT :limit
         """

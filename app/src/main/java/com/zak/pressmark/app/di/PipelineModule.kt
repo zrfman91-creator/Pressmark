@@ -12,7 +12,9 @@ import com.zak.pressmark.data.remote.discogs.DiscogsApiProvider
 import com.zak.pressmark.data.remote.http.HttpClients
 import com.zak.pressmark.data.remote.provider.DiscogsMetadataProvider
 import com.zak.pressmark.data.remote.provider.MetadataProvider
+import com.zak.pressmark.data.repository.CatalogSettingsRepository
 import com.zak.pressmark.data.repository.DefaultInboxRepository
+import com.zak.pressmark.data.repository.DevSettingsRepository
 import com.zak.pressmark.data.repository.InboxRepository
 import com.zak.pressmark.data.repository.IngestSettingsRepository
 import dagger.Module
@@ -68,5 +70,17 @@ object PipelineModule {
     fun provideIngestSettingsRepository(
         @ApplicationContext context: Context,
     ): IngestSettingsRepository = IngestSettingsRepository(context)
+
+    @Provides
+    @Singleton
+    fun provideDevSettingsRepository(
+        @ApplicationContext context: Context,
+    ): DevSettingsRepository = DevSettingsRepository(context)
+
+    @Provides
+    @Singleton
+    fun provideCatalogSettingsRepository(
+        @ApplicationContext context: Context,
+    ): CatalogSettingsRepository = CatalogSettingsRepository(context)
 
 }
