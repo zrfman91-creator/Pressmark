@@ -11,6 +11,8 @@ import kotlin.random.Random
 
 private const val CONFIDENCE_MAX = 100
 
+private const val BARCODE_MATCH_SCORE = 95
+
 object InboxPipeline {
     fun scoreCandidate(
         queryTitle: String?,
@@ -23,7 +25,7 @@ object InboxPipeline {
         val reasons = mutableListOf<String>()
 
         if (!queryBarcode.isNullOrBlank() && matchesBarcode(queryBarcode, candidate.barcode)) {
-            score += 60
+            score += BARCODE_MATCH_SCORE
             reasons.add("barcode_match")
         }
 
