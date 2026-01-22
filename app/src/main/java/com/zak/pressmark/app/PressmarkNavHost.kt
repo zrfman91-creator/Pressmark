@@ -30,6 +30,7 @@ import com.zak.pressmark.feature.releasedetails.vm.ReleaseDetailsViewModelFactor
 import com.zak.pressmark.feature.inbox.route.InboxRoute
 import com.zak.pressmark.feature.inbox.vm.InboxViewModel
 import com.zak.pressmark.feature.inbox.vm.InboxViewModelFactory
+import com.zak.pressmark.feature.landing.route.LandingRoute
 import com.zak.pressmark.feature.resolveinbox.route.ResolveInboxItemRoute
 import com.zak.pressmark.feature.resolveinbox.vm.ResolveInboxViewModel
 import com.zak.pressmark.feature.resolveinbox.vm.ResolveInboxViewModelFactory
@@ -46,8 +47,15 @@ fun PressmarkNavHost(
 ) {
     NavHost(
         navController = navController,
-        startDestination = PressmarkRoutes.LIST,
+        startDestination = PressmarkRoutes.LANDING,
     ) {
+        composable(PressmarkRoutes.LANDING) {
+            LandingRoute(
+                onOpenCatalog = { navController.navigate(PressmarkRoutes.LIST) },
+                onOpenScanConveyor = { navController.navigate(PressmarkRoutes.SCAN_CONVEYOR) },
+            )
+        }
+
         composable(PressmarkRoutes.LIST) {
             val listFactory = remember(graph) {
                 CatalogViewModelFactory(
@@ -312,6 +320,7 @@ fun PressmarkNavHost(
             val factory = remember(graph) {
                 ScanConveyorViewModelFactory(
                     inboxRepository = graph.inboxRepository,
+                    metadataProvider = graph.metadataProvider,
                     releaseRepository = graph.releaseRepository,
                 )
             }
@@ -361,6 +370,15 @@ fun PressmarkNavHost(
 
             ResolveInboxItemRoute(
                 vm = vm,
+                onCommitComplete = { nextInboxId ->
+                    if (nextInboxId != null) {
+                        navController.navigate(PressmarkRoutes.resolveInbox(nextInboxId)) {
+                            popUpTo(PressmarkRoutes.INBOX) { inclusive = false }
+                        }
+                    } else {
+                        navController.popBackStack(PressmarkRoutes.INBOX, false)
+                    }
+                },
                 onBack = { navController.popBackStack() },
             )
         }

@@ -34,6 +34,9 @@ interface InboxItemDao {
     @Query("SELECT * FROM ${DbSchema.InboxItem.TABLE} ORDER BY ${DbSchema.InboxItem.CREATED_AT} DESC")
     fun observeAll(): Flow<List<InboxItemEntity>>
 
+    @Query("SELECT ${DbSchema.InboxItem.ID} FROM ${DbSchema.InboxItem.TABLE} ORDER BY ${DbSchema.InboxItem.CREATED_AT} DESC")
+    suspend fun fetchOrderedIds(): List<String>
+
     @Query(
         """
         SELECT * FROM ${DbSchema.InboxItem.TABLE}

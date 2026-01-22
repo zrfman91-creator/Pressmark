@@ -62,8 +62,14 @@ fun ScanConveyorRoute(
         inboxCount = inboxCount,
         libraryCount = libraryCount,
         onScanBarcode = { barcode ->
-            vm.addBarcode(barcode) {
+            vm.addBarcode(barcode) { _, autoCommitted ->
                 InboxPipelineScheduler.enqueueLookupDrain(context)
+                val message = if (autoCommitted) {
+                    "Strong match record committed"
+                } else {
+                    "Sent to Inbox for review"
+                }
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             }
         },
         onCaptureCover = onCaptureCover,

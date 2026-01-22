@@ -40,6 +40,8 @@ interface InboxRepository {
         errorCode: InboxErrorCode,
     ): ProviderCandidate?
 
+    suspend fun getNextInboxItemId(inboxItemId: String): String?
+
     suspend fun markCommitted(
         inboxItemId: String,
         committedProviderItemId: String?,
@@ -213,8 +215,12 @@ class DefaultInboxRepository(
             topScore = top.confidence,
             secondScore = second?.confidence,
             wasUndone = item.wasUndone,
+            hasBarcode = !item.barcode.isNullOrBlank(),
         )
         val status = LookupStatus.NEEDS_REVIEW
+        val shouldCopyCandidate = item.sourceType == InboxSourceType.BARCODE &&
+            item.rawTitle.isNullOrBlank() &&
+            item.rawArtist.isNullOrBlank()
 
         inboxItemDao.update(
             item.copy(
@@ -224,6 +230,8 @@ class DefaultInboxRepository(
                 confidence = top.confidence,
                 reasonsJson = top.reasonsJson,
                 nextLookupAt = null,
+                extractedTitle = if (shouldCopyCandidate) top.title else item.extractedTitle,
+                extractedArtist = if (shouldCopyCandidate) top.artist else item.extractedArtist,
             )
         )
         return if (shouldAutoCommit) {
@@ -239,6 +247,16 @@ class DefaultInboxRepository(
     ) {
         providerSnapshotDao.deleteForInboxItem(inboxItemId)
         inboxItemDao.deleteById(inboxItemId)
+    }
+
+    override suspend fun getNextInboxItemId(inboxItemId: String): String? {
+        val ids = inboxItemDao.fetchOrderedIds()
+        val index = ids.indexOf(inboxItemId)
+        return if (index == -1) {
+            ids.firstOrNull()
+        } else {
+            ids.getOrNull(index + 1)
+        }
     }
 
     override suspend fun retryLookup(inboxItemId: String) {

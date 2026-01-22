@@ -14,4 +14,8 @@ class DiscogsProviderStub : MetadataProvider {
     override suspend fun searchByTitleArtist(title: String, artist: String): List<ProviderCandidate> {
         return emptyList() // TODO: Integrate Discogs lookup.
     }
+
+    override suspend fun searchByTitleLabel(title: String, label: String?): List<ProviderCandidate> {
+        return emptyList() // TODO: Integrate Discogs lookup.
+    }
 }

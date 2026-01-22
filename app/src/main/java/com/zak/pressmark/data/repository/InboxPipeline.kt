@@ -46,6 +46,12 @@ object InboxPipeline {
             reasons.add("artist_tokens")
         }
 
+        val vinylScore = vinylIndicatorScore(queryTitle, candidate.title, candidate.rawJson)
+        if (vinylScore > 0) {
+            score += vinylScore
+            reasons.add("vinyl_hint")
+        }
+
         val boundedScore = min(CONFIDENCE_MAX, score)
         val json = JSONObject()
             .put("reasons", JSONArray(reasons))
@@ -62,11 +68,14 @@ object InboxPipeline {
         topScore: Int,
         secondScore: Int?,
         wasUndone: Boolean,
+        hasBarcode: Boolean,
     ): Boolean {
         if (wasUndone) return false
-        if (topScore < 95) return false
+        val minScore = if (hasBarcode) 90 else 95
+        if (topScore < minScore) return false
         val gap = secondScore?.let { topScore - it } ?: topScore
-        return gap >= 10
+        val minGap = if (hasBarcode) 15 else 10
+        return gap >= minGap
     }
 
     fun computeBackoffMillis(
@@ -141,5 +150,19 @@ object InboxPipeline {
             .map { it.trim() }
             .filter { it.isNotBlank() }
             .toSet()
+    }
+
+    private fun vinylIndicatorScore(
+        queryTitle: String?,
+        candidateTitle: String?,
+        candidateRawJson: String?,
+    ): Int {
+        val indicators = setOf("vinyl", "lp", "ep", "12", "33", "rpm")
+        val queryTokens = normalizeTokens(queryTitle)
+        if (queryTokens.isEmpty()) return 0
+        val candidateTokens = normalizeTokens(candidateTitle) + normalizeTokens(candidateRawJson)
+        val hasMatch = queryTokens.intersect(indicators).isNotEmpty() &&
+            candidateTokens.intersect(indicators).isNotEmpty()
+        return if (hasMatch) 4 else 0
     }
 }
