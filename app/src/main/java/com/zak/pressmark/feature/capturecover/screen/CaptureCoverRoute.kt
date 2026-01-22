@@ -97,6 +97,7 @@ import kotlin.math.roundToInt
 fun CameraCoverCaptureRoute(
     onBack: () -> Unit,
     onCaptured: (Uri) -> Unit,
+    overlayContent: @Composable (BoxScope.() -> Unit) = {},
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -279,6 +280,8 @@ fun CameraCoverCaptureRoute(
                                 modifier = Modifier.fillMaxSize(),
                                 frameFraction = frameFraction,
                             )
+
+                            overlayContent()
 
                             Text(
                                 text = "Center the album cover and tap the shutter",

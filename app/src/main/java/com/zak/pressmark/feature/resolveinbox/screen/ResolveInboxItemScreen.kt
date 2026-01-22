@@ -49,6 +49,7 @@ fun ResolveInboxItemScreen(
     modifier: Modifier = Modifier,
 ) {
     var showAddDetails by remember { mutableStateOf(false) }
+    var expandedReasonsId by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(candidates) {
         if (selectedCandidateId == null && candidates.isNotEmpty()) {
@@ -81,6 +82,13 @@ fun ResolveInboxItemScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            val missingDetails = (inboxItem?.extractedTitle ?: inboxItem?.rawTitle).isNullOrBlank() ||
+                (inboxItem?.extractedArtist ?: inboxItem?.rawArtist).isNullOrBlank()
+            if (missingDetails) {
+                TextButton(onClick = { showAddDetails = true }) {
+                    Text("Add missing details")
+                }
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -123,13 +131,22 @@ fun ResolveInboxItemScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 candidate.reasonsJson?.let { reasons ->
-                                    val summary = summarizeReasons(reasons)
-                                    if (summary.isNotBlank()) {
+                                    val reasonList = parseReasons(reasons)
+                                    if (reasonList.isNotEmpty()) {
+                                        val expanded = expandedReasonsId == candidate.id
+                                        val display = if (expanded) reasonList else reasonList.take(3)
                                         Text(
-                                            text = summary,
+                                            text = "Matched because ${display.joinToString(" • ") { reasonLabel(it) }}",
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.secondary,
                                         )
+                                        TextButton(
+                                            onClick = {
+                                                expandedReasonsId = if (expanded) null else candidate.id
+                                            },
+                                        ) {
+                                            Text(if (expanded) "Hide reasons" else "Show reasons")
+                                        }
                                     }
                                 }
                                 Text(
@@ -182,17 +199,43 @@ fun ResolveInboxItemScreen(
     }
 }
 
-private fun summarizeReasons(rawJson: String): String {
+private fun parseReasons(rawJson: String): List<String> {
     return runCatching {
-        val reasons = org.json.JSONObject(rawJson)
-            .optJSONArray("reasons")
-            ?.let { array ->
-                (0 until array.length())
-                    .mapNotNull { idx -> array.optString(idx).takeIf { it.isNotBlank() } }
-            }
-            .orEmpty()
-        reasons.take(2).joinToString(" • ")
-    }.getOrDefault("")
+        if (rawJson.trim().startsWith("[")) {
+            val array = org.json.JSONArray(rawJson)
+            (0 until array.length())
+                .mapNotNull { idx -> array.optString(idx).takeIf { it.isNotBlank() } }
+        } else {
+            org.json.JSONObject(rawJson)
+                .optJSONArray("reasons")
+                ?.let { array ->
+                    (0 until array.length())
+                        .mapNotNull { idx -> array.optString(idx).takeIf { it.isNotBlank() } }
+                }
+                .orEmpty()
+        }
+    }.getOrDefault(emptyList())
+}
+
+private fun reasonLabel(code: String): String {
+    return when (code) {
+        "LOW_SIGNAL" -> "Low signal"
+        "MULTIPLE_CANDIDATES" -> "Multiple candidates"
+        "MISSING_TITLE" -> "Missing title"
+        "MISSING_ARTIST" -> "Missing artist"
+        "WEAK_MATCH_TITLE" -> "Weak title match"
+        "WEAK_MATCH_ARTIST" -> "Weak artist match"
+        "NO_API_MATCH" -> "No API match"
+        "BARCODE_VALID_CHECKSUM" -> "Valid checksum"
+        "BARCODE_NORMALIZED" -> "Normalized barcode"
+        "FORMAT_MATCH_VINYL" -> "Vinyl format match"
+        "CATNO_MATCH" -> "Catalog no match"
+        "LABEL_MATCH" -> "Label match"
+        "TITLE_MATCH" -> "Title match"
+        "ARTIST_MATCH" -> "Artist match"
+        "RUNNER_UP_GAP_STRONG" -> "Clear top result"
+        else -> code.replace('_', ' ').lowercase().replaceFirstChar { it.uppercase() }
+    }
 }
 
 private fun extractCandidateImageUrl(rawJson: String): String? {

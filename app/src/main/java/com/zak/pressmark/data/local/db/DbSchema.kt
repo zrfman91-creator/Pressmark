@@ -181,6 +181,9 @@ object DbSchema {
         const val REASONS_JSON = "reasons_json"
         const val WAS_UNDONE = "was_undone"
         const val COMMITTED_PROVIDER_ITEM_ID = "committed_provider_item_id"
+        const val IS_UNKNOWN = "is_unknown"
+        const val DELETED_AT = "deleted_at"
+        const val REFERENCE_PHOTO_URI = "reference_photo_uri"
     }
 
     object ProviderSnapshot {

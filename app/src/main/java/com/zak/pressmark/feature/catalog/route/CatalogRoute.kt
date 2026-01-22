@@ -12,12 +12,16 @@ fun AlbumListRoute(
     onAddAlbum: () -> Unit,
     onOpenRelease: (releaseId: String) -> Unit,
     onOpenScanConveyor: () -> Unit,
+    showDevSettings: Boolean,
+    onOpenDevSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val releases = vm.releaseListItems.collectAsStateWithLifecycle().value
     val uiState = vm.ui.collectAsStateWithLifecycle().value
     val query = vm.query.collectAsStateWithLifecycle().value
     val sort = vm.sort.collectAsStateWithLifecycle().value
+    val viewMode = vm.viewMode.collectAsStateWithLifecycle().value
+    val density = vm.density.collectAsStateWithLifecycle().value
 
     AlbumListScreen(
         releases = releases,
@@ -35,6 +39,14 @@ fun AlbumListRoute(
 
         sort = sort,
         onSortChange = vm::setSort,
+
+        viewMode = viewMode,
+        onViewModeChange = vm::setViewMode,
+        density = density,
+        onDensityChange = vm::setDensity,
+
+        showDevSettings = showDevSettings,
+        onOpenDevSettings = onOpenDevSettings,
 
         modifier = modifier,
     )

@@ -5,6 +5,8 @@ import android.content.Context
 import coil3.ImageLoader
 import com.zak.pressmark.BuildConfig
 import com.zak.pressmark.core.util.AppImageLoader
+import com.zak.pressmark.core.ocr.MlKitTextExtractor
+import com.zak.pressmark.core.ocr.TextExtractor
 import com.zak.pressmark.data.local.db.AppDatabase
 import com.zak.pressmark.data.local.db.DatabaseProvider
 import com.zak.pressmark.data.remote.discogs.DiscogsApiProvider
@@ -16,7 +18,9 @@ import com.zak.pressmark.data.remote.provider.DiscogsMetadataProvider
 import com.zak.pressmark.data.remote.provider.MetadataProvider
 import com.zak.pressmark.data.repository.AlbumRepository
 import com.zak.pressmark.data.repository.ArtistRepository
+import com.zak.pressmark.data.repository.CatalogSettingsRepository
 import com.zak.pressmark.data.repository.DefaultInboxRepository
+import com.zak.pressmark.data.repository.DevSettingsRepository
 import com.zak.pressmark.data.repository.InboxRepository
 import com.zak.pressmark.data.repository.IngestSettingsRepository
 import com.zak.pressmark.data.repository.ReleaseRepository
@@ -99,9 +103,21 @@ class AppGraph(
         IngestSettingsRepository(appContext)
     }
 
+    val devSettingsRepository: DevSettingsRepository by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        DevSettingsRepository(appContext)
+    }
+
+    val catalogSettingsRepository: CatalogSettingsRepository by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        CatalogSettingsRepository(appContext)
+    }
+
     // --- UI Layer Dependencies ---
     val imageLoader: ImageLoader by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         AppImageLoader.get(appContext)
+    }
+
+    val textExtractor: TextExtractor by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        MlKitTextExtractor(appContext)
     }
 }
 

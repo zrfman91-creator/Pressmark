@@ -45,7 +45,7 @@ import com.zak.pressmark.data.local.dao.ArtworkDao
         ProviderSnapshotEntity::class,
         ImportBatchEntity::class,
     ],
-    version = 11, // bump version (wipe anyway)
+    version = 12, // bump version (wipe anyway)
     exportSchema = true,
 )
 @TypeConverters(InboxTypeConverters::class)

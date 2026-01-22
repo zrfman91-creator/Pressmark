@@ -25,6 +25,9 @@ object PressmarkRoutes {
     fun resolveInbox(inboxId: String): String = "$RESOLVE_INBOX/$inboxId"
     const val INBOX_COVER_CAPTURE = "inbox_cover_capture"
 
+    // Developer settings (debug only entry)
+    const val DEV_SETTINGS = "dev_settings"
+
     // Album Details
     const val DETAILS = "album_details"
     const val ARG_ALBUM_ID = "albumId"

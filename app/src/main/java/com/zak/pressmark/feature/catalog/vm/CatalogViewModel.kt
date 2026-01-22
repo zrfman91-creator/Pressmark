@@ -5,6 +5,9 @@ package com.zak.pressmark.feature.catalog.vm
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zak.pressmark.data.model.ReleaseSummary
+import com.zak.pressmark.data.repository.CatalogDensity
+import com.zak.pressmark.data.repository.CatalogSettingsRepository
+import com.zak.pressmark.data.repository.CatalogViewMode
 import com.zak.pressmark.data.repository.ReleaseRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -30,6 +33,7 @@ enum class CatalogSort {
 
 class AlbumListViewModel(
     private val releaseRepository: ReleaseRepository,
+    private val catalogSettingsRepository: CatalogSettingsRepository,
 ) : ViewModel() {
 
     private val _ui = MutableStateFlow(AlbumListUiState())
@@ -42,6 +46,14 @@ class AlbumListViewModel(
     private val _sort = MutableStateFlow(CatalogSort.TitleAZ)
     val sort: StateFlow<CatalogSort> = _sort
 
+    val viewMode: StateFlow<CatalogViewMode> = catalogSettingsRepository
+        .observeViewMode()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CatalogViewMode.LIST)
+
+    val density: StateFlow<CatalogDensity> = catalogSettingsRepository
+        .observeDensity()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CatalogDensity.SPACIOUS)
+
     fun setQuery(value: String) {
         _query.value = value
     }
@@ -52,6 +64,18 @@ class AlbumListViewModel(
 
     fun clearQuery() {
         _query.value = ""
+    }
+
+    fun setViewMode(mode: CatalogViewMode) {
+        viewModelScope.launch(Dispatchers.IO) {
+            catalogSettingsRepository.setViewMode(mode)
+        }
+    }
+
+    fun setDensity(density: CatalogDensity) {
+        viewModelScope.launch(Dispatchers.IO) {
+            catalogSettingsRepository.setDensity(density)
+        }
     }
 
     // Reactive list, filtered + sorted

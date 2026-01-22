@@ -1,6 +1,8 @@
 package com.zak.pressmark.data.repository
 
 import android.net.Uri
+import android.util.Log
+import com.zak.pressmark.core.util.InboxReferencePhotoStore
 import com.zak.pressmark.data.local.dao.InboxItemDao
 import com.zak.pressmark.data.local.dao.ProviderSnapshotDao
 import com.zak.pressmark.data.local.entity.InboxItemEntity
@@ -13,6 +15,7 @@ import com.zak.pressmark.data.model.inbox.InboxSourceType
 import com.zak.pressmark.data.model.inbox.LookupStatus
 import com.zak.pressmark.data.model.inbox.OcrStatus
 import com.zak.pressmark.data.model.inbox.ProviderCandidate
+import com.zak.pressmark.data.model.inbox.ReasonCode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.util.UUID
@@ -22,6 +25,9 @@ interface InboxRepository {
     fun observeInboxItems(): Flow<List<InboxItemEntity>>
     fun observeInboxItem(inboxItemId: String): Flow<InboxItemEntity?>
     fun observeTopCandidates(inboxItemId: String): Flow<List<ProviderSnapshotEntity>>
+    suspend fun softDeleteInboxItem(inboxItemId: String)
+    suspend fun undoSoftDeleteInboxItem(inboxItemId: String)
+    suspend fun setUnknown(inboxItemId: String, isUnknown: Boolean)
 
     suspend fun createQuickAdd(title: String, artist: String): String
     suspend fun createBarcode(barcode: String): String
@@ -32,6 +38,8 @@ interface InboxRepository {
         inboxItemId: String,
         extractedFields: ExtractedFields,
         success: Boolean,
+        confidenceScore: Int? = null,
+        confidenceReasonsJson: String? = null,
     )
 
     suspend fun applyLookupResults(
@@ -84,6 +92,38 @@ class DefaultInboxRepository(
             .map { it.take(3) }
     }
 
+    override suspend fun softDeleteInboxItem(inboxItemId: String) {
+        val item = inboxItemDao.getById(inboxItemId) ?: return
+        val now = System.currentTimeMillis()
+        inboxItemDao.update(
+            item.copy(
+                deletedAt = now,
+                updatedAt = now,
+            )
+        )
+    }
+
+    override suspend fun undoSoftDeleteInboxItem(inboxItemId: String) {
+        val item = inboxItemDao.getById(inboxItemId) ?: return
+        inboxItemDao.update(
+            item.copy(
+                deletedAt = null,
+                updatedAt = System.currentTimeMillis(),
+                wasUndone = true,
+            )
+        )
+    }
+
+    override suspend fun setUnknown(inboxItemId: String, isUnknown: Boolean) {
+        val item = inboxItemDao.getById(inboxItemId) ?: return
+        inboxItemDao.update(
+            item.copy(
+                isUnknown = isUnknown,
+                updatedAt = System.currentTimeMillis(),
+            )
+        )
+    }
+
     override suspend fun createQuickAdd(title: String, artist: String): String {
         return createInboxItem(
             sourceType = InboxSourceType.QUICK_ADD,
@@ -111,6 +151,7 @@ class DefaultInboxRepository(
             rawArtist = null,
             barcode = null,
             photoUris = listOf(photoUri.toString()),
+            referencePhotoUri = photoUri.toString(),
             ocrStatus = OcrStatus.NOT_STARTED,
             lookupStatus = LookupStatus.NOT_ELIGIBLE,
             nextOcrAt = System.currentTimeMillis(),
@@ -132,6 +173,8 @@ class DefaultInboxRepository(
         inboxItemId: String,
         extractedFields: ExtractedFields,
         success: Boolean,
+        confidenceScore: Int?,
+        confidenceReasonsJson: String?,
     ) {
         val item = inboxItemDao.getById(inboxItemId) ?: return
         val now = System.currentTimeMillis()
@@ -162,6 +205,8 @@ class DefaultInboxRepository(
                 extractedArtist = extractedFields.artist,
                 extractedLabel = extractedFields.label,
                 extractedCatalogNo = extractedFields.catalogNo,
+                confidenceScore = confidenceScore ?: item.confidenceScore,
+                confidenceReasonsJson = confidenceReasonsJson ?: item.confidenceReasonsJson,
                 lookupStatus = lookupStatus,
                 nextLookupAt = nextLookup,
             )
@@ -201,22 +246,49 @@ class DefaultInboxRepository(
                 queryTitle = item.extractedTitle ?: item.rawTitle,
                 queryArtist = item.extractedArtist ?: item.rawArtist,
                 queryCatalogNo = item.extractedCatalogNo,
+                queryLabel = item.extractedLabel,
                 queryBarcode = item.barcode,
                 candidate = candidate,
             )
             buildSnapshot(item.id, candidate, score)
         }.sortedByDescending { it.confidence }
 
-        providerSnapshotDao.insertAll(snapshots)
-
         val top = snapshots.first()
         val second = snapshots.getOrNull(1)
+        val gap = second?.let { top.confidence - it.confidence } ?: top.confidence
+        val gapThreshold = if (!item.barcode.isNullOrBlank()) 12 else 8
+        val gapStrong = gap >= gapThreshold
+        val updatedTop = if (gapStrong) {
+            val updatedReasons = ReasonCode.append(
+                ReasonCode.decode(top.reasonsJson),
+                ReasonCode.RUNNER_UP_GAP_STRONG,
+            )
+            top.copy(reasonsJson = ReasonCode.encode(updatedReasons))
+        } else {
+            top
+        }
+        val updatedSnapshots = listOf(updatedTop) + snapshots.drop(1)
+
+        providerSnapshotDao.insertAll(updatedSnapshots)
+
         val shouldAutoCommit = InboxPipeline.shouldAutoCommit(
             topScore = top.confidence,
             secondScore = second?.confidence,
             wasUndone = item.wasUndone,
             hasBarcode = !item.barcode.isNullOrBlank(),
         )
+
+        if (item.sourceType == InboxSourceType.BARCODE) {
+            val preview = updatedSnapshots.take(3).joinToString(" | ") { snapshot ->
+                val reasons = ReasonCode.decode(snapshot.reasonsJson).joinToString(",")
+                "${snapshot.title} (${snapshot.confidence}) [$reasons]"
+            }
+            Log.d(
+                "BarcodeRanker",
+                "Barcode ranking for inbox ${item.id}: top=${updatedTop.providerItemId} " +
+                    "gap=$gap autoCommit=$shouldAutoCommit candidates=$preview"
+            )
+        }
         val status = LookupStatus.NEEDS_REVIEW
         val shouldCopyCandidate = item.sourceType == InboxSourceType.BARCODE &&
             item.rawTitle.isNullOrBlank() &&
@@ -227,8 +299,8 @@ class DefaultInboxRepository(
                 updatedAt = now,
                 lookupStatus = status,
                 errorCode = InboxErrorCode.NONE,
-                confidence = top.confidence,
-                reasonsJson = top.reasonsJson,
+                confidenceScore = updatedTop.confidence,
+                confidenceReasonsJson = updatedTop.reasonsJson,
                 nextLookupAt = null,
                 extractedTitle = if (shouldCopyCandidate) top.title else item.extractedTitle,
                 extractedArtist = if (shouldCopyCandidate) top.artist else item.extractedArtist,
@@ -245,6 +317,8 @@ class DefaultInboxRepository(
         inboxItemId: String,
         committedProviderItemId: String?,
     ) {
+        val item = inboxItemDao.getById(inboxItemId)
+        InboxReferencePhotoStore.delete(item?.referencePhotoUri)
         providerSnapshotDao.deleteForInboxItem(inboxItemId)
         inboxItemDao.deleteById(inboxItemId)
     }
@@ -304,8 +378,8 @@ class DefaultInboxRepository(
                 lookupStatus = LookupStatus.PENDING,
                 nextLookupAt = now,
                 errorCode = InboxErrorCode.NONE,
-                confidence = null,
-                reasonsJson = null,
+                confidenceScore = null,
+                confidenceReasonsJson = null,
             )
         )
     }
@@ -346,10 +420,13 @@ class DefaultInboxRepository(
                 extractedArtist = null,
                 extractedLabel = label,
                 extractedCatalogNo = catalogNo,
-                confidence = null,
-                reasonsJson = null,
+                confidenceScore = null,
+                confidenceReasonsJson = null,
                 wasUndone = false,
                 committedProviderItemId = null,
+                isUnknown = false,
+                deletedAt = null,
+                referencePhotoUri = null,
             )
             inboxItemDao.upsert(item)
             imported += 1
@@ -368,6 +445,7 @@ class DefaultInboxRepository(
         rawArtist: String?,
         barcode: String?,
         photoUris: List<String>,
+        referencePhotoUri: String? = null,
         ocrStatus: OcrStatus = OcrStatus.NOT_STARTED,
         lookupStatus: LookupStatus = LookupStatus.PENDING,
         nextOcrAt: Long? = null,
@@ -395,10 +473,13 @@ class DefaultInboxRepository(
             extractedArtist = null,
             extractedLabel = null,
             extractedCatalogNo = null,
-            confidence = null,
-            reasonsJson = null,
+            confidenceScore = null,
+            confidenceReasonsJson = null,
             wasUndone = false,
             committedProviderItemId = null,
+            isUnknown = false,
+            deletedAt = null,
+            referencePhotoUri = referencePhotoUri,
         )
         inboxItemDao.upsert(item)
         return id

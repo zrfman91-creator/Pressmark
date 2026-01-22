@@ -73,14 +73,23 @@ data class InboxItemEntity(
     val extractedCatalogNo: String?,
 
     @ColumnInfo(name = DbSchema.InboxItem.CONFIDENCE)
-    val confidence: Int?,
+    val confidenceScore: Int?,
 
     @ColumnInfo(name = DbSchema.InboxItem.REASONS_JSON)
-    val reasonsJson: String?,
+    val confidenceReasonsJson: String?,
 
     @ColumnInfo(name = DbSchema.InboxItem.WAS_UNDONE)
     val wasUndone: Boolean,
 
     @ColumnInfo(name = DbSchema.InboxItem.COMMITTED_PROVIDER_ITEM_ID)
     val committedProviderItemId: String?,
+
+    @ColumnInfo(name = DbSchema.InboxItem.IS_UNKNOWN)
+    val isUnknown: Boolean,
+
+    @ColumnInfo(name = DbSchema.InboxItem.DELETED_AT)
+    val deletedAt: Long?,
+
+    @ColumnInfo(name = DbSchema.InboxItem.REFERENCE_PHOTO_URI)
+    val referencePhotoUri: String?,
 )
