@@ -19,7 +19,9 @@ object InboxEligibility {
 
         val hasSignal = !signalBarcode.isNullOrBlank() ||
             !signalCatalogNo.isNullOrBlank() ||
-            (!signalTitle.isNullOrBlank() && !signalArtist.isNullOrBlank())
+            (!signalTitle.isNullOrBlank() && !signalArtist.isNullOrBlank()) ||
+            (item.sourceType == com.zak.pressmark.data.model.inbox.InboxSourceType.COVER_PHOTO &&
+                !signalTitle.isNullOrBlank())
 
         return item.lookupStatus == LookupStatus.PENDING &&
             hasSignal &&

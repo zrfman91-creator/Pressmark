@@ -40,6 +40,16 @@ class DiscogsMetadataProvider(
         }
     }
 
+    override suspend fun searchByTitleLabel(title: String, label: String?): List<ProviderCandidate> {
+        return runSearch("title_label") {
+            api.searchReleases(
+                releaseTitle = title,
+                label = label,
+                perPage = 25,
+            ).results
+        }
+    }
+
     private suspend fun runSearch(
         searchLabel: String,
         fallbackBarcode: String? = null,

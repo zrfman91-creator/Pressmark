@@ -9,7 +9,10 @@ import android.net.Uri
  */
 object PressmarkRoutes {
 
-    // List Screen (start destination)
+    // Landing Screen (start destination)
+    const val LANDING = "landing"
+
+    // List Screen
     const val LIST = "album_list"
     const val ADD = "add"
 

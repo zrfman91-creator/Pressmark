@@ -30,11 +30,17 @@ class ResolveInboxViewModel(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
+    private val _didCommit = MutableStateFlow(false)
+    val didCommit: StateFlow<Boolean> = _didCommit.asStateFlow()
+
     fun selectCandidate(candidateId: String?) {
         _selectedCandidateId.value = candidateId
     }
 
-    fun commitSelectedCandidate(candidates: List<ProviderSnapshotEntity>) {
+    fun commitSelectedCandidate(
+        candidates: List<ProviderSnapshotEntity>,
+        onComplete: (String?) -> Unit,
+    ) {
         viewModelScope.launch {
             val candidate = candidates.firstOrNull { it.id == _selectedCandidateId.value }
             if (candidate == null) {
@@ -51,10 +57,13 @@ class ResolveInboxViewModel(
                 _errorMessage.value = "Failed to commit release."
                 return@launch
             }
+            val nextId = repository.getNextInboxItemId(inboxItemId)
             repository.markCommitted(
                 inboxItemId = inboxItemId,
                 committedProviderItemId = candidate.providerItemId,
             )
+            _didCommit.value = true
+            onComplete(nextId)
         }
     }
 

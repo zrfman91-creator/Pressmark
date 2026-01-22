@@ -38,12 +38,14 @@ class LookupDrainWorker(
             val artist = item.extractedArtist ?: item.rawArtist
             val catalogNo = item.extractedCatalogNo
             val barcode = item.barcode
+            val label = item.extractedLabel
 
             val candidates = runCatching {
                 when {
                     !barcode.isNullOrBlank() -> provider.lookupByBarcode(barcode)
                     !catalogNo.isNullOrBlank() -> provider.lookupByCatalogNo(catalogNo, item.extractedLabel)
                     !title.isNullOrBlank() && !artist.isNullOrBlank() -> provider.searchByTitleArtist(title, artist)
+                    !title.isNullOrBlank() -> provider.searchByTitleLabel(title, label)
                     else -> emptyList()
                 }
             }
