@@ -32,6 +32,20 @@ object InboxPipeline {
         var score = 0
         val reasons = mutableListOf<String>()
 
+        val normalizedQueryTitle = normalizeString(queryTitle)
+        val normalizedQueryArtist = normalizeString(queryArtist)
+        val normalizedQueryCatalogNo = normalizeString(queryCatalogNo)
+        val normalizedQueryLabel = normalizeString(queryLabel)
+        val normalizedCandidateTitle = normalizeString(candidate.title)
+        val normalizedCandidateArtist = normalizeString(candidate.artist)
+        val normalizedCandidateCatalogNo = normalizeString(candidate.catalogNo)
+        val normalizedCandidateLabel = normalizeString(candidate.label)
+        val queryTitleTokens = normalizeTokensFromNormalized(normalizedQueryTitle)
+        val queryArtistTokens = normalizeTokensFromNormalized(normalizedQueryArtist)
+        val candidateTitleTokens = normalizeTokensFromNormalized(normalizedCandidateTitle)
+        val candidateArtistTokens = normalizeTokensFromNormalized(normalizedCandidateArtist)
+        val candidateRawJsonTokens = normalizeTokens(candidate.rawJson)
+
         val normalizedQueryBarcode = normalizeBarcode(queryBarcode)
         val normalizedCandidateBarcode = normalizeBarcode(candidate.barcode)
         if (!normalizedQueryBarcode.isNullOrBlank() && normalizedQueryBarcode == normalizedCandidateBarcode) {
@@ -46,39 +60,40 @@ object InboxPipeline {
             }
         }
 
-        if (!queryCatalogNo.isNullOrBlank() && matchesText(queryCatalogNo, candidate.catalogNo)) {
+        if (matchesNormalizedText(normalizedQueryCatalogNo, normalizedCandidateCatalogNo)) {
             score += CATNO_SCORE
             reasons.add(ReasonCode.CATNO_MATCH)
         }
 
-        if (!queryArtist.isNullOrBlank() && matchesText(queryArtist, candidate.artist)) {
+        if (matchesNormalizedText(normalizedQueryArtist, normalizedCandidateArtist)) {
             score += ARTIST_STRONG_SCORE
             reasons.add(ReasonCode.ARTIST_MATCH)
         } else {
-            val artistRatio = tokenOverlapRatio(queryArtist, candidate.artist)
+            val artistRatio = tokenOverlapRatio(queryArtistTokens, candidateArtistTokens)
             if (artistRatio >= 0.4) {
                 score += ARTIST_WEAK_SCORE
                 reasons.add(ReasonCode.WEAK_MATCH_ARTIST)
             }
         }
 
-        if (!queryTitle.isNullOrBlank() && matchesText(queryTitle, candidate.title)) {
+        if (matchesNormalizedText(normalizedQueryTitle, normalizedCandidateTitle)) {
             score += TITLE_STRONG_SCORE
             reasons.add(ReasonCode.TITLE_MATCH)
         } else {
-            val titleRatio = tokenOverlapRatio(queryTitle, candidate.title)
+            val titleRatio = tokenOverlapRatio(queryTitleTokens, candidateTitleTokens)
             if (titleRatio >= 0.4) {
                 score += TITLE_WEAK_SCORE
                 reasons.add(ReasonCode.WEAK_MATCH_TITLE)
             }
         }
 
-        if (!queryLabel.isNullOrBlank() && matchesLabel(queryLabel, candidate.label)) {
+        if (matchesNormalizedText(normalizedQueryLabel, normalizedCandidateLabel)) {
             score += LABEL_SCORE
             reasons.add(ReasonCode.LABEL_MATCH)
         }
 
-        val vinylMatch = hasVinylIndicator(queryTitle, candidate.title, candidate.rawJson)
+        val candidateTokens = candidateTitleTokens + candidateRawJsonTokens
+        val vinylMatch = hasVinylIndicator(queryTitleTokens, candidateTokens)
         if (vinylMatch) {
             score += VINYL_SCORE
             reasons.add(ReasonCode.FORMAT_MATCH_VINYL)
@@ -125,9 +140,7 @@ object InboxPipeline {
         return (baseMinutes * multiplier + jitter).toLong() * 60_000L
     }
 
-    private fun tokenOverlapRatio(left: String?, right: String?): Double {
-        val leftTokens = normalizeTokens(left)
-        val rightTokens = normalizeTokens(right)
+    private fun tokenOverlapRatio(leftTokens: Set<String>, rightTokens: Set<String>): Double {
         if (leftTokens.isEmpty() || rightTokens.isEmpty()) return 0.0
 
         val overlap = leftTokens.intersect(rightTokens).size
@@ -136,14 +149,12 @@ object InboxPipeline {
         return overlap.toDouble() / maxOf(leftTokens.size, rightTokens.size).toDouble()
     }
 
-    private fun matchesLabel(queryLabel: String?, candidateLabel: String?): Boolean {
-        return matchesText(queryLabel, candidateLabel)
+    private fun matchesText(left: String?, right: String?): Boolean {
+        return matchesNormalizedText(normalizeString(left), normalizeString(right))
     }
 
-    private fun matchesText(left: String?, right: String?): Boolean {
-        val a = normalizeTokens(left).joinToString(" ")
-        val b = normalizeTokens(right).joinToString(" ")
-        return a.isNotBlank() && a == b
+    private fun matchesNormalizedText(left: String, right: String): Boolean {
+        return left.isNotBlank() && left == right
     }
 
     private fun normalizeBarcode(value: String?): String? {
@@ -173,8 +184,8 @@ object InboxPipeline {
         return computed == checkDigit
     }
 
-    private fun normalizeTokens(value: String?): Set<String> {
-        val normalized = value
+    private fun normalizeString(value: String?): String {
+        return value
             ?.trim()
             ?.lowercase()
             ?.let { Normalizer.normalize(it, Normalizer.Form.NFD) }
@@ -183,7 +194,14 @@ object InboxPipeline {
             ?.replace(Regex("\\s+"), " ")
             ?.trim()
             .orEmpty()
+    }
 
+    private fun normalizeTokens(value: String?): Set<String> {
+        val normalized = normalizeString(value)
+        return normalizeTokensFromNormalized(normalized)
+    }
+
+    private fun normalizeTokensFromNormalized(normalized: String): Set<String> {
         if (normalized.isBlank()) return emptySet()
 
         return normalized.split(" ")
@@ -192,15 +210,9 @@ object InboxPipeline {
             .toSet()
     }
 
-    private fun hasVinylIndicator(
-        queryTitle: String?,
-        candidateTitle: String?,
-        candidateRawJson: String?,
-    ): Boolean {
+    private fun hasVinylIndicator(queryTokens: Set<String>, candidateTokens: Set<String>): Boolean {
         val indicators = setOf("vinyl", "lp", "ep", "12", "33", "rpm")
-        val queryTokens = normalizeTokens(queryTitle)
         if (queryTokens.isEmpty()) return false
-        val candidateTokens = normalizeTokens(candidateTitle) + normalizeTokens(candidateRawJson)
         val hasMatch = queryTokens.intersect(indicators).isNotEmpty() &&
             candidateTokens.intersect(indicators).isNotEmpty()
         return hasMatch

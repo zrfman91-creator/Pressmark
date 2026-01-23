@@ -16,6 +16,9 @@ interface InboxItemDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(item: InboxItemEntity)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(items: List<InboxItemEntity>)
+
     @Update
     suspend fun update(item: InboxItemEntity)
 

@@ -386,6 +386,7 @@ class DefaultInboxRepository(
 
     override suspend fun createCsvImport(rows: List<CsvImportRow>): CsvImportSummary {
         var imported = 0
+        val items = mutableListOf<InboxItemEntity>()
         rows.forEach { row ->
             val title = row.title?.trim()?.takeIf { it.isNotBlank() }
             val artist = row.artist?.trim()?.takeIf { it.isNotBlank() }
@@ -428,8 +429,12 @@ class DefaultInboxRepository(
                 deletedAt = null,
                 referencePhotoUri = null,
             )
-            inboxItemDao.upsert(item)
+            items.add(item)
             imported += 1
+        }
+
+        if (items.isNotEmpty()) {
+            inboxItemDao.upsertAll(items)
         }
 
         return CsvImportSummary(
