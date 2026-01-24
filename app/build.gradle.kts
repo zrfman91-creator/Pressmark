@@ -121,6 +121,8 @@ dependencies {
     implementation(libs.mlkit.barcode.scanning)
     implementation(libs.hilt.android)
     implementation(libs.androidx.hilt.work)
+    implementation(libs.androidx.compose.ui.text)
+    implementation(libs.androidx.foundation.layout)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 

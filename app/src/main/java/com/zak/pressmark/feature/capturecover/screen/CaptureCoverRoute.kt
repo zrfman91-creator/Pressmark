@@ -23,6 +23,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -73,8 +74,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.exifinterface.media.ExifInterface
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -95,10 +96,11 @@ import kotlin.math.roundToInt
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CameraCoverCaptureRoute(
+    modifier: Modifier = Modifier,
     onBack: () -> Unit,
     onCaptured: (Uri) -> Unit,
     overlayContent: @Composable (BoxScope.() -> Unit) = {},
-    modifier: Modifier = Modifier,
+
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -631,8 +633,8 @@ private fun cropBitmapToOverlayFillCenter(
     val sizeB = cutoutView / scale
 
     // Clamp to bitmap bounds
-    var x = leftB.roundToInt().coerceIn(0, src.width - 1)
-    var y = topB.roundToInt().coerceIn(0, src.height - 1)
+    val x = leftB.roundToInt().coerceIn(0, src.width - 1)
+    val y = topB.roundToInt().coerceIn(0, src.height - 1)
 
     var s = sizeB.roundToInt().coerceAtLeast(1)
     if (x + s > src.width) s = src.width - x

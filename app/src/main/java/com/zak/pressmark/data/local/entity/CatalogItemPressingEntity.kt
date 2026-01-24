@@ -4,20 +4,48 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import com.zak.pressmark.data.local.db.DbSchema.CatalogItemPressing
 
+/**
+ * Owned pressing record (may be unconfirmed initially).
+ *
+ * release_id is nullable until confirmed.
+ * provider_release_id is stored so we can reference provider candidates even before linking an internal Release row.
+ */
 @Entity(
-    tableName = CatalogItemPressing.TABLE,
+    tableName = "catalog_item_pressings",
     indices = [
-        Index(value = [CatalogItemPressing.CATALOG_ITEM_ID]),
-        Index(value = [CatalogItemPressing.RELEASE_ID]),
-    ],
+        Index(value = ["catalog_item_id"]),
+        Index(value = ["confirmed_release_id"]),
+        Index(value = ["provider", "provider_release_id"])
+    ]
 )
 data class CatalogItemPressingEntity(
-    @PrimaryKey
-    @ColumnInfo(name = CatalogItemPressing.ID) val id: String,
-    @ColumnInfo(name = CatalogItemPressing.CATALOG_ITEM_ID) val catalogItemId: String,
-    @ColumnInfo(name = CatalogItemPressing.RELEASE_ID) val releaseId: String?,
-    @ColumnInfo(name = CatalogItemPressing.EVIDENCE_SCORE) val evidenceScore: Int?,
-    @ColumnInfo(name = CatalogItemPressing.CREATED_AT) val createdAt: Long,
+    @PrimaryKey(autoGenerate = true)
+    @ColumnInfo(name = "id")
+    val id: Long = 0L,
+
+    @ColumnInfo(name = "catalog_item_id")
+    val catalogItemId: Long,
+
+    /**
+     * Internal Release row id when confirmed (nullable until link).
+     * Keep this even if Release-first is decommissioned later; it remains a traceable compatibility edge.
+     */
+    @ColumnInfo(name = "confirmed_release_id")
+    val confirmedReleaseId: Long? = null,
+
+    @ColumnInfo(name = "provider")
+    val provider: Provider? = null,
+
+    @ColumnInfo(name = "provider_release_id")
+    val providerReleaseId: String? = null,
+
+    @ColumnInfo(name = "evidence_score")
+    val evidenceScore: Double = 0.0,
+
+    @ColumnInfo(name = "created_at")
+    val createdAt: Long,
+
+    @ColumnInfo(name = "updated_at")
+    val updatedAt: Long
 )

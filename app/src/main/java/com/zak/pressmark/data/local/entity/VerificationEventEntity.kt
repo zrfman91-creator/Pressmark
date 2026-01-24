@@ -4,25 +4,48 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import com.zak.pressmark.data.local.db.DbSchema.VerificationEvent
 
+/**
+ * Append-only verification/audit trail.
+ */
 @Entity(
-    tableName = VerificationEvent.TABLE,
+    tableName = "verification_events",
     indices = [
-        Index(value = [VerificationEvent.CATALOG_ITEM_ID]),
-        Index(value = [VerificationEvent.PROVIDER]),
-        Index(value = [VerificationEvent.PROVIDER_ITEM_ID]),
-    ],
+        Index(value = ["catalog_item_id"]),
+        Index(value = ["event_type"]),
+        Index(value = ["created_at"])
+    ]
 )
 data class VerificationEventEntity(
-    @PrimaryKey
-    @ColumnInfo(name = VerificationEvent.ID) val id: String,
-    @ColumnInfo(name = VerificationEvent.CATALOG_ITEM_ID) val catalogItemId: String,
-    @ColumnInfo(name = VerificationEvent.EVENT_TYPE) val eventType: String,
-    @ColumnInfo(name = VerificationEvent.PROVIDER) val provider: String?,
-    @ColumnInfo(name = VerificationEvent.PROVIDER_ITEM_ID) val providerItemId: String?,
-    @ColumnInfo(name = VerificationEvent.PREVIOUS_RELEASE_ID) val previousReleaseId: String?,
-    @ColumnInfo(name = VerificationEvent.NEW_RELEASE_ID) val newReleaseId: String?,
-    @ColumnInfo(name = VerificationEvent.REASONS_JSON) val reasonsJson: String?,
-    @ColumnInfo(name = VerificationEvent.CREATED_AT) val createdAt: Long,
+    @PrimaryKey(autoGenerate = true)
+    @ColumnInfo(name = "id")
+    val id: Long = 0L,
+
+    @ColumnInfo(name = "catalog_item_id")
+    val catalogItemId: Long,
+
+    @ColumnInfo(name = "event_type")
+    val eventType: VerificationEventType,
+
+    @ColumnInfo(name = "provider")
+    val provider: Provider? = null,
+
+    @ColumnInfo(name = "provider_item_id")
+    val providerItemId: String? = null,
+
+    @ColumnInfo(name = "previous_release_id")
+    val previousReleaseId: Long? = null,
+
+    @ColumnInfo(name = "new_release_id")
+    val newReleaseId: Long? = null,
+
+    /**
+     * Store reasons as JSON (or a compact string) for now.
+     * This is intentionally flexible to avoid migrations during experimentation.
+     */
+    @ColumnInfo(name = "reasons_json")
+    val reasonsJson: String? = null,
+
+    @ColumnInfo(name = "created_at")
+    val createdAt: Long
 )

@@ -1,6 +1,16 @@
 package com.zak.pressmark.feature.scanconveyor.screen
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,13 +26,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ShortText
+import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.QrCodeScanner
-import androidx.compose.material.icons.outlined.UploadFile
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -38,7 +49,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -59,6 +69,9 @@ fun ScanConveyorScreen(
     var showBarcodeEntry by remember { mutableStateOf(false) }
     var showBarcodeScanner by remember { mutableStateOf(false) }
 
+    // Expand/collapse "No barcode" options below the primary scan button
+    var showNoBarcodeActions by remember { mutableStateOf(false) }
+
     LaunchedEffect(showQuickAdd) {
         if (!showQuickAdd) {
             title = ""
@@ -71,169 +84,199 @@ fun ScanConveyorScreen(
             TopAppBar(title = { Text("Scan Conveyor") })
         },
         bottomBar = {
-            // Pinned primary CTA, safely above system nav bar (and keyboard if shown)
+            // Bottom action stack.
+            // When options expand below the scan button, the scan button shifts upward naturally.
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
                     .imePadding()
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
+                    .padding(horizontal = 24.dp, vertical = 16.dp)
+                    .animateContentSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
+                // Secondary trigger: TextButton that disappears when options are visible
+                AnimatedVisibility(
+                    visible = !showNoBarcodeActions,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
                 ) {
-                    Button(
-                        onClick = { showQuickAdd = true },
+                    TextButton(
+                        onClick = { showNoBarcodeActions = true },
                         modifier = Modifier
-                            .widthIn(min = 260.dp)
-                            .heightIn(min = 64.dp),
+                            .fillMaxWidth()
+                            .widthIn(min = 260.dp, max = 520.dp),
                         shape = MaterialTheme.shapes.small,
                     ) {
-                        Row(
-                            modifier = Modifier.width(180.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Start
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Outlined.ShortText,
-                                contentDescription = null,
-                                modifier = Modifier.size(28.dp)
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                text = "Quick add",
-                                style = MaterialTheme.typography.titleMedium,
-                                textAlign = TextAlign.Center,
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Button(
-                        onClick = onCaptureCover,
-                        modifier = Modifier
-                            .widthIn(min = 260.dp)
-                            .heightIn(min = 64.dp),
-                        shape = MaterialTheme.shapes.small,
-                    ) {
-                        Row(
-                            modifier = Modifier.width(180.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Start
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.PhotoCamera,
-                                contentDescription = null,
-                                modifier = Modifier.size(28.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Cover image search",
-                                style = MaterialTheme.typography.titleMedium,
-                                textAlign = TextAlign.Center,
-                            )
-                        }
+                        Text(
+                            text = "No barcode?",
+                            style = MaterialTheme.typography.labelLarge,
+                        )
                     }
                 }
+                // Primary CTA pinned above nav bar
                 Button(
-                    onClick = { showBarcodeScanner = true },
+                    onClick = {
+                        // If the panel is open, collapse it before scanning
+                        showNoBarcodeActions = false
+                        showBarcodeScanner = true
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .widthIn(max = 520.dp)
+                        .widthIn(min = 260.dp, max = 520.dp)
                         .heightIn(min = 80.dp),
                     shape = MaterialTheme.shapes.small,
                 ) {
-                   Column(
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.QrCodeScanner,
                             contentDescription = null,
-                            modifier = Modifier.size(36.dp),
+                            modifier = Modifier.size(28.dp),
                         )
+                        Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = "Scan barcode",
-                            style = MaterialTheme.typography.titleLarge,
+                            style = MaterialTheme.typography.titleMedium,
                         )
+                    }
+                }
+                Spacer(modifier = Modifier.height(2.dp))
+
+                // Revealed options (appear below scan button; scan button shifts up as this expands)
+                AnimatedVisibility(
+                    visible = showNoBarcodeActions,
+                    enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
+                    exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .widthIn(max = 520.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        FilledTonalButton(
+                            onClick = {
+                                showNoBarcodeActions = false
+                                onCaptureCover()
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 56.dp),
+                            shape = MaterialTheme.shapes.small,
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.PhotoCamera,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(28.dp),
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = "Scan cover",
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
+                            }
+                        }
+
+                        FilledTonalButton(
+                            onClick = {
+                                showNoBarcodeActions = false
+                                showQuickAdd = true
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 56.dp),
+                            shape = MaterialTheme.shapes.small,
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Outlined.ShortText,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(28.dp),
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = "Quick add",
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
+                            }
+                        }
                     }
                 }
             }
         },
         modifier = modifier,
     ) { padding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .padding(padding),
         ) {
-            Text(
-                text = "Inbox: $inboxCount · Library: $libraryCount",
-                style = MaterialTheme.typography.titleMedium,
-            )
-
-
-
-            Spacer(modifier = Modifier.height(0.dp))
-
-            Button(
-                onClick = onOpenInbox,
+            // Main content
+            Column(
                 modifier = Modifier
-                    .widthIn(min = 260.dp)
-                    .heightIn(min = 64.dp),
-                shape = MaterialTheme.shapes.small,
+                    .fillMaxSize()
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Row(
-                    modifier = Modifier.width(180.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Start
+                Text(
+                    text = "Inbox: $inboxCount · Library: $libraryCount",
+                    style = MaterialTheme.typography.titleMedium,
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Button(
+                    onClick = onOpenInbox,
+                    modifier = Modifier.widthIn(min = 240.dp),
                 ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Inventory2,
-                        contentDescription = null,
-                        modifier = Modifier.size(28.dp)
-                    )
+                    Icon(Icons.Outlined.Inventory2, contentDescription = null)
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "Go to Inbox",
-                        style = MaterialTheme.typography.titleMedium,
-                        textAlign = TextAlign.Center,
-                    )
+                    Text("Go to Inbox")
+                }
+
+                Button(
+                    onClick = onImportCsv,
+                    modifier = Modifier.widthIn(min = 240.dp),
+                ) {
+                    Icon(Icons.Outlined.CollectionsBookmark, contentDescription = null)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("CSV import")
                 }
             }
-            Button(
-                onClick = onImportCsv,
-                modifier = Modifier
-                    .widthIn(min = 260.dp)
-                    .heightIn(min = 64.dp),
-                shape = MaterialTheme.shapes.small,
-            ) {
-                Row(
-                    modifier = Modifier.width(180.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Start
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.UploadFile,
-                        contentDescription = null,
-                        modifier = Modifier.size(28.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "Import Library",
-                        style = MaterialTheme.typography.titleMedium,
-                        textAlign = TextAlign.Center,
-                    )
-                }
+
+            // Tap-outside-to-dismiss scrim (covers content area only; bottom bar remains interactive)
+            if (showNoBarcodeActions) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.24f))
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() },
+                        ) {
+                            showNoBarcodeActions = false
+                        },
+                )
             }
         }
     }
+
     if (showQuickAdd) {
         AlertDialog(
             onDismissRequest = { showQuickAdd = false },

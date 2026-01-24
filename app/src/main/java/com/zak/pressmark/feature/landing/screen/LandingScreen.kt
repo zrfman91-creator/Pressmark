@@ -1,25 +1,29 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
 package com.zak.pressmark.feature.landing.screen
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.LibraryBooks
+import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
 import androidx.compose.material.icons.outlined.QrCodeScanner
 import androidx.compose.material3.Button
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -30,8 +34,13 @@ fun LandingScreen(
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Pressmark") },
+            CenterAlignedTopAppBar(
+                title = { Text(
+                    text = "Pressmark",
+                    style = MaterialTheme.typography.displayLarge,
+                    textAlign = TextAlign.Center,
+                    )
+                },
             )
         },
         modifier = modifier,
@@ -39,18 +48,18 @@ fun LandingScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(24.dp),
-            verticalArrangement = Arrangement.Center,
+                .padding(horizontal =4.dp, vertical = 256.dp)
+                .navigationBarsPadding(),
+            verticalArrangement = Arrangement.Bottom,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.Top,
             ) {
                 LandingButton(
                     label = "Catalog",
-                    icon = Icons.Outlined.LibraryBooks,
+                    icon = Icons.AutoMirrored.Outlined.LibraryBooks,
                     onClick = onOpenCatalog,
                 )
                 LandingButton(
@@ -73,23 +82,29 @@ private fun LandingButton(
     Button(
         onClick = onClick,
         modifier = modifier
-            .size(140.dp)
+            .size(200.dp)
             .aspectRatio(1f),
+        shape = MaterialTheme.shapes.small,
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
+        Box(
+            modifier = Modifier.fillMaxSize())
+        {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                modifier = Modifier.size(32.dp),
+                modifier = Modifier
+                    .size(80.dp)
+                    .align(Alignment.Center),
             )
-            Spacer(modifier = Modifier.size(12.dp))
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.titleSmall,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(8.dp)
             )
         }
     }
 }
+

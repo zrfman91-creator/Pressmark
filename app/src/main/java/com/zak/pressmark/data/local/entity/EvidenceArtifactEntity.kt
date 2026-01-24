@@ -4,24 +4,48 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import com.zak.pressmark.data.local.db.DbSchema.EvidenceArtifact
 
+/**
+ * Persisted ingest evidence. Never deleted; used to refine/verify pressings later.
+ */
 @Entity(
-    tableName = EvidenceArtifact.TABLE,
+    tableName = "evidence_artifacts",
     indices = [
-        Index(value = [EvidenceArtifact.CATALOG_ITEM_ID]),
-        Index(value = [EvidenceArtifact.TYPE]),
-    ],
+        Index(value = ["catalog_item_id"]),
+        Index(value = ["type"]),
+        Index(value = ["normalized_value"])
+    ]
 )
 data class EvidenceArtifactEntity(
-    @PrimaryKey
-    @ColumnInfo(name = EvidenceArtifact.ID) val id: String,
-    @ColumnInfo(name = EvidenceArtifact.CATALOG_ITEM_ID) val catalogItemId: String,
-    @ColumnInfo(name = EvidenceArtifact.TYPE) val type: String,
-    @ColumnInfo(name = EvidenceArtifact.RAW_VALUE) val rawValue: String?,
-    @ColumnInfo(name = EvidenceArtifact.NORMALIZED_VALUE) val normalizedValue: String?,
-    @ColumnInfo(name = EvidenceArtifact.SOURCE) val source: String?,
-    @ColumnInfo(name = EvidenceArtifact.CONFIDENCE) val confidence: Int?,
-    @ColumnInfo(name = EvidenceArtifact.PHOTO_URI) val photoUri: String?,
-    @ColumnInfo(name = EvidenceArtifact.CREATED_AT) val createdAt: Long,
+    @PrimaryKey(autoGenerate = true)
+    @ColumnInfo(name = "id")
+    val id: Long = 0L,
+
+    @ColumnInfo(name = "catalog_item_id")
+    val catalogItemId: Long,
+
+    @ColumnInfo(name = "type")
+    val type: EvidenceType,
+
+    @ColumnInfo(name = "raw_value")
+    val rawValue: String? = null,
+
+    @ColumnInfo(name = "normalized_value")
+    val normalizedValue: String? = null,
+
+    @ColumnInfo(name = "source")
+    val source: EvidenceSource,
+
+    @ColumnInfo(name = "confidence")
+    val confidence: Double = 0.0,
+
+    /**
+     * Optional local URI to the photo captured during ingest.
+     * Can be null if you delete photos after commit; evidence still remains.
+     */
+    @ColumnInfo(name = "photo_uri")
+    val photoUri: String? = null,
+
+    @ColumnInfo(name = "created_at")
+    val createdAt: Long
 )
