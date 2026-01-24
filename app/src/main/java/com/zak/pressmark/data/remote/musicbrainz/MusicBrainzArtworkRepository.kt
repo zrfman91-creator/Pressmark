@@ -2,8 +2,7 @@
 package com.zak.pressmark.data.remote.musicbrainz
 
 import android.util.Log
-import com.zak.pressmark.BuildConfig
-import com.zak.pressmark.data.local.entity.AlbumEntity
+import com.zak.pressmark.data.local.entity.v1.AlbumEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext

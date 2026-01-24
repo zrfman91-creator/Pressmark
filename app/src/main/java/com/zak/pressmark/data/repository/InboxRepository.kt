@@ -3,10 +3,15 @@ package com.zak.pressmark.data.repository
 import android.net.Uri
 import android.util.Log
 import com.zak.pressmark.core.util.InboxReferencePhotoStore
-import com.zak.pressmark.data.local.dao.InboxItemDao
-import com.zak.pressmark.data.local.dao.ProviderSnapshotDao
-import com.zak.pressmark.data.local.entity.InboxItemEntity
-import com.zak.pressmark.data.local.entity.ProviderSnapshotEntity
+import com.zak.pressmark.data.local.dao.v1.CatalogItemPressingDao
+import com.zak.pressmark.data.local.dao.v1.InboxItemDao
+import com.zak.pressmark.data.local.dao.v1.EvidenceArtifactDao
+import com.zak.pressmark.data.local.dao.v1.ProviderSnapshotDao
+import com.zak.pressmark.data.local.dao.v1.VerificationEventDao
+import com.zak.pressmark.data.local.entity.v1.InboxItemEntity
+import com.zak.pressmark.data.local.entity.v1.EvidenceArtifactEntity
+import com.zak.pressmark.data.local.entity.v1.ProviderSnapshotEntity
+import com.zak.pressmark.data.local.entity.v1.VerificationEventEntity
 import com.zak.pressmark.data.model.inbox.CandidateScore
 import com.zak.pressmark.data.model.inbox.CsvImportRow
 import com.zak.pressmark.data.model.inbox.CsvImportSummary
@@ -79,9 +84,9 @@ data class ExtractedFields(
 class DefaultInboxRepository(
     private val inboxItemDao: InboxItemDao,
     private val providerSnapshotDao: ProviderSnapshotDao,
-    private val evidenceArtifactDao: com.zak.pressmark.data.local.dao.EvidenceArtifactDao,
-    private val verificationEventDao: com.zak.pressmark.data.local.dao.VerificationEventDao,
-    private val catalogItemPressingDao: com.zak.pressmark.data.local.dao.CatalogItemPressingDao,
+    private val evidenceArtifactDao: EvidenceArtifactDao,
+    private val verificationEventDao: VerificationEventDao,
+    private val catalogItemPressingDao: CatalogItemPressingDao,
 ) : InboxRepository {
     override fun observeInboxCount(): Flow<Int> = inboxItemDao.observeInboxCount()
 
@@ -536,11 +541,12 @@ class DefaultInboxRepository(
         if (evidence.isNotEmpty()) {
             evidenceArtifactDao.insertAll(evidence)
         }
-        val event = com.zak.pressmark.data.local.entity.VerificationEventEntity(
-            id = java.util.UUID.randomUUID().toString(),
+        val event = VerificationEventEntity(
+            id = UUID.randomUUID().toString(),
             catalogItemId = catalogItemId,
             eventType = "CONFIRMED",
-            provider = committedProviderItemId?.let { "discogs" } ?: item.committedProviderItemId?.let { "discogs" },
+            provider = committedProviderItemId?.let { "discogs" }
+                ?: item.committedProviderItemId?.let { "discogs" },
             providerItemId = committedProviderItemId ?: item.committedProviderItemId,
             previousReleaseId = null,
             newReleaseId = releaseId,
@@ -554,8 +560,8 @@ class DefaultInboxRepository(
         item: InboxItemEntity,
         catalogItemId: String,
         now: Long,
-    ): List<com.zak.pressmark.data.local.entity.EvidenceArtifactEntity> {
-        val results = mutableListOf<com.zak.pressmark.data.local.entity.EvidenceArtifactEntity>()
+    ): List<EvidenceArtifactEntity> {
+        val results = mutableListOf<EvidenceArtifactEntity>()
         fun addEvidence(
             type: String,
             raw: String?,
@@ -565,8 +571,8 @@ class DefaultInboxRepository(
         ) {
             if (raw.isNullOrBlank() && photoUri.isNullOrBlank()) return
             results.add(
-                com.zak.pressmark.data.local.entity.EvidenceArtifactEntity(
-                    id = java.util.UUID.randomUUID().toString(),
+                EvidenceArtifactEntity(
+                    id = UUID.randomUUID().toString(),
                     catalogItemId = catalogItemId,
                     type = type,
                     rawValue = raw,

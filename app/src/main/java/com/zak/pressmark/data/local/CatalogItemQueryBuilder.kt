@@ -2,7 +2,7 @@ package com.zak.pressmark.data.local.query
 
 import androidx.sqlite.db.SimpleSQLiteQuery
 import androidx.sqlite.db.SupportSQLiteQuery
-import com.zak.pressmark.data.local.entity.CatalogItemState
+import com.zak.pressmark.data.local.entity.v1.CatalogItemState
 import com.zak.pressmark.data.util.Normalization
 
 /**

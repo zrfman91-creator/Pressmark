@@ -31,8 +31,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import com.zak.pressmark.data.local.entity.InboxItemEntity
-import com.zak.pressmark.data.local.entity.ProviderSnapshotEntity
+import com.zak.pressmark.data.local.entity.v1.InboxItemEntity
+import com.zak.pressmark.data.local.entity.v1.ProviderSnapshotEntity
 import org.json.JSONObject
 
 @Composable

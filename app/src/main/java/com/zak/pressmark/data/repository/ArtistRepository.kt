@@ -3,9 +3,9 @@ package com.zak.pressmark.data.repository
 
 import kotlinx.coroutines.flow.Flow
 import com.zak.pressmark.core.util.Normalizer
-import com.zak.pressmark.data.local.dao.ArtistDao
-import com.zak.pressmark.data.local.dao.MergeArtistsResult
-import com.zak.pressmark.data.local.entity.ArtistEntity
+import com.zak.pressmark.data.local.dao.v1.ArtistDao
+import com.zak.pressmark.data.local.dao.v1.MergeArtistsResult
+import com.zak.pressmark.data.local.entity.v1.ArtistEntity
 
 class ArtistRepository(
     private val dao: ArtistDao

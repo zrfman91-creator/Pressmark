@@ -2,8 +2,8 @@
 package com.zak.pressmark.data.repository
 
 import com.zak.pressmark.core.credits.ArtistCreditParser
-import com.zak.pressmark.data.local.entity.CreditRole
-import com.zak.pressmark.data.local.entity.ReleaseArtistCreditEntity
+import com.zak.pressmark.data.local.entity.v1.CreditRole
+import com.zak.pressmark.data.local.entity.v1.ReleaseArtistCreditEntity
 
 /**
  * Data-layer builder that:

@@ -1,8 +1,8 @@
 // FILE: app/src/main/java/com/zak/pressmark/data/repository/AlbumRepository.kt
 package com.zak.pressmark.data.repository
 
-import com.zak.pressmark.data.local.dao.AlbumDao
-import com.zak.pressmark.data.local.entity.AlbumEntity
+import com.zak.pressmark.data.local.dao.v1.AlbumDao
+import com.zak.pressmark.data.local.entity.v1.AlbumEntity
 import com.zak.pressmark.data.local.model.AlbumWithArtistName
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID

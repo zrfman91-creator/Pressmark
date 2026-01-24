@@ -4,8 +4,8 @@ package com.zak.pressmark.feature.addalbum.vm
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.zak.pressmark.data.local.entity.ArtistEntity
-import com.zak.pressmark.data.local.entity.ReleaseEntity
+import com.zak.pressmark.data.local.entity.v1.ArtistEntity
+import com.zak.pressmark.data.local.entity.v1.ReleaseEntity
 import com.zak.pressmark.data.repository.ReleaseRepository
 import com.zak.pressmark.data.repository.ArtistRepository
 import com.zak.pressmark.feature.addalbum.model.AddAlbumFormState

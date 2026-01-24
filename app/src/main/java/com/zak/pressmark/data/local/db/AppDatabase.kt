@@ -4,37 +4,45 @@ package com.zak.pressmark.data.local.db
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import com.zak.pressmark.data.local.dao.AlbumDao
-import com.zak.pressmark.data.local.dao.ArtistDao
-import com.zak.pressmark.data.local.dao.GenreDao
-import com.zak.pressmark.data.local.dao.ImportBatchDao
-import com.zak.pressmark.data.local.dao.InboxItemDao
-import com.zak.pressmark.data.local.dao.CatalogItemDao
-import com.zak.pressmark.data.local.dao.CatalogItemPressingDao
-import com.zak.pressmark.data.local.dao.CatalogVariantDao
-import com.zak.pressmark.data.local.dao.EvidenceArtifactDao
-import com.zak.pressmark.data.local.dao.MasterIdentityDao
-import com.zak.pressmark.data.local.dao.ProviderSnapshotDao
-import com.zak.pressmark.data.local.dao.VerificationEventDao
-import com.zak.pressmark.data.local.entity.AlbumEntity
-import com.zak.pressmark.data.local.entity.AlbumGenreCrossRef
-import com.zak.pressmark.data.local.entity.ArtistEntity
-import com.zak.pressmark.data.local.entity.ArtworkEntity
-import com.zak.pressmark.data.local.entity.CatalogItemEntity
-import com.zak.pressmark.data.local.entity.CatalogItemPressingEntity
-import com.zak.pressmark.data.local.entity.CatalogVariantEntity
-import com.zak.pressmark.data.local.entity.EvidenceArtifactEntity
-import com.zak.pressmark.data.local.entity.GenreEntity
-import com.zak.pressmark.data.local.entity.ImportBatchEntity
-import com.zak.pressmark.data.local.entity.InboxItemEntity
-import com.zak.pressmark.data.local.entity.MasterIdentityEntity
-import com.zak.pressmark.data.local.entity.ProviderSnapshotEntity
-import com.zak.pressmark.data.local.entity.ReleaseArtistCreditEntity
-import com.zak.pressmark.data.local.entity.ReleaseEntity
-import com.zak.pressmark.data.local.entity.VerificationEventEntity
-import com.zak.pressmark.data.local.dao.ReleaseArtistCreditDao
-import com.zak.pressmark.data.local.dao.ReleaseDao
-import com.zak.pressmark.data.local.dao.ArtworkDao
+import com.zak.pressmark.data.local.dao.v1.AlbumDao
+import com.zak.pressmark.data.local.dao.v1.ArtistDao
+import com.zak.pressmark.data.local.dao.v1.ArtworkDao
+import com.zak.pressmark.data.local.dao.v1.CatalogItemDao
+import com.zak.pressmark.data.local.dao.v1.CatalogItemPressingDao
+import com.zak.pressmark.data.local.dao.v1.CatalogVariantDao
+import com.zak.pressmark.data.local.dao.v1.EvidenceArtifactDao
+import com.zak.pressmark.data.local.dao.v1.GenreDao
+import com.zak.pressmark.data.local.dao.v1.ImportBatchDao
+import com.zak.pressmark.data.local.dao.v1.InboxItemDao
+import com.zak.pressmark.data.local.dao.v1.MasterIdentityDao
+import com.zak.pressmark.data.local.dao.v1.ProviderSnapshotDao
+import com.zak.pressmark.data.local.dao.v1.ReleaseArtistCreditDao
+import com.zak.pressmark.data.local.dao.v1.ReleaseDao
+import com.zak.pressmark.data.local.dao.v1.VerificationEventDao
+import com.zak.pressmark.data.local.dao.v2.PressingDaoV2
+import com.zak.pressmark.data.local.dao.v2.ReleaseDaoV2
+import com.zak.pressmark.data.local.dao.v2.VariantDaoV2
+import com.zak.pressmark.data.local.dao.v2.WorkDaoV2
+import com.zak.pressmark.data.local.entity.v1.AlbumEntity
+import com.zak.pressmark.data.local.entity.v1.AlbumGenreCrossRef
+import com.zak.pressmark.data.local.entity.v1.ArtistEntity
+import com.zak.pressmark.data.local.entity.v1.ArtworkEntity
+import com.zak.pressmark.data.local.entity.v1.CatalogItemEntity
+import com.zak.pressmark.data.local.entity.v1.CatalogItemPressingEntity
+import com.zak.pressmark.data.local.entity.v1.CatalogVariantEntity
+import com.zak.pressmark.data.local.entity.v1.EvidenceArtifactEntity
+import com.zak.pressmark.data.local.entity.v1.GenreEntity
+import com.zak.pressmark.data.local.entity.v1.ImportBatchEntity
+import com.zak.pressmark.data.local.entity.v1.InboxItemEntity
+import com.zak.pressmark.data.local.entity.v1.MasterIdentityEntity
+import com.zak.pressmark.data.local.entity.v1.ProviderSnapshotEntity
+import com.zak.pressmark.data.local.entity.v1.ReleaseArtistCreditEntity
+import com.zak.pressmark.data.local.entity.v1.ReleaseEntity
+import com.zak.pressmark.data.local.entity.v1.VerificationEventEntity
+import com.zak.pressmark.data.local.entity.v2.PressingEntityV2
+import com.zak.pressmark.data.local.entity.v2.ReleaseEntityV2
+import com.zak.pressmark.data.local.entity.v2.VariantEntityV2
+import com.zak.pressmark.data.local.entity.v2.WorkEntityV2
 
 
 @Database(
@@ -64,8 +72,14 @@ import com.zak.pressmark.data.local.dao.ArtworkDao
         InboxItemEntity::class,
         ProviderSnapshotEntity::class,
         ImportBatchEntity::class,
+
+        // --- V2 canonical model (Work -> Release -> Pressing -> Variant) ---
+        WorkEntityV2::class,
+        ReleaseEntityV2::class,
+        PressingEntityV2::class,
+        VariantEntityV2::class,
     ],
-    version = 13, // bump version (wipe anyway)
+    version = 14, // bump version (wipe anyway)
     exportSchema = true,
 )
 @TypeConverters(InboxTypeConverters::class)
@@ -95,4 +109,10 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun inboxItemDao(): InboxItemDao
     abstract fun providerSnapshotDao(): ProviderSnapshotDao
     abstract fun importBatchDao(): ImportBatchDao
+
+    // --- V2 canonical DAOs ---
+    abstract fun workDaoV2(): WorkDaoV2
+    abstract fun releaseDaoV2(): ReleaseDaoV2
+    abstract fun pressingDaoV2(): PressingDaoV2
+    abstract fun variantDaoV2(): VariantDaoV2
 }

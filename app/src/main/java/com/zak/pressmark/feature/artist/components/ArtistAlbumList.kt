@@ -7,7 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.zak.pressmark.data.local.entity.AlbumEntity
+import com.zak.pressmark.data.local.entity.v1.AlbumEntity
 
 /**
  * Artist-screen list:

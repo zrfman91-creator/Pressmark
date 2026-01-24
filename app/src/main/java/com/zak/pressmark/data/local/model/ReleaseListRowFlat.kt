@@ -3,8 +3,8 @@ package com.zak.pressmark.data.local.model
 
 import androidx.room.ColumnInfo
 import androidx.room.Embedded
-import com.zak.pressmark.data.local.entity.CreditRole
-import com.zak.pressmark.data.local.entity.ReleaseEntity
+import com.zak.pressmark.data.local.entity.v1.CreditRole
+import com.zak.pressmark.data.local.entity.v1.ReleaseEntity
 
 /**
  * Flat row for the Release list read model.

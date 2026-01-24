@@ -1,6 +1,6 @@
 package com.zak.pressmark.data.repository
 
-import com.zak.pressmark.data.local.entity.InboxItemEntity
+import com.zak.pressmark.data.local.entity.v1.InboxItemEntity
 import com.zak.pressmark.data.model.inbox.InboxErrorCode
 import com.zak.pressmark.data.model.inbox.InboxSourceType
 import com.zak.pressmark.data.model.inbox.LookupStatus

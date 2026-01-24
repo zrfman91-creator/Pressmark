@@ -1,11 +1,11 @@
 package com.zak.pressmark.data.local.db
 
 import androidx.room.TypeConverter
-import com.zak.pressmark.data.local.entity.CatalogItemState
-import com.zak.pressmark.data.local.entity.EvidenceSource
-import com.zak.pressmark.data.local.entity.EvidenceType
-import com.zak.pressmark.data.local.entity.Provider
-import com.zak.pressmark.data.local.entity.VerificationEventType
+import com.zak.pressmark.data.local.entity.v1.CatalogItemState
+import com.zak.pressmark.data.local.entity.v1.EvidenceSource
+import com.zak.pressmark.data.local.entity.v1.EvidenceType
+import com.zak.pressmark.data.local.entity.v1.Provider
+import com.zak.pressmark.data.local.entity.v1.VerificationEventType
 
 /**
  * Persist enums as stable strings.

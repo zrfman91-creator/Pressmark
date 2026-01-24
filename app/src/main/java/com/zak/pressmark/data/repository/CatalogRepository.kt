@@ -2,19 +2,20 @@ package com.zak.pressmark.data.repository
 
 import androidx.room.withTransaction
 import com.zak.pressmark.core.credits.ArtistCreditFormatter
-import com.zak.pressmark.data.local.dao.ArtworkDao
-import com.zak.pressmark.data.local.dao.CatalogItemDao
-import com.zak.pressmark.data.local.dao.CatalogItemPressingDao
-import com.zak.pressmark.data.local.dao.CatalogVariantDao
-import com.zak.pressmark.data.local.dao.EvidenceArtifactDao
-import com.zak.pressmark.data.local.dao.MasterIdentityDao
-import com.zak.pressmark.data.local.dao.ReleaseArtistCreditDao
-import com.zak.pressmark.data.local.dao.ReleaseDao
-import com.zak.pressmark.data.local.dao.VerificationEventDao
+import com.zak.pressmark.data.local.dao.v1.ArtworkDao
+import com.zak.pressmark.data.local.dao.v1.CatalogItemDao
+import com.zak.pressmark.data.local.dao.v1.CatalogItemPressingDao
+import com.zak.pressmark.data.local.dao.v1.CatalogVariantDao
+import com.zak.pressmark.data.local.dao.v1.EvidenceArtifactDao
+import com.zak.pressmark.data.local.dao.v1.MasterIdentityDao
+import com.zak.pressmark.data.local.dao.v1.ReleaseArtistCreditDao
+import com.zak.pressmark.data.local.dao.v1.ReleaseDao
+import com.zak.pressmark.data.local.dao.v1.VerificationEventDao
 import com.zak.pressmark.data.local.db.AppDatabase
-import com.zak.pressmark.data.local.entity.CatalogItemEntity
-import com.zak.pressmark.data.local.entity.CatalogItemPressingEntity
-import com.zak.pressmark.data.local.entity.MasterIdentityEntity
+import com.zak.pressmark.data.local.entity.v1.CatalogItemEntity
+import com.zak.pressmark.data.local.entity.v1.CatalogItemPressingEntity
+import com.zak.pressmark.data.local.entity.v1.MasterIdentityEntity
+import com.zak.pressmark.data.local.entity.v1.ReleaseArtistCreditEntity
 import com.zak.pressmark.data.local.model.ArtistCreditFormatMapper
 import com.zak.pressmark.data.model.CatalogItemDetails
 import com.zak.pressmark.data.model.CatalogItemSummary
@@ -23,7 +24,6 @@ import com.zak.pressmark.data.model.MasterIdentitySummary
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
 import java.util.UUID
 
 class CatalogRepository(
@@ -183,7 +183,7 @@ class CatalogRepository(
         val creditRows = creditDao.creditRowsForRelease(releaseId)
         if (creditRows.isEmpty()) return "Unknown artist"
         val formatterCredits = creditRows.map { row ->
-            val creditEntity = com.zak.pressmark.data.local.entity.ReleaseArtistCreditEntity(
+            val creditEntity = ReleaseArtistCreditEntity(
                 releaseId = releaseId,
                 artistId = row.artistId,
                 role = row.role,

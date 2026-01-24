@@ -2,15 +2,15 @@ package com.zak.pressmark.data.repository
 
 import androidx.room.withTransaction
 import com.zak.pressmark.core.credits.ArtistCreditFormatter
-import com.zak.pressmark.data.local.dao.ArtworkDao
-import com.zak.pressmark.data.local.dao.ReleaseArtistCreditDao
-import com.zak.pressmark.data.local.dao.ReleaseDao
+import com.zak.pressmark.data.local.dao.v1.ArtworkDao
+import com.zak.pressmark.data.local.dao.v1.ReleaseArtistCreditDao
+import com.zak.pressmark.data.local.dao.v1.ReleaseDao
 import com.zak.pressmark.data.local.db.AppDatabase
-import com.zak.pressmark.data.local.entity.ArtworkEntity
-import com.zak.pressmark.data.local.entity.ArtworkKind
-import com.zak.pressmark.data.local.entity.ArtworkSource
-import com.zak.pressmark.data.local.entity.ReleaseArtistCreditEntity
-import com.zak.pressmark.data.local.entity.ReleaseEntity
+import com.zak.pressmark.data.local.entity.v1.ArtworkEntity
+import com.zak.pressmark.data.local.entity.v1.ArtworkKind
+import com.zak.pressmark.data.local.entity.v1.ArtworkSource
+import com.zak.pressmark.data.local.entity.v1.ReleaseArtistCreditEntity
+import com.zak.pressmark.data.local.entity.v1.ReleaseEntity
 import com.zak.pressmark.data.local.model.ArtistCreditFormatMapper
 import com.zak.pressmark.data.local.model.ReleaseCreditRow
 import com.zak.pressmark.data.local.model.ReleaseListItem

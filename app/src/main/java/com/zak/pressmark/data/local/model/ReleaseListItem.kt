@@ -2,8 +2,8 @@
 package com.zak.pressmark.data.local.model
 
 import com.zak.pressmark.core.credits.ArtistCreditFormatter
-import com.zak.pressmark.data.local.entity.ReleaseArtistCreditEntity
-import com.zak.pressmark.data.local.entity.ReleaseEntity
+import com.zak.pressmark.data.local.entity.v1.ReleaseArtistCreditEntity
+import com.zak.pressmark.data.local.entity.v1.ReleaseEntity
 
 /**
  * UI-ready list item built from [ReleaseListRowFlat] rows.

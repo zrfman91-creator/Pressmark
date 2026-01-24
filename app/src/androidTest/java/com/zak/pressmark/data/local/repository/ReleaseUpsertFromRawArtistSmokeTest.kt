@@ -6,8 +6,8 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.zak.pressmark.data.local.db.AppDatabase
-import com.zak.pressmark.data.local.entity.CreditRole
-import com.zak.pressmark.data.local.entity.ReleaseEntity
+import com.zak.pressmark.data.local.entity.v1.CreditRole
+import com.zak.pressmark.data.local.entity.v1.ReleaseEntity
 import com.zak.pressmark.data.repository.ReleaseRepository
 import kotlinx.coroutines.runBlocking
 import org.junit.After

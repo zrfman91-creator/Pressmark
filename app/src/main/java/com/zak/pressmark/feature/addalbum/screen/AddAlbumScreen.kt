@@ -57,7 +57,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import com.zak.pressmark.data.local.entity.ArtistEntity
+import com.zak.pressmark.data.local.entity.v1.ArtistEntity
 import com.zak.pressmark.feature.addalbum.model.AddAlbumFormState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay

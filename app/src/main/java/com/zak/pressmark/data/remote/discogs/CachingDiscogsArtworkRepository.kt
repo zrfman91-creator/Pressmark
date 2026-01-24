@@ -1,7 +1,7 @@
 // FILE: app/src/main/java/com/zak/pressmark/data/remote/discogs/CachingDiscogsArtworkRepository.kt
 package com.zak.pressmark.data.remote.discogs
 
-import com.zak.pressmark.data.local.entity.AlbumEntity
+import com.zak.pressmark.data.local.entity.v1.AlbumEntity
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async

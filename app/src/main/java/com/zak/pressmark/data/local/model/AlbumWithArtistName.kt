@@ -3,7 +3,7 @@ package com.zak.pressmark.data.local.model
 
 import androidx.room.ColumnInfo
 import androidx.room.Embedded
-import com.zak.pressmark.data.local.entity.AlbumEntity
+import com.zak.pressmark.data.local.entity.v1.AlbumEntity
 
 /**
  * Room JOIN result:

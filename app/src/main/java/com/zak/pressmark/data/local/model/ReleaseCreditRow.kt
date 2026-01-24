@@ -1,7 +1,7 @@
 package com.zak.pressmark.data.local.model
 
 import androidx.room.ColumnInfo
-import com.zak.pressmark.data.local.entity.CreditRole
+import com.zak.pressmark.data.local.entity.v1.CreditRole
 
 /**
  * Flat credit row joined with artist display name for Release details rendering.

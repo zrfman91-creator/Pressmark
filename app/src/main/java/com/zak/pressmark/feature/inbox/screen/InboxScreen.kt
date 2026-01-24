@@ -29,7 +29,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
-import com.zak.pressmark.data.local.entity.InboxItemEntity
+import com.zak.pressmark.data.local.entity.v1.InboxItemEntity
 import com.zak.pressmark.data.repository.InboxEligibility
 import com.zak.pressmark.feature.inbox.vm.InboxFilter
 

@@ -1,11 +1,11 @@
 package com.zak.pressmark.data.repository.catalog
 
-import com.zak.pressmark.data.local.dao.CatalogItemDao
-import com.zak.pressmark.data.local.dao.MasterIdentityDao
-import com.zak.pressmark.data.local.entity.CatalogItemEntity
-import com.zak.pressmark.data.local.entity.CatalogItemState
-import com.zak.pressmark.data.local.entity.MasterIdentityEntity
-import com.zak.pressmark.data.local.entity.Provider
+import com.zak.pressmark.data.local.dao.v1.CatalogItemDao
+import com.zak.pressmark.data.local.dao.v1.MasterIdentityDao
+import com.zak.pressmark.data.local.entity.v1.CatalogItemEntity
+import com.zak.pressmark.data.local.entity.v1.CatalogItemState
+import com.zak.pressmark.data.local.entity.v1.MasterIdentityEntity
+import com.zak.pressmark.data.local.entity.v1.Provider
 import com.zak.pressmark.data.local.query.CatalogItemQueryBuilder
 import com.zak.pressmark.data.util.Normalization
 import kotlinx.coroutines.flow.Flow

@@ -2,8 +2,8 @@ package com.zak.pressmark.feature.resolveinbox.vm
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.zak.pressmark.data.local.entity.InboxItemEntity
-import com.zak.pressmark.data.local.entity.ProviderSnapshotEntity
+import com.zak.pressmark.data.local.entity.v1.InboxItemEntity
+import com.zak.pressmark.data.local.entity.v1.ProviderSnapshotEntity
 import com.zak.pressmark.data.repository.InboxRepository
 import com.zak.pressmark.data.repository.ReleaseRepository
 import kotlinx.coroutines.flow.SharingStarted

@@ -3,7 +3,7 @@ package com.zak.pressmark.feature.inbox.vm
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.zak.pressmark.data.local.entity.InboxItemEntity
+import com.zak.pressmark.data.local.entity.v1.InboxItemEntity
 import com.zak.pressmark.data.model.inbox.LookupStatus
 import com.zak.pressmark.data.repository.InboxEligibility
 import com.zak.pressmark.data.repository.InboxRepository

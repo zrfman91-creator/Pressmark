@@ -5,7 +5,10 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.zak.pressmark.data.local.db.AppDatabase
-import com.zak.pressmark.data.local.entity.*
+import com.zak.pressmark.data.local.entity.v1.ArtistEntity
+import com.zak.pressmark.data.local.entity.v1.CreditRole
+import com.zak.pressmark.data.local.entity.v1.ReleaseArtistCreditEntity
+import com.zak.pressmark.data.local.entity.v1.ReleaseEntity
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals

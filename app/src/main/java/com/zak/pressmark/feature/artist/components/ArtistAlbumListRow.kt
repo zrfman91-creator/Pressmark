@@ -13,7 +13,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.zak.pressmark.data.local.entity.AlbumEntity
+import com.zak.pressmark.data.local.entity.v1.AlbumEntity
 
 /**
  * Artist-screen row:
