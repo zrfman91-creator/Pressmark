@@ -7,6 +7,7 @@ import com.zak.pressmark.data.model.inbox.CsvImportSummary
 import com.zak.pressmark.data.model.inbox.InboxErrorCode
 import com.zak.pressmark.data.remote.provider.MetadataProvider
 import com.zak.pressmark.data.remote.provider.RateLimitException
+import com.zak.pressmark.data.repository.CatalogRepository
 import com.zak.pressmark.data.repository.InboxRepository
 import com.zak.pressmark.data.repository.ReleaseRepository
 import kotlinx.coroutines.flow.SharingStarted
@@ -20,11 +21,16 @@ class ScanConveyorViewModel(
     private val inboxRepository: InboxRepository,
     private val metadataProvider: MetadataProvider,
     private val releaseRepository: ReleaseRepository,
+    private val catalogRepository: CatalogRepository,
 ) : ViewModel() {
     val inboxCount: StateFlow<Int> = inboxRepository.observeInboxCount()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
-    val libraryCount: StateFlow<Int> = releaseRepository.observeReleaseSummaries()
+    val libraryCount: StateFlow<Int> = catalogRepository
+        .observeCatalogItemSummaries(
+            query = kotlinx.coroutines.flow.flowOf(""),
+            sort = kotlinx.coroutines.flow.flowOf(com.zak.pressmark.feature.catalog.vm.CatalogSort.AddedNewest),
+        )
         .map { it.size }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
@@ -44,7 +50,7 @@ class ScanConveyorViewModel(
                 val autoCommitCandidate = inboxRepository.applyLookupResults(id, candidates, errorCode)
                 if (autoCommitCandidate != null) {
                     runCatching {
-                        releaseRepository.upsertFromProvider(
+                        val releaseId = releaseRepository.upsertFromProvider(
                             provider = autoCommitCandidate.provider,
                             providerItemId = autoCommitCandidate.providerItemId,
                         )
@@ -52,6 +58,7 @@ class ScanConveyorViewModel(
                         inboxRepository.markCommitted(
                             inboxItemId = id,
                             committedProviderItemId = autoCommitCandidate.providerItemId,
+                            releaseId = it,
                         )
                         true
                     } ?: false

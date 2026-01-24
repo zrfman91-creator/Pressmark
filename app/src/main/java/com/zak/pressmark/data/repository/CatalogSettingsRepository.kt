@@ -21,6 +21,11 @@ enum class CatalogDensity {
     SPACIOUS,
 }
 
+enum class CatalogSource {
+    RELEASE,
+    CATALOG_ITEM,
+}
+
 class CatalogSettingsRepository(
     context: Context,
 ) {
@@ -40,6 +45,13 @@ class CatalogSettingsRepository(
         }
     }
 
+    fun observeCatalogSource(): Flow<CatalogSource> {
+        return dataStore.data.map { prefs ->
+            val raw = prefs[PreferencesKeys.SOURCE] ?: CatalogSource.RELEASE.name
+            runCatching { CatalogSource.valueOf(raw) }.getOrDefault(CatalogSource.RELEASE)
+        }
+    }
+
     suspend fun setViewMode(mode: CatalogViewMode) {
         dataStore.edit { prefs ->
             prefs[PreferencesKeys.VIEW_MODE] = mode.name
@@ -52,8 +64,15 @@ class CatalogSettingsRepository(
         }
     }
 
+    suspend fun setCatalogSource(source: CatalogSource) {
+        dataStore.edit { prefs ->
+            prefs[PreferencesKeys.SOURCE] = source.name
+        }
+    }
+
     private object PreferencesKeys {
         val VIEW_MODE = stringPreferencesKey("catalog_view_mode")
         val DENSITY = stringPreferencesKey("catalog_density")
+        val SOURCE = stringPreferencesKey("catalog_source")
     }
 }

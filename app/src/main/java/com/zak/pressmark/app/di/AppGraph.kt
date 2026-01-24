@@ -18,6 +18,7 @@ import com.zak.pressmark.data.remote.provider.DiscogsMetadataProvider
 import com.zak.pressmark.data.remote.provider.MetadataProvider
 import com.zak.pressmark.data.repository.AlbumRepository
 import com.zak.pressmark.data.repository.ArtistRepository
+import com.zak.pressmark.data.repository.CatalogRepository
 import com.zak.pressmark.data.repository.CatalogSettingsRepository
 import com.zak.pressmark.data.repository.DefaultInboxRepository
 import com.zak.pressmark.data.repository.DevSettingsRepository
@@ -85,13 +86,21 @@ class AppGraph(
         ReleaseRepository(
             db = database,
             discogsApiService = discogsApiService,
+            catalogRepository = catalogRepository,
         )
+    }
+
+    val catalogRepository: CatalogRepository by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        CatalogRepository(database)
     }
 
     val inboxRepository: InboxRepository by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         DefaultInboxRepository(
             inboxItemDao = database.inboxItemDao(),
             providerSnapshotDao = database.providerSnapshotDao(),
+            evidenceArtifactDao = database.evidenceArtifactDao(),
+            verificationEventDao = database.verificationEventDao(),
+            catalogItemPressingDao = database.catalogItemPressingDao(),
         )
     }
 

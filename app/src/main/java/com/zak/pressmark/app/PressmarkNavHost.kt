@@ -21,6 +21,9 @@ import com.zak.pressmark.feature.catalog.route.AlbumListRoute
 import com.zak.pressmark.feature.devsettings.route.DevSettingsRoute
 import com.zak.pressmark.feature.catalog.vm.AlbumListViewModel
 import com.zak.pressmark.feature.catalog.vm.CatalogViewModelFactory
+import com.zak.pressmark.feature.catalogdetails.route.CatalogDetailsRoute
+import com.zak.pressmark.feature.catalogdetails.vm.CatalogDetailsViewModel
+import com.zak.pressmark.feature.catalogdetails.vm.CatalogDetailsViewModelFactory
 import com.zak.pressmark.feature.artist.route.ArtistRoute
 import com.zak.pressmark.feature.artist.vm.ArtistViewModel
 import com.zak.pressmark.feature.artist.vm.ArtistViewModelFactory
@@ -61,7 +64,7 @@ fun PressmarkNavHost(
         composable(PressmarkRoutes.LIST) {
             val listFactory = remember(graph) {
                 CatalogViewModelFactory(
-                    releaseRepo = graph.releaseRepository,
+                    catalogRepository = graph.catalogRepository,
                     catalogSettingsRepository = graph.catalogSettingsRepository,
                 )
             }
@@ -72,8 +75,8 @@ fun PressmarkNavHost(
                 vm = vm,
                 onAddAlbum = { navController.navigate(PressmarkRoutes.ADD) },
                 onOpenScanConveyor = { navController.navigate(PressmarkRoutes.SCAN_CONVEYOR) },
-                onOpenRelease = { releaseId ->
-                    navController.navigate(PressmarkRoutes.details(releaseId))
+                onOpenRelease = { catalogItemId ->
+                    navController.navigate(PressmarkRoutes.catalogDetails(catalogItemId))
                 },
                 showDevSettings = BuildConfig.DEBUG,
                 onOpenDevSettings = { navController.navigate(PressmarkRoutes.DEV_SETTINGS) },
@@ -120,6 +123,28 @@ fun PressmarkNavHost(
                         )
                     )
                 }
+            )
+        }
+
+        composable(
+            route = PressmarkRoutes.CATALOG_DETAILS_PATTERN,
+            arguments = listOf(navArgument(PressmarkRoutes.ARG_CATALOG_ITEM_ID) {
+                type = NavType.StringType
+            }),
+        ) { backStackEntry ->
+            val catalogItemId =
+                backStackEntry.arguments?.getString(PressmarkRoutes.ARG_CATALOG_ITEM_ID).orEmpty()
+
+            val factory =
+                remember(graph, catalogItemId) { CatalogDetailsViewModelFactory(graph, catalogItemId) }
+            val vm: CatalogDetailsViewModel = viewModel(
+                key = "catalog_details_$catalogItemId",
+                factory = factory,
+            )
+
+            CatalogDetailsRoute(
+                vm = vm,
+                onBack = { navController.popBackStack() },
             )
         }
 
@@ -327,6 +352,7 @@ fun PressmarkNavHost(
                     inboxRepository = graph.inboxRepository,
                     metadataProvider = graph.metadataProvider,
                     releaseRepository = graph.releaseRepository,
+                    catalogRepository = graph.catalogRepository,
                 )
             }
             val vm: ScanConveyorViewModel = viewModel(factory = factory)

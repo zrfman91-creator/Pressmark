@@ -50,6 +50,7 @@ class ReleaseRepository(
     private val artistRepository: ArtistRepository = ArtistRepository(db.artistDao()),
     private val creditsBuilder: ReleaseArtistCreditsBuilder = ReleaseArtistCreditsBuilder(artistRepository),
     private val discogsApiService: DiscogsApiService? = null,
+    private val catalogRepository: CatalogRepository? = null,
 ) {
     data class ReleaseDetailsSnapshot(
         val release: ReleaseEntity?,
@@ -76,6 +77,7 @@ class ReleaseRepository(
             creditsProvider = { credits },
             artworks = artworks,
             primaryArtworkId = primaryArtworkId,
+            artistLineOverride = null,
         )
     }
 
@@ -98,6 +100,7 @@ class ReleaseRepository(
             creditsProvider = { creditsBuilder.buildForRelease(releaseId = release.id, rawArtist = rawArtist) },
             artworks = artworks,
             primaryArtworkId = primaryArtworkId,
+            artistLineOverride = rawArtist,
         )
     }
 
@@ -106,6 +109,7 @@ class ReleaseRepository(
         creditsProvider: suspend () -> List<ReleaseArtistCreditEntity>,
         artworks: List<ArtworkEntity>,
         primaryArtworkId: Long?,
+        artistLineOverride: String?,
     ) {
         db.withTransaction {
             releaseDao.insert(release)
@@ -129,6 +133,11 @@ class ReleaseRepository(
                 artworkDao.setPrimaryArtwork(release.id, primaryArtworkId)
             }
         }
+
+        catalogRepository?.upsertFromRelease(
+            releaseId = release.id,
+            artistLineOverride = artistLineOverride,
+        )
     }
 
     suspend fun listReleases(): List<ReleaseEntity> = releaseDao.listAll()
@@ -214,7 +223,7 @@ class ReleaseRepository(
         rating: Int?,
         lastPlayedAt: Long?,
     ): Int {
-        return db.withTransaction {
+        val updated = db.withTransaction {
             val updated = releaseDao.updateReleaseDetails(
                 releaseId = releaseId,
                 title = title.trim(),
@@ -235,6 +244,10 @@ class ReleaseRepository(
 
             updated
         }
+        if (updated > 0) {
+            catalogRepository?.upsertFromRelease(releaseId = releaseId, artistLineOverride = rawArtist)
+        }
+        return updated
     }
 
     suspend fun updateReleaseMetadata(
@@ -248,7 +261,7 @@ class ReleaseRepository(
         notes: String?,
         discogsReleaseId: Long?,
     ): Boolean {
-        return db.withTransaction {
+        val updated = db.withTransaction {
             val existing = releaseDao.getById(releaseId) ?: return@withTransaction false
             releaseDao.update(
                 existing.copy(
@@ -264,6 +277,10 @@ class ReleaseRepository(
             )
             true
         }
+        if (updated) {
+            catalogRepository?.upsertFromRelease(releaseId = releaseId)
+        }
+        return updated
     }
 
     suspend fun setLocalCover(releaseId: String, coverUri: String?) {
@@ -391,6 +408,8 @@ class ReleaseRepository(
             )
             artworkDao.setPrimaryArtwork(releaseId, artworkId)
         }
+
+        catalogRepository?.upsertFromRelease(releaseId = releaseId)
     }
 
     suspend fun deleteRelease(releaseId: String) {

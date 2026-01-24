@@ -61,6 +61,7 @@ class ResolveInboxViewModel(
             repository.markCommitted(
                 inboxItemId = inboxItemId,
                 committedProviderItemId = candidate.providerItemId,
+                releaseId = releaseId,
             )
             _didCommit.value = true
             onComplete(nextId)
