@@ -4,8 +4,8 @@ package com.zak.pressmark
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.zak.pressmark.data.local.db.AppDatabase
-import com.zak.pressmark.data.local.entity.v1.ArtistEntity
+import com.zak.pressmark.data.local.db.v2.AppDatabaseV2
+import com.zak.pressmark.data.local.entity.v2.ArtistEntity
 import com.zak.pressmark.data.local.entity.v1.CreditRole
 import com.zak.pressmark.data.local.entity.v1.ReleaseArtistCreditEntity
 import com.zak.pressmark.data.local.entity.v1.ReleaseEntity
@@ -20,13 +20,13 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class ArtistMergeSmokeTest {
 
-    private lateinit var db: AppDatabase
+    private lateinit var db: AppDatabaseV2
 
     @Before
     fun setup() {
         db = Room.inMemoryDatabaseBuilder(
             ApplicationProvider.getApplicationContext(),
-            AppDatabase::class.java
+            AppDatabaseV2::class.java
         )
             .allowMainThreadQueries()
             .build()
