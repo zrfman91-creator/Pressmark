@@ -68,10 +68,11 @@ class LookupDrainWorker(
                             provider = autoCommitCandidate.provider,
                             providerItemId = autoCommitCandidate.providerItemId,
                         )
-                    }.getOrNull()?.let {
+                    }.getOrNull()?.let { releaseId ->
                         repo.markCommitted(
                             inboxItemId = item.id,
                             committedProviderItemId = autoCommitCandidate.providerItemId,
+                            releaseId = releaseId,
                         )
                     }
                 }

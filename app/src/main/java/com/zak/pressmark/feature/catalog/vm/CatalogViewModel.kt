@@ -4,17 +4,16 @@ package com.zak.pressmark.feature.catalog.vm
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.zak.pressmark.data.model.ReleaseSummary
+import com.zak.pressmark.data.model.CatalogItemSummary
 import com.zak.pressmark.data.repository.CatalogDensity
+import com.zak.pressmark.data.repository.CatalogRepository
 import com.zak.pressmark.data.repository.CatalogSettingsRepository
 import com.zak.pressmark.data.repository.CatalogViewMode
-import com.zak.pressmark.data.repository.ReleaseRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.stateIn
@@ -32,7 +31,7 @@ enum class CatalogSort {
 }
 
 class AlbumListViewModel(
-    private val releaseRepository: ReleaseRepository,
+    private val catalogRepository: CatalogRepository,
     private val catalogSettingsRepository: CatalogSettingsRepository,
 ) : ViewModel() {
 
@@ -78,76 +77,24 @@ class AlbumListViewModel(
         }
     }
 
-    // Reactive list, filtered + sorted
-    val releaseListItems: StateFlow<List<ReleaseSummary>> =
-        combine(
-            releaseRepository.observeReleaseSummaries(),
-            _query.debounce(150).distinctUntilChanged(),
-            _sort,
-        ) { items, qRaw, sort ->
-            val q = qRaw.trim()
-            val filtered = if (q.isBlank()) items else items.filter { it.matchesQuery(q) }
-            filtered.sortedWith(sort.comparator())
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    // Reactive list, filtered + sorted in Room
+    val catalogItems: StateFlow<List<CatalogItemSummary>> =
+        catalogRepository.observeCatalogItemSummaries(
+            query = _query.debounce(150).distinctUntilChanged(),
+            sort = _sort,
+        ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    fun deleteRelease(release: ReleaseSummary) {
+    fun deleteCatalogItem(item: CatalogItemSummary) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                releaseRepository.deleteRelease(release.releaseId)
+                catalogRepository.deleteCatalogItem(item.catalogItemId)
             } catch (t: Throwable) {
-                _ui.value = _ui.value.copy(snackMessage = t.message ?: "Failed to delete release.")
+                _ui.value = _ui.value.copy(snackMessage = t.message ?: "Failed to delete catalog item.")
             }
         }
     }
 
     fun dismissSnack() {
         _ui.value = _ui.value.copy(snackMessage = null)
-    }
-}
-
-private fun ReleaseSummary.matchesQuery(qRaw: String): Boolean {
-    val needle = qRaw.lowercase()
-
-    fun hit(value: String?): Boolean =
-        !value.isNullOrBlank() && value.lowercase().contains(needle)
-
-    return hit(title) ||
-        hit(artistLine) ||
-        hit(catalogNo) ||
-        hit(barcode) ||
-        hit(label) ||
-        hit(country) ||
-        hit(format) ||
-        hit(releaseType) ||
-        hit(releaseYear?.toString())
-}
-
-private fun CatalogSort.comparator(): Comparator<ReleaseSummary> {
-    fun titleKey(it: ReleaseSummary) = it.title.lowercase()
-    fun artistKey(it: ReleaseSummary) = it.artistLine.lowercase()
-    fun addedKey(it: ReleaseSummary) = it.addedAt
-    fun yearKey(it: ReleaseSummary) = it.releaseYear ?: Int.MIN_VALUE
-
-    return when (this) {
-        CatalogSort.AddedNewest ->
-            compareByDescending<ReleaseSummary> { addedKey(it) }
-                .thenBy { it.releaseId }
-
-        CatalogSort.TitleAZ ->
-            compareBy<ReleaseSummary> { titleKey(it) }
-                .thenByDescending { addedKey(it) }
-                .thenBy { it.releaseId }
-
-        CatalogSort.ArtistAZ ->
-            compareBy<ReleaseSummary> { artistKey(it) }
-                .thenBy { titleKey(it) }
-                .thenByDescending { addedKey(it) }
-                .thenBy { it.releaseId }
-
-        CatalogSort.YearNewest ->
-            compareByDescending<ReleaseSummary> { yearKey(it) }
-                .thenBy { titleKey(it) }
-                .thenByDescending { addedKey(it) }
-                .thenBy { it.releaseId }
     }
 }

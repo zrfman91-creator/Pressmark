@@ -151,6 +151,88 @@ object DbSchema {
         const val CREATED_AT = "created_at"
     }
 
+    /**
+     * Master-first catalog items (top-level identity).
+     */
+    object CatalogItem {
+        const val TABLE = "catalog_items"
+
+        const val ID = "id"
+        const val MASTER_IDENTITY_ID = "master_identity_id"
+        const val DISPLAY_TITLE = "display_title"
+        const val DISPLAY_ARTIST_LINE = "display_artist_line"
+        const val PRIMARY_ARTWORK_URI = "primary_artwork_uri"
+        const val RELEASE_YEAR = "release_year"
+        const val STATE = "state"
+        const val ADDED_AT = "added_at"
+        const val UPDATED_AT = "updated_at"
+    }
+
+    object MasterIdentity {
+        const val TABLE = "master_identities"
+
+        const val ID = "id"
+        const val PROVIDER = "provider"
+        const val MASTER_ID = "master_id"
+        const val TITLE = "title"
+        const val ARTIST_LINE = "artist_line"
+        const val YEAR = "year"
+        const val GENRES = "genres"
+        const val STYLES = "styles"
+        const val ARTWORK_URI = "artwork_uri"
+        const val RAW_JSON = "raw_json"
+        const val CREATED_AT = "created_at"
+    }
+
+    object CatalogItemPressing {
+        const val TABLE = "catalog_item_pressings"
+
+        const val ID = "id"
+        const val CATALOG_ITEM_ID = "catalog_item_id"
+        const val RELEASE_ID = "release_id"
+        const val EVIDENCE_SCORE = "evidence_score"
+        const val CREATED_AT = "created_at"
+    }
+
+    object CatalogVariant {
+        const val TABLE = "catalog_variants"
+
+        const val ID = "id"
+        const val CATALOG_ITEM_ID = "catalog_item_id"
+        const val PRESSING_ID = "pressing_id"
+        const val VARIANT_KEY = "variant_key"
+        const val NOTES = "notes"
+        const val CREATED_AT = "created_at"
+    }
+
+    object EvidenceArtifact {
+        const val TABLE = "evidence_artifacts"
+
+        const val ID = "id"
+        const val CATALOG_ITEM_ID = "catalog_item_id"
+        const val TYPE = "type"
+        const val RAW_VALUE = "raw_value"
+        const val NORMALIZED_VALUE = "normalized_value"
+        const val SOURCE = "source"
+        const val CONFIDENCE = "confidence"
+        const val PHOTO_URI = "photo_uri"
+        const val CREATED_AT = "created_at"
+    }
+
+    object VerificationEvent {
+        const val TABLE = "verification_events"
+
+        const val ID = "id"
+        const val CATALOG_ITEM_ID = "catalog_item_id"
+        const val EVENT_TYPE = "event_type"
+        const val PROVIDER = "provider"
+        const val PROVIDER_ITEM_ID = "provider_item_id"
+        const val PREVIOUS_RELEASE_ID = "previous_release_id"
+        const val NEW_RELEASE_ID = "new_release_id"
+        const val REASONS_JSON = "reasons_json"
+        const val CREATED_AT = "created_at"
+    }
+
     object InboxItem {
         const val TABLE = "inbox_items"
 

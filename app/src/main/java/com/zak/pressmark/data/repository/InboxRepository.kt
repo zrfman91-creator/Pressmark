@@ -53,6 +53,7 @@ interface InboxRepository {
     suspend fun markCommitted(
         inboxItemId: String,
         committedProviderItemId: String?,
+        releaseId: String?,
     )
     suspend fun retryLookup(inboxItemId: String)
 
@@ -78,6 +79,9 @@ data class ExtractedFields(
 class DefaultInboxRepository(
     private val inboxItemDao: InboxItemDao,
     private val providerSnapshotDao: ProviderSnapshotDao,
+    private val evidenceArtifactDao: com.zak.pressmark.data.local.dao.EvidenceArtifactDao,
+    private val verificationEventDao: com.zak.pressmark.data.local.dao.VerificationEventDao,
+    private val catalogItemPressingDao: com.zak.pressmark.data.local.dao.CatalogItemPressingDao,
 ) : InboxRepository {
     override fun observeInboxCount(): Flow<Int> = inboxItemDao.observeInboxCount()
 
@@ -316,8 +320,18 @@ class DefaultInboxRepository(
     override suspend fun markCommitted(
         inboxItemId: String,
         committedProviderItemId: String?,
+        releaseId: String?,
     ) {
         val item = inboxItemDao.getById(inboxItemId)
+        val catalogItemId = releaseId?.let { catalogItemPressingDao.findCatalogItemIdByReleaseId(it) }
+        if (item != null && catalogItemId != null) {
+            persistEvidenceAndVerification(
+                item = item,
+                catalogItemId = catalogItemId,
+                committedProviderItemId = committedProviderItemId,
+                releaseId = releaseId,
+            )
+        }
         InboxReferencePhotoStore.delete(item?.referencePhotoUri)
         providerSnapshotDao.deleteForInboxItem(inboxItemId)
         inboxItemDao.deleteById(inboxItemId)
@@ -509,5 +523,94 @@ class DefaultInboxRepository(
             confidence = score.confidence,
             reasonsJson = score.reasonsJson,
         )
+    }
+
+    private suspend fun persistEvidenceAndVerification(
+        item: InboxItemEntity,
+        catalogItemId: String,
+        committedProviderItemId: String?,
+        releaseId: String?,
+    ) {
+        val now = System.currentTimeMillis()
+        val evidence = buildEvidenceArtifacts(item, catalogItemId, now)
+        if (evidence.isNotEmpty()) {
+            evidenceArtifactDao.insertAll(evidence)
+        }
+        val event = com.zak.pressmark.data.local.entity.VerificationEventEntity(
+            id = java.util.UUID.randomUUID().toString(),
+            catalogItemId = catalogItemId,
+            eventType = "CONFIRMED",
+            provider = committedProviderItemId?.let { "discogs" } ?: item.committedProviderItemId?.let { "discogs" },
+            providerItemId = committedProviderItemId ?: item.committedProviderItemId,
+            previousReleaseId = null,
+            newReleaseId = releaseId,
+            reasonsJson = item.confidenceReasonsJson,
+            createdAt = now,
+        )
+        verificationEventDao.insert(event)
+    }
+
+    private fun buildEvidenceArtifacts(
+        item: InboxItemEntity,
+        catalogItemId: String,
+        now: Long,
+    ): List<com.zak.pressmark.data.local.entity.EvidenceArtifactEntity> {
+        val results = mutableListOf<com.zak.pressmark.data.local.entity.EvidenceArtifactEntity>()
+        fun addEvidence(
+            type: String,
+            raw: String?,
+            normalized: String?,
+            source: String?,
+            photoUri: String? = null,
+        ) {
+            if (raw.isNullOrBlank() && photoUri.isNullOrBlank()) return
+            results.add(
+                com.zak.pressmark.data.local.entity.EvidenceArtifactEntity(
+                    id = java.util.UUID.randomUUID().toString(),
+                    catalogItemId = catalogItemId,
+                    type = type,
+                    rawValue = raw,
+                    normalizedValue = normalized,
+                    source = source,
+                    confidence = item.confidenceScore,
+                    photoUri = photoUri,
+                    createdAt = now,
+                )
+            )
+        }
+        val source = item.sourceType.name
+        addEvidence("BARCODE", item.barcode, normalizeBarcode(item.barcode), source)
+        addEvidence("CATALOG_NO", item.extractedCatalogNo, normalizeText(item.extractedCatalogNo), source)
+        addEvidence("LABEL", item.extractedLabel, normalizeText(item.extractedLabel), source)
+        addEvidence("TITLE", item.extractedTitle ?: item.rawTitle, normalizeText(item.extractedTitle ?: item.rawTitle), source)
+        addEvidence("ARTIST", item.extractedArtist ?: item.rawArtist, normalizeText(item.extractedArtist ?: item.rawArtist), source)
+        item.photoUris.forEach { uri ->
+            addEvidence("PHOTO", uri, null, source, photoUri = uri)
+        }
+        item.referencePhotoUri?.let { uri ->
+            addEvidence("REFERENCE_PHOTO", uri, null, source, photoUri = uri)
+        }
+        return results
+    }
+
+    private fun normalizeText(value: String?): String? {
+        return value
+            ?.trim()
+            ?.lowercase()
+            ?.replace(Regex("\\s+"), " ")
+            ?.takeIf { it.isNotBlank() }
+    }
+
+    private fun normalizeBarcode(value: String?): String? {
+        val digits = value
+            ?.trim()
+            ?.replace(Regex("[^0-9]"), "")
+            ?.takeIf { it.isNotBlank() }
+        return when (digits?.length) {
+            12 -> "0$digits"
+            13 -> digits
+            14 -> digits.drop(1)
+            else -> digits
+        }
     }
 }

@@ -28,7 +28,13 @@ object PressmarkRoutes {
     // Developer settings (debug only entry)
     const val DEV_SETTINGS = "dev_settings"
 
-    // Album Details
+    // Catalog Details (master-first)
+    const val CATALOG_DETAILS = "catalog_details"
+    const val ARG_CATALOG_ITEM_ID = "catalogItemId"
+    const val CATALOG_DETAILS_PATTERN = "$CATALOG_DETAILS/{$ARG_CATALOG_ITEM_ID}"
+    fun catalogDetails(catalogItemId: String): String = "$CATALOG_DETAILS/$catalogItemId"
+
+    // Album Details (legacy release-first)
     const val DETAILS = "album_details"
     const val ARG_ALBUM_ID = "albumId"
     const val DETAILS_PATTERN = "$DETAILS/{$ARG_ALBUM_ID}"
