@@ -98,6 +98,16 @@ fun AddWorkRoute(
                 Text("Search Discogs")
             }
 
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Button(
+                onClick = { vm.addManualWork() },
+                enabled = !state.isLoading && state.artist.isNotBlank() && state.title.isNotBlank(),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Add without Discogs")
+            }
+
             if (state.isLoading) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(
@@ -113,6 +123,11 @@ fun AddWorkRoute(
                 Text(text = msg)
             }
 
+            state.infoMessage?.let { msg ->
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(text = msg)
+            }
+
             if (state.results.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text("Matches")
@@ -124,7 +139,7 @@ fun AddWorkRoute(
                     items(state.results) { item ->
                         CandidateRow(
                             item = item,
-                            onClick = { vm.addToLibrary(item, onDone) },
+                            onClick = { vm.addToLibrary(item) },
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                     }

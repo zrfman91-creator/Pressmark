@@ -18,6 +18,12 @@ interface ReleaseDaoV2 {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(releases: List<ReleaseEntityV2>)
 
+    @Query("SELECT * FROM ${DbSchemaV2.Release.TABLE} WHERE ${DbSchemaV2.Release.WORK_ID} = :workId")
+    suspend fun getByWorkId(workId: String): List<ReleaseEntityV2>
+
+    @Query("DELETE FROM ${DbSchemaV2.Release.TABLE} WHERE ${DbSchemaV2.Release.WORK_ID} = :workId")
+    suspend fun deleteByWorkId(workId: String)
+
     @Query("SELECT * FROM ${DbSchemaV2.Release.TABLE} WHERE ${DbSchemaV2.Release.ID} = :releaseId LIMIT 1")
     suspend fun getById(releaseId: String): ReleaseEntityV2?
 

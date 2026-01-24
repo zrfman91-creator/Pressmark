@@ -15,6 +15,7 @@ data class LibraryItemUi(
     val title: String,
     val artistLine: String,
     val year: Int?,
+    val artworkUri: String?,
 )
 
 data class LibraryUiState(
@@ -40,10 +41,17 @@ class LibraryViewModel @Inject constructor(
                                 title = w.title,
                                 artistLine = w.artistLine,
                                 year = w.year,
+                                artworkUri = w.primaryArtworkUri,
                             )
                         },
                     )
                 }
+        }
+    }
+
+    fun deleteWork(workId: String) {
+        viewModelScope.launch {
+            workRepositoryV2.deleteWork(workId)
         }
     }
 }

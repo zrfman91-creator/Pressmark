@@ -33,6 +33,30 @@ interface WorkDaoV2 {
     @Query(
         """
         SELECT * FROM ${DbSchemaV2.Work.TABLE}
+        WHERE ${DbSchemaV2.Work.ARTIST_NORMALIZED} = :artistNorm
+          AND ${DbSchemaV2.Work.TITLE_NORMALIZED} = :titleNorm
+          AND ((:year IS NULL AND ${DbSchemaV2.Work.YEAR} IS NULL)
+            OR ${DbSchemaV2.Work.YEAR} = :year)
+        ORDER BY ${DbSchemaV2.Work.UPDATED_AT} DESC
+        LIMIT 1
+        """
+    )
+    suspend fun getByNormalized(artistNorm: String, titleNorm: String, year: Int?): WorkEntityV2?
+
+    @Query(
+        """
+        SELECT * FROM ${DbSchemaV2.Work.TABLE}
+        WHERE ${DbSchemaV2.Work.ARTIST_NORMALIZED} = :artistNorm
+          AND ${DbSchemaV2.Work.TITLE_NORMALIZED} = :titleNorm
+        ORDER BY ${DbSchemaV2.Work.UPDATED_AT} DESC
+        LIMIT 1
+        """
+    )
+    suspend fun getByNormalizedIgnoringYear(artistNorm: String, titleNorm: String): WorkEntityV2?
+
+    @Query(
+        """
+        SELECT * FROM ${DbSchemaV2.Work.TABLE}
         ORDER BY ${DbSchemaV2.Work.UPDATED_AT} DESC
         """
     )

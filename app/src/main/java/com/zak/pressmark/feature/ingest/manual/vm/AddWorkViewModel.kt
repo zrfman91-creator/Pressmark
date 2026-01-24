@@ -29,6 +29,7 @@ data class AddWorkUiState(
     val year: String = "",
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
+    val infoMessage: String? = null,
     val results: List<DiscogsCandidateUi> = emptyList(),
 )
 
@@ -42,16 +43,16 @@ class AddWorkViewModel @Inject constructor(
     val uiState = _uiState.asStateFlow()
 
     fun onArtistChanged(value: String) {
-        _uiState.value = _uiState.value.copy(artist = value, errorMessage = null)
+        _uiState.value = _uiState.value.copy(artist = value, errorMessage = null, infoMessage = null)
     }
 
     fun onTitleChanged(value: String) {
-        _uiState.value = _uiState.value.copy(title = value, errorMessage = null)
+        _uiState.value = _uiState.value.copy(title = value, errorMessage = null, infoMessage = null)
     }
 
     fun onYearChanged(value: String) {
         val cleaned = value.filter { it.isDigit() }
-        _uiState.value = _uiState.value.copy(year = cleaned, errorMessage = null)
+        _uiState.value = _uiState.value.copy(year = cleaned, errorMessage = null, infoMessage = null)
     }
 
     fun searchDiscogs() {
@@ -68,7 +69,12 @@ class AddWorkViewModel @Inject constructor(
         val year = _uiState.value.year.toIntOrNull()
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null, results = emptyList())
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                errorMessage = null,
+                infoMessage = null,
+                results = emptyList(),
+            )
 
             try {
                 val candidates = discogsClient.searchMasters(
@@ -110,15 +116,14 @@ class AddWorkViewModel @Inject constructor(
      */
     fun addToLibrary(
         candidate: DiscogsCandidateUi,
-        onDone: () -> Unit,
     ) {
         val (artist, title) = parseArtistTitle(candidate.displayTitle)
         val year = candidate.year
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null, infoMessage = null)
             try {
-                workRepositoryV2.upsertDiscogsMasterWork(
+                val result = workRepositoryV2.upsertDiscogsMasterWork(
                     discogsMasterId = candidate.masterId,
                     title = title,
                     artistLine = artist,
@@ -128,8 +133,55 @@ class AddWorkViewModel @Inject constructor(
                     styles = candidate.styles,
                 )
 
-                _uiState.value = _uiState.value.copy(isLoading = false)
-                onDone()
+                val info = when (result) {
+                    is WorkRepositoryV2.UpsertResult.Created -> "Added to library."
+                    is WorkRepositoryV2.UpsertResult.UpdatedExisting -> "Already in library — updated details."
+                    is WorkRepositoryV2.UpsertResult.PossibleDuplicate -> "Possible duplicate — added anyway."
+                }
+
+                _uiState.value = _uiState.value.copy(isLoading = false, infoMessage = info)
+            } catch (t: Throwable) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    errorMessage = t.message ?: "Failed to add to library",
+                )
+            }
+        }
+    }
+
+    fun addManualWork() {
+        val artist = _uiState.value.artist.trim()
+        val title = _uiState.value.title.trim()
+        val year = _uiState.value.year.toIntOrNull()
+
+        if (artist.isBlank() || title.isBlank()) {
+            _uiState.value = _uiState.value.copy(
+                errorMessage = "Artist and title are required.",
+                infoMessage = null,
+            )
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null, infoMessage = null)
+            try {
+                val result = workRepositoryV2.upsertManualWork(
+                    title = title,
+                    artistLine = artist,
+                    year = year,
+                )
+
+                val info = when (result) {
+                    is WorkRepositoryV2.UpsertResult.Created -> "Added to library."
+                    is WorkRepositoryV2.UpsertResult.UpdatedExisting -> "Already in library — updated details."
+                    is WorkRepositoryV2.UpsertResult.PossibleDuplicate -> result.reason
+                }
+
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    infoMessage = info,
+                    results = emptyList(),
+                )
             } catch (t: Throwable) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
