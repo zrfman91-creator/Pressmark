@@ -18,6 +18,9 @@ interface PressingDaoV2 {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(pressings: List<PressingEntityV2>)
 
+    @Query("DELETE FROM ${DbSchemaV2.Pressing.TABLE} WHERE ${DbSchemaV2.Pressing.RELEASE_ID} = :releaseId")
+    suspend fun deleteByReleaseId(releaseId: String)
+
     @Query("SELECT * FROM ${DbSchemaV2.Pressing.TABLE} WHERE ${DbSchemaV2.Pressing.ID} = :pressingId LIMIT 1")
     suspend fun getById(pressingId: String): PressingEntityV2?
 

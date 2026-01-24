@@ -1,6 +1,5 @@
 package com.zak.pressmark.app
 
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -16,6 +15,7 @@ import com.zak.pressmark.feature.ingest.barcode.vm.AddBarcodeViewModel
 import com.zak.pressmark.feature.ingest.manual.route.AddWorkRoute
 import com.zak.pressmark.feature.library.route.LibraryRoute
 import com.zak.pressmark.feature.library.vm.LibraryViewModel
+import com.zak.pressmark.feature.workdetails.route.WorkDetailsRoute
 import kotlinx.coroutines.flow.collectLatest
 
 @Composable
@@ -86,7 +86,9 @@ fun PressmarkNavHost(
             route = PressmarkRoutes.WORK_DETAILS_PATTERN,
             arguments = listOf(navArgument(PressmarkRoutes.ARG_WORK_ID) { type = NavType.StringType }),
         ) {
-            Text("Work details (coming soon)")
+            WorkDetailsRoute(
+                onBack = { navController.popBackStack() },
+            )
         }
     }
 }

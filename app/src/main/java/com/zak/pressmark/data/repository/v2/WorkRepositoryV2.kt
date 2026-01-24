@@ -24,6 +24,12 @@ class WorkRepositoryV2 @Inject constructor(
     private val variantDao: VariantDaoV2,
 ) {
 
+    sealed class UpsertResult {
+        data class Created(val workId: String) : UpsertResult()
+        data class UpdatedExisting(val workId: String) : UpsertResult()
+        data class PossibleDuplicate(val existingWorkId: String?, val reason: String) : UpsertResult()
+    }
+
     suspend fun createWork(
         title: String,
         artistLine: String,
@@ -64,7 +70,7 @@ class WorkRepositoryV2 @Inject constructor(
         primaryArtworkUri: String? = null,
         genres: List<String> = emptyList(),
         styles: List<String> = emptyList(),
-    ): String {
+    ): UpsertResult {
         val now = System.currentTimeMillis()
 
         val existing = workDao.getByDiscogsMasterId(discogsMasterId)
@@ -88,7 +94,81 @@ class WorkRepositoryV2 @Inject constructor(
 
         db.withTransaction { workDao.upsert(entity) }
 
-        return workId
+        return if (existing == null) {
+            UpsertResult.Created(workId)
+        } else {
+            UpsertResult.UpdatedExisting(workId)
+        }
+    }
+
+    suspend fun upsertManualWork(
+        title: String,
+        artistLine: String,
+        year: Int?,
+        primaryArtworkUri: String? = null,
+    ): UpsertResult {
+        val now = System.currentTimeMillis()
+        val titleNormalized = normalize(title)
+        val artistNormalized = normalize(artistLine)
+
+        val existingExact = workDao.getByNormalized(
+            artistNorm = artistNormalized,
+            titleNorm = titleNormalized,
+            year = year,
+        )
+
+        if (existingExact != null) {
+            val updated = existingExact.copy(
+                title = title,
+                titleNormalized = titleNormalized,
+                artistLine = artistLine,
+                artistNormalized = artistNormalized,
+                year = year,
+                primaryArtworkUri = primaryArtworkUri ?: existingExact.primaryArtworkUri,
+                updatedAt = now,
+            )
+
+            db.withTransaction { workDao.upsert(updated) }
+
+            return UpsertResult.UpdatedExisting(existingExact.id)
+        }
+
+        val possibleDuplicate = if (year == null) {
+            workDao.getByNormalizedIgnoringYear(
+                artistNorm = artistNormalized,
+                titleNorm = titleNormalized,
+            )
+        } else {
+            null
+        }
+
+        val workId = "work:${sha1("$titleNormalized|$artistNormalized|$year")}"
+        val entity = WorkEntityV2(
+            id = workId,
+            title = title,
+            titleNormalized = titleNormalized,
+            artistLine = artistLine,
+            artistNormalized = artistNormalized,
+            year = year,
+            genresJson = "[]",
+            stylesJson = "[]",
+            primaryArtworkUri = primaryArtworkUri,
+            discogsMasterId = null,
+            musicBrainzReleaseGroupId = null,
+            createdAt = now,
+            updatedAt = now,
+        )
+
+        db.withTransaction { workDao.upsert(entity) }
+
+        return if (possibleDuplicate != null) {
+            UpsertResult.PossibleDuplicate(
+                existingWorkId = possibleDuplicate.id,
+                reason = "Similar work already exists in your library.",
+            )
+        } else {
+            UpsertResult.Created(workId)
+        }
     }
 
     suspend fun addRelease(
@@ -182,7 +262,21 @@ class WorkRepositoryV2 @Inject constructor(
 
     fun observeAllWorks() = workDao.observeAll()
 
+    fun observeWork(workId: String) = workDao.observeById(workId)
+
     suspend fun getWork(workId: String) = workDao.getById(workId)
+
+    suspend fun deleteWork(workId: String) {
+        db.withTransaction {
+            variantDao.deleteByWorkId(workId)
+            val releases = releaseDao.getByWorkId(workId)
+            releases.forEach { release ->
+                pressingDao.deleteByReleaseId(release.id)
+            }
+            releaseDao.deleteByWorkId(workId)
+            workDao.deleteById(workId)
+        }
+    }
 
     private fun normalize(value: String): String =
         value.lowercase().replace(Regex("[^a-z0-9\\s]"), " ").trim()

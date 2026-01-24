@@ -107,6 +107,11 @@ fun AddBarcodeRoute(
                 Text(text = msg)
             }
 
+            state.infoMessage?.let { msg ->
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(text = msg)
+            }
+
             state.masterCandidate?.let { candidate ->
                 Spacer(modifier = Modifier.height(16.dp))
                 Text("Master match")

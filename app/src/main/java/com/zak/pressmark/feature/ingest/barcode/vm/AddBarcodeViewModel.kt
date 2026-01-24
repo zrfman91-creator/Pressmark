@@ -40,6 +40,7 @@ data class AddBarcodeUiState(
     val barcode: String = "",
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
+    val infoMessage: String? = null,
     val masterCandidate: BarcodeMasterCandidateUi? = null,
 )
 
@@ -57,6 +58,7 @@ class AddBarcodeViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(
             barcode = cleaned,
             errorMessage = null,
+            infoMessage = null,
             masterCandidate = null,
         )
     }
@@ -86,7 +88,12 @@ class AddBarcodeViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null, masterCandidate = null)
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                errorMessage = null,
+                infoMessage = null,
+                masterCandidate = null,
+            )
 
             try {
                 val releaseSearch = discogsApi.searchReleases(
@@ -199,7 +206,7 @@ class AddBarcodeViewModel @Inject constructor(
                 val title = master.title.ifBlank { candidate.releaseTitle }
                 val year = master.year ?: candidate.year
 
-                val workId = workRepositoryV2.upsertDiscogsMasterWork(
+                val result = workRepositoryV2.upsertDiscogsMasterWork(
                     discogsMasterId = master.id,
                     title = title,
                     artistLine = candidate.artistLine,
@@ -210,9 +217,21 @@ class AddBarcodeViewModel @Inject constructor(
                 )
 
                 // Reset the screen back to "Add by barcode" menu, ready for the next scan.
-                _uiState.value = AddBarcodeUiState()
+                val info = when (result) {
+                    is WorkRepositoryV2.UpsertResult.Created -> "Added to library."
+                    is WorkRepositoryV2.UpsertResult.UpdatedExisting -> "Already in library — updated details."
+                    is WorkRepositoryV2.UpsertResult.PossibleDuplicate -> "Possible duplicate — added anyway."
+                }
+                _uiState.value = AddBarcodeUiState(infoMessage = info)
 
-                onAdded(workId)
+                val workId = when (result) {
+                    is WorkRepositoryV2.UpsertResult.Created -> result.workId
+                    is WorkRepositoryV2.UpsertResult.UpdatedExisting -> result.workId
+                    is WorkRepositoryV2.UpsertResult.PossibleDuplicate -> result.existingWorkId.orEmpty()
+                }
+                if (workId.isNotBlank()) {
+                    onAdded(workId)
+                }
             } catch (t: Throwable) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
