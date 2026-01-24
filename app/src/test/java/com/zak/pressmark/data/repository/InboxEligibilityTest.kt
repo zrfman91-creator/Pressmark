@@ -5,6 +5,7 @@ import com.zak.pressmark.data.model.inbox.InboxErrorCode
 import com.zak.pressmark.data.model.inbox.InboxSourceType
 import com.zak.pressmark.data.model.inbox.LookupStatus
 import com.zak.pressmark.data.model.inbox.OcrStatus
+import com.zak.pressmark.data.repository.v1.InboxEligibility
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test

@@ -5,7 +5,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import com.zak.pressmark.data.local.db.DbSchemaV2
+import com.zak.pressmark.data.local.db.v2.DbSchemaV2
 import com.zak.pressmark.data.local.entity.v2.WorkEntityV2
 import kotlinx.coroutines.flow.Flow
 
@@ -23,6 +23,20 @@ interface WorkDaoV2 {
 
     @Query("SELECT * FROM ${DbSchemaV2.Work.TABLE} WHERE ${DbSchemaV2.Work.ID} = :workId LIMIT 1")
     fun observeById(workId: String): Flow<WorkEntityV2?>
+
+    @Query("SELECT * FROM ${DbSchemaV2.Work.TABLE} WHERE ${DbSchemaV2.Work.ID} = :workId LIMIT 1")
+    suspend fun getById(workId: String): WorkEntityV2?
+
+    @Query("SELECT * FROM ${DbSchemaV2.Work.TABLE} WHERE ${DbSchemaV2.Work.DISCOGS_MASTER_ID} = :masterId LIMIT 1")
+    suspend fun getByDiscogsMasterId(masterId: Long): WorkEntityV2?
+
+    @Query(
+        """
+        SELECT * FROM ${DbSchemaV2.Work.TABLE}
+        ORDER BY ${DbSchemaV2.Work.UPDATED_AT} DESC
+        """
+    )
+    fun observeAll(): Flow<List<WorkEntityV2>>
 
     @Query(
         """

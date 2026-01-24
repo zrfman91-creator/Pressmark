@@ -1,11 +1,12 @@
 // FILE: app/src/main/java/com/zak/pressmark/data/remote/discogs/DiscogsApiService.kt
 package com.zak.pressmark.data.remote.discogs
+
 import retrofit2.http.GET
 import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface DiscogsApiService {
-    // Searches the Discogs database for releases. Endpoint: GET /database/search
+
     @GET("database/search")
     suspend fun searchReleases(
         @Query("type") type: String = "release",
@@ -21,10 +22,10 @@ interface DiscogsApiService {
     @GET("releases/{release_id}")
     suspend fun getRelease(
         @Path("release_id") releaseId: Long,
-    ): DiscogsRelease // Note: Uses the new DiscogsRelease data class
+    ): DiscogsRelease
 
-    @GET("marketplace/stats/{release_id}")
-    suspend fun getMarketplaceStats(
-        @Path("release_id") releaseId: Long,
-    ): DiscogsMarketplaceStats
+    @GET("masters/{masterId}")
+    suspend fun getMaster(
+        @Path("masterId") masterId: Long,
+    ): DiscogsMaster
 }

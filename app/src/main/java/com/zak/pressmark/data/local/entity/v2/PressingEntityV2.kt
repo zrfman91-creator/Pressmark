@@ -5,7 +5,7 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import com.zak.pressmark.data.local.db.DbSchemaV2
+import com.zak.pressmark.data.local.db.v2.DbSchemaV2
 
 @Entity(
     tableName = DbSchemaV2.Pressing.TABLE,

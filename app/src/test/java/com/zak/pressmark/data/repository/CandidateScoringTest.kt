@@ -1,6 +1,7 @@
 package com.zak.pressmark.data.repository
 
 import com.zak.pressmark.data.model.inbox.ProviderCandidate
+import com.zak.pressmark.data.repository.v1.InboxPipeline
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

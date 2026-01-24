@@ -2,7 +2,6 @@
 package com.zak.pressmark.data.remote.discogs
 
 import android.util.Log
-import com.zak.pressmark.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext

@@ -1,6 +1,8 @@
 // FILE: app/src/test/java/com/zak/pressmark/core/credits/ArtistCreditsParserFormatterTest.kt
 package com.zak.pressmark.core.credits
 
+import com.zak.pressmark.core.util.credits.ArtistCreditFormatter
+import com.zak.pressmark.core.util.credits.ArtistCreditParser
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
