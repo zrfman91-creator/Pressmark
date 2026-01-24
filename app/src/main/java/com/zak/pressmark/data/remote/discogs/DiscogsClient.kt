@@ -1,41 +1,62 @@
-// FILE: app/src/main/java/com/zak/pressmark/data/remote/discogs/DiscogsClient.kt
 package com.zak.pressmark.data.remote.discogs
 
-import okhttp3.Interceptor
-import okhttp3.OkHttpClient
-import okhttp3.Response
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class DiscogsAuthInterceptor(
-    private val token: String,
-    private val userAgent: String,
-) : Interceptor {
-    override fun intercept(chain: Interceptor.Chain): Response {
-        val req = chain.request().newBuilder()
-            .header("User-Agent", userAgent)
-            .header("Authorization", "Discogs token=$token")
-            .build()
-        return chain.proceed(req)
+data class DiscogsMasterCandidate(
+    val masterId: Long,
+    val displayTitle: String,
+    val subtitle: String?,
+    val year: Int?,
+    val thumbUrl: String?,
+    val coverUrl: String?,
+    val genres: List<String>,
+    val styles: List<String>,
+)
+
+@Singleton
+class DiscogsClient @Inject constructor(
+    private val api: DiscogsApi,
+) {
+    suspend fun searchMasters(
+        artist: String,
+        title: String,
+        year: Int?,
+        limit: Int,
+    ): List<DiscogsMasterCandidate> {
+        val resp = api.search(
+            artist = artist,
+            releaseTitle = title,
+            year = year,
+            perPage = limit,
+            page = 1,
+        )
+
+        return resp.results.map { r ->
+            DiscogsMasterCandidate(
+                masterId = r.id,
+                displayTitle = r.title,
+                subtitle = buildSubtitle(r.genre, r.style),
+                year = r.year,
+                thumbUrl = r.thumb,
+                coverUrl = r.coverImage,
+                genres = r.genre.orEmpty(),
+                styles = r.style.orEmpty(),
+            )
+        }
     }
-}
 
-object DiscogsClient {
+    suspend fun getMaster(masterId: Long): DiscogsMasterResponse =
+        api.getMaster(masterId)
 
-    fun create(
-        token: String,
-        userAgent: String,
-        baseClient: OkHttpClient? = null,
-    ): DiscogsApiService {
-        val okHttp = (baseClient?.newBuilder() ?: OkHttpClient.Builder())
-            .addInterceptor(DiscogsAuthInterceptor(token, userAgent))
-            .build()
-
-        return Retrofit.Builder()
-            .baseUrl("https://api.discogs.com/")
-            .client(okHttp)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-            .create(DiscogsApiService::class.java)
+    private fun buildSubtitle(genres: List<String>?, styles: List<String>?): String? {
+        val g = genres.orEmpty().joinToString(" • ").takeIf { it.isNotBlank() }
+        val s = styles.orEmpty().joinToString(" • ").takeIf { it.isNotBlank() }
+        return when {
+            g != null && s != null -> "$g • $s"
+            g != null -> g
+            s != null -> s
+            else -> null
+        }
     }
 }

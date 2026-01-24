@@ -29,6 +29,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.google.services)
     alias(libs.plugins.firebase.appdistribution)
+    alias(libs.plugins.hilt.android)
 }
 
 android {
@@ -114,11 +115,20 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.exifinterface)
+    implementation(libs.androidx.work.runtime)
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.mlkit.text.recognition)
+    implementation(libs.mlkit.barcode.scanning)
+    implementation(libs.hilt.android)
+    implementation(libs.androidx.hilt.work)
+    implementation(libs.androidx.compose.ui.text)
+    implementation(libs.androidx.foundation.layout)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     // Navigation + lifecycle compose
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
 
@@ -126,6 +136,8 @@ dependencies {
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
+    ksp(libs.hilt.compiler)
+    ksp(libs.androidx.hilt.compiler)
 
     // Networking
     implementation(libs.retrofit)
@@ -142,7 +154,7 @@ dependencies {
     implementation(libs.androidx.camera.camera2)
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
-    implementation("androidx.exifinterface:exifinterface:1.4.2")
+    implementation(libs.androidx.exifinterface)
 
     // Unit tests
     testImplementation(libs.junit)
