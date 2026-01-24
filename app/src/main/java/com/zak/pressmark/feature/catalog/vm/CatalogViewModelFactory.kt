@@ -3,11 +3,11 @@ package com.zak.pressmark.feature.catalog.vm
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.zak.pressmark.data.repository.CatalogRepository
 import com.zak.pressmark.data.repository.CatalogSettingsRepository
-import com.zak.pressmark.data.repository.ReleaseRepository
 
 class CatalogViewModelFactory(
-    private val releaseRepo: ReleaseRepository,
+    private val catalogRepository: CatalogRepository,
     private val catalogSettingsRepository: CatalogSettingsRepository,
 ) : ViewModelProvider.Factory {
 
@@ -17,7 +17,7 @@ class CatalogViewModelFactory(
             throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
         }
         return AlbumListViewModel(
-            releaseRepository = releaseRepo,
+            catalogRepository = catalogRepository,
             catalogSettingsRepository = catalogSettingsRepository,
         ) as T
     }

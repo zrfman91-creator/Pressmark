@@ -10,13 +10,13 @@ import com.zak.pressmark.feature.catalog.vm.AlbumListViewModel
 fun AlbumListRoute(
     vm: AlbumListViewModel,
     onAddAlbum: () -> Unit,
-    onOpenRelease: (releaseId: String) -> Unit,
+    onOpenRelease: (catalogItemId: String) -> Unit,
     onOpenScanConveyor: () -> Unit,
     showDevSettings: Boolean,
     onOpenDevSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val releases = vm.releaseListItems.collectAsStateWithLifecycle().value
+    val releases = vm.catalogItems.collectAsStateWithLifecycle().value
     val uiState = vm.ui.collectAsStateWithLifecycle().value
     val query = vm.query.collectAsStateWithLifecycle().value
     val sort = vm.sort.collectAsStateWithLifecycle().value
@@ -35,7 +35,7 @@ fun AlbumListRoute(
         onAddAlbum = onAddAlbum,
         onOpenScanConveyor = onOpenScanConveyor,
         onOpenRelease = onOpenRelease,
-        onDelete = { item -> vm.deleteRelease(item) },
+        onDelete = { item -> vm.deleteCatalogItem(item) },
 
         sort = sort,
         onSortChange = vm::setSort,

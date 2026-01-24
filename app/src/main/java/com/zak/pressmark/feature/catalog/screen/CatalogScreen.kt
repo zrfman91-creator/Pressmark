@@ -3,6 +3,7 @@ package com.zak.pressmark.feature.catalog.screen
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -52,7 +53,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.zak.pressmark.core.ui.elements.AlbumArtwork
-import com.zak.pressmark.data.model.ReleaseSummary
+import com.zak.pressmark.data.model.CatalogItemSummary
 import com.zak.pressmark.data.repository.CatalogDensity
 import com.zak.pressmark.data.repository.CatalogViewMode
 import com.zak.pressmark.feature.catalog.components.CatalogActionRail
@@ -65,7 +66,7 @@ import com.zak.pressmark.feature.catalog.vm.CatalogSort
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlbumListScreen(
-    releases: List<ReleaseSummary>,
+    releases: List<CatalogItemSummary>,
     query: String,
     onQueryChange: (String) -> Unit,
     sort: CatalogSort,
@@ -74,8 +75,8 @@ fun AlbumListScreen(
     onSnackShown: () -> Unit,
     onAddAlbum: () -> Unit,
     onOpenScanConveyor: () -> Unit,
-    onOpenRelease: (releaseId: String) -> Unit,
-    onDelete: (ReleaseSummary) -> Unit,
+    onOpenRelease: (catalogItemId: String) -> Unit,
+    onDelete: (CatalogItemSummary) -> Unit,
     viewMode: CatalogViewMode,
     onViewModeChange: (CatalogViewMode) -> Unit,
     density: CatalogDensity,
@@ -257,12 +258,12 @@ fun AlbumListScreen(
                         ) {
                             items(
                                 items = releases,
-                                key = { it.releaseId },
+                                key = { it.catalogItemId },
                             ) { item ->
                                 ReleaseRow(
                                     item = item,
                                     densitySpec = densitySpec,
-                                    onClick = { onOpenRelease(item.releaseId) },
+                                    onClick = { onOpenRelease(item.catalogItemId) },
                                     onDelete = { onDelete(item) },
                                 )
                                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -295,7 +296,7 @@ fun AlbumListScreen(
 
 @Composable
 private fun ReleaseRow(
-    item: ReleaseSummary,
+    item: CatalogItemSummary,
     densitySpec: CatalogDensitySpec,
     onClick: () -> Unit,
     onDelete: () -> Unit,
@@ -308,8 +309,8 @@ private fun ReleaseRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         AlbumArtwork(
-            artworkUrl = item.artworkUri,
-            contentDescription = "${item.artistLine} — ${item.title}",
+            artworkUrl = item.primaryArtworkUri,
+            contentDescription = "${item.displayArtistLine} — ${item.displayTitle}",
             size = densitySpec.artworkSize,
         )
 
@@ -317,13 +318,13 @@ private fun ReleaseRow(
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = item.title,
+                text = item.displayTitle,
                 style = densitySpec.titleStyle,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = densitySpec.titleMaxLines,
             )
 
-            val artistLine = item.artistLine.takeIf { it.isNotBlank() } ?: "—"
+            val artistLine = item.displayArtistLine.takeIf { it.isNotBlank() } ?: "—"
             Text(
                 text = artistLine,
                 style = densitySpec.artistStyle,
@@ -390,7 +391,7 @@ private fun DensityAndViewModeRow(
 
 @Composable
 private fun ReleaseGrid(
-    releases: List<ReleaseSummary>,
+    releases: List<CatalogItemSummary>,
     onOpenRelease: (String) -> Unit,
     densitySpec: CatalogDensitySpec,
 ) {
@@ -403,12 +404,12 @@ private fun ReleaseGrid(
     ) {
         items(
             items = releases,
-            key = { it.releaseId },
+            key = { it.catalogItemId },
         ) { item ->
             ReleaseTile(
                 item = item,
                 densitySpec = densitySpec,
-                onClick = { onOpenRelease(item.releaseId) },
+                onClick = { onOpenRelease(item.catalogItemId) },
             )
         }
     }
@@ -416,7 +417,7 @@ private fun ReleaseGrid(
 
 @Composable
 private fun ReleaseTile(
-    item: ReleaseSummary,
+    item: CatalogItemSummary,
     densitySpec: CatalogDensitySpec,
     onClick: () -> Unit,
 ) {
@@ -427,18 +428,18 @@ private fun ReleaseTile(
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         AlbumArtwork(
-            artworkUrl = item.artworkUri,
-            contentDescription = "${item.artistLine} — ${item.title}",
+            artworkUrl = item.primaryArtworkUri,
+            contentDescription = "${item.displayArtistLine} — ${item.displayTitle}",
             size = densitySpec.gridArtworkSize,
             cornerRadius = 10.dp,
         )
         Text(
-            text = item.title,
+            text = item.displayTitle,
             style = densitySpec.titleStyle,
             maxLines = densitySpec.titleMaxLines,
         )
         Text(
-            text = item.artistLine.ifBlank { "—" },
+            text = item.displayArtistLine.ifBlank { "—" },
             style = densitySpec.artistStyle,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = densitySpec.artistMaxLines,

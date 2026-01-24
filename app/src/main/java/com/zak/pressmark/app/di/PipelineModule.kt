@@ -8,6 +8,9 @@ import com.zak.pressmark.data.local.dao.ProviderSnapshotDao
 import com.zak.pressmark.data.local.db.AppDatabase
 import com.zak.pressmark.data.local.db.DatabaseProvider
 import com.zak.pressmark.BuildConfig
+import com.zak.pressmark.data.local.dao.CatalogItemPressingDao
+import com.zak.pressmark.data.local.dao.EvidenceArtifactDao
+import com.zak.pressmark.data.local.dao.VerificationEventDao
 import com.zak.pressmark.data.remote.discogs.DiscogsApiProvider
 import com.zak.pressmark.data.remote.http.HttpClients
 import com.zak.pressmark.data.remote.provider.DiscogsMetadataProvider
@@ -40,11 +43,33 @@ object PipelineModule {
     fun provideProviderSnapshotDao(db: AppDatabase): ProviderSnapshotDao = db.providerSnapshotDao()
 
     @Provides
+    fun provideCatalogItemPressingDao(db: AppDatabase): CatalogItemPressingDao = db.catalogItemPressingDao()
+
+    @Provides
+    fun provideEvidenceArtifactDao(db: AppDatabase): EvidenceArtifactDao = db.evidenceArtifactDao()
+
+    @Provides
+    fun provideVerificationEventDao(db: AppDatabase): VerificationEventDao = db.verificationEventDao()
+
+    @Provides
+    @Singleton
+    fun provideCatalogRepository(db: AppDatabase): CatalogRepository = CatalogRepository(db)
+
+    @Provides
     @Singleton
     fun provideInboxRepository(
         inboxItemDao: InboxItemDao,
         providerSnapshotDao: ProviderSnapshotDao,
-    ): InboxRepository = DefaultInboxRepository(inboxItemDao, providerSnapshotDao)
+        evidenceArtifactDao: EvidenceArtifactDao,
+        verificationEventDao: VerificationEventDao,
+        catalogItemPressingDao: CatalogItemPressingDao,
+    ): InboxRepository = DefaultInboxRepository(
+        inboxItemDao = inboxItemDao,
+        providerSnapshotDao = providerSnapshotDao,
+        evidenceArtifactDao = evidenceArtifactDao,
+        verificationEventDao = verificationEventDao,
+        catalogItemPressingDao = catalogItemPressingDao,
+    )
 
     @Provides
     @Singleton

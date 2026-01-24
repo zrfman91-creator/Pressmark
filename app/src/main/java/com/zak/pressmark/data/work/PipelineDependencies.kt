@@ -9,6 +9,7 @@ import com.zak.pressmark.data.remote.discogs.DiscogsApiProvider
 import com.zak.pressmark.data.remote.http.HttpClients
 import com.zak.pressmark.data.remote.provider.DiscogsMetadataProvider
 import com.zak.pressmark.data.remote.provider.MetadataProvider
+import com.zak.pressmark.data.repository.CatalogRepository
 import com.zak.pressmark.data.repository.DefaultInboxRepository
 import com.zak.pressmark.data.repository.InboxRepository
 import com.zak.pressmark.data.repository.IngestSettingsRepository
@@ -61,11 +62,15 @@ object PipelineDependencies {
         }
     }
 
+
     private fun buildInboxRepository(context: Context): InboxRepository {
         val db = DatabaseProvider.get(context.applicationContext)
         return DefaultInboxRepository(
             inboxItemDao = db.inboxItemDao(),
             providerSnapshotDao = db.providerSnapshotDao(),
+            evidenceArtifactDao = db.evidenceArtifactDao(),
+            verificationEventDao = db.verificationEventDao(),
+            catalogItemPressingDao = db.catalogItemPressingDao(),
         )
     }
 
@@ -85,6 +90,6 @@ object PipelineDependencies {
             userAgent = "Pressmark/${BuildConfig.VERSION_NAME}",
             baseClient = HttpClients.cached(context.applicationContext),
         )
-        return ReleaseRepository(db = db, discogsApiService = api)
+        return ReleaseRepository(db = db, discogsApiService = api, catalogRepository = CatalogRepository(db))
     }
 }
