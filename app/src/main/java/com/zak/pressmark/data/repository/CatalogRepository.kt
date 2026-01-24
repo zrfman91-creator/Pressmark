@@ -169,6 +169,7 @@ class CatalogRepository(
     suspend fun deleteCatalogItem(catalogItemId: String) {
         db.withTransaction {
             val releaseIds = catalogItemPressingDao.listReleaseIds(catalogItemId)
+                .filterNotNull()
             catalogItemPressingDao.deleteByCatalogItemId(catalogItemId)
             catalogVariantDao.deleteByCatalogItemId(catalogItemId)
             evidenceArtifactDao.deleteByCatalogItemId(catalogItemId)

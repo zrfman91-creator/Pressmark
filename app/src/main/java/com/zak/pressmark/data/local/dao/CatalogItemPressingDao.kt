@@ -5,7 +5,6 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.zak.pressmark.data.local.db.DbSchema.CatalogItemPressing
-import com.zak.pressmark.data.local.db.DbSchema.Release
 import com.zak.pressmark.data.model.CatalogPressingSummary
 import kotlinx.coroutines.flow.Flow
 
@@ -24,7 +23,7 @@ interface CatalogItemPressingDao {
         WHERE ${CatalogItemPressing.CATALOG_ITEM_ID} = :catalogItemId
         """
     )
-    suspend fun listReleaseIds(catalogItemId: String): List<String>
+    suspend fun listReleaseIds(catalogItemId: String): List<String?>
 
     @Query(
         """
@@ -42,14 +41,14 @@ interface CatalogItemPressingDao {
             p.${CatalogItemPressing.CATALOG_ITEM_ID} AS catalogItemId,
             p.${CatalogItemPressing.RELEASE_ID} AS releaseId,
             p.${CatalogItemPressing.EVIDENCE_SCORE} AS evidenceScore,
-            r.${Release.TITLE} AS title,
-            r.${Release.LABEL} AS label,
-            r.${Release.CATALOG_NO} AS catalogNo,
-            r.${Release.COUNTRY} AS country,
-            r.${Release.RELEASE_YEAR} AS releaseYear
+            r.title AS title,
+            r.label AS label,
+            r.catalog_no AS catalogNo,
+            r.country AS country,
+            r.release_year AS releaseYear
         FROM ${CatalogItemPressing.TABLE} p
-        LEFT JOIN ${Release.TABLE} r
-          ON r.${Release.ID} = p.${CatalogItemPressing.RELEASE_ID}
+        LEFT JOIN releases r
+          ON r.id = p.${CatalogItemPressing.RELEASE_ID}
         WHERE p.${CatalogItemPressing.CATALOG_ITEM_ID} = :catalogItemId
         ORDER BY p.${CatalogItemPressing.CREATED_AT} DESC
         """
