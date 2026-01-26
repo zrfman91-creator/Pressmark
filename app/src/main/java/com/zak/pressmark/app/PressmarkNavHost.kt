@@ -66,7 +66,11 @@ fun PressmarkNavHost(
                 onDone = { navController.popBackStack() },
                 onScan = { navController.navigate(PressmarkRoutes.BARCODE_SCANNER) },
                 // Stay on the "Add by barcode" screen after add.
-                onAdded = { _ -> },
+                onAdded = { _, autoReopen ->
+                    if (autoReopen) {
+                        navController.navigate(PressmarkRoutes.BARCODE_SCANNER)
+                    }
+                },
             )
         }
 

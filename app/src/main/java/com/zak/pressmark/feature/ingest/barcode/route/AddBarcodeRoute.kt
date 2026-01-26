@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -18,6 +20,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -37,7 +40,7 @@ fun AddBarcodeRoute(
     vm: AddBarcodeViewModel,
     onDone: () -> Unit,
     onScan: () -> Unit,
-    onAdded: (String) -> Unit,
+    onAdded: (String, Boolean) -> Unit,
 ) {
     val state by vm.uiState.collectAsState()
 
@@ -55,6 +58,23 @@ fun AddBarcodeRoute(
                 },
             )
         },
+        bottomBar = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .imePadding()
+                    .padding(16.dp),
+            ) {
+                Button(
+                    onClick = onScan,
+                    enabled = !state.isLoading,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Scan with camera")
+                }
+            }
+        },
     ) { padding ->
         Column(
             modifier = Modifier
@@ -63,16 +83,6 @@ fun AddBarcodeRoute(
                 .padding(16.dp),
             verticalArrangement = Arrangement.Top,
         ) {
-            Button(
-                onClick = onScan,
-                enabled = !state.isLoading,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("Scan with camera")
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
             OutlinedTextField(
                 value = state.barcode,
                 onValueChange = vm::onBarcodeChanged,
@@ -90,6 +100,18 @@ fun AddBarcodeRoute(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text("Lookup master on Discogs")
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text("Auto-reopen scanner")
+                Switch(
+                    checked = state.autoReopenScanner,
+                    onCheckedChange = vm::setAutoReopen,
+                )
             }
 
             if (state.isLoading) {

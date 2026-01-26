@@ -11,6 +11,9 @@ import com.zak.pressmark.data.local.entity.v2.PressingEntityV2
 import com.zak.pressmark.data.local.entity.v2.ReleaseEntityV2
 import com.zak.pressmark.data.local.entity.v2.VariantEntityV2
 import com.zak.pressmark.data.local.entity.v2.WorkEntityV2
+import com.zak.pressmark.data.prefs.LibrarySortKey
+import com.zak.pressmark.data.prefs.LibrarySortSpec
+import com.zak.pressmark.data.prefs.SortDirection
 import java.security.MessageDigest
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -263,6 +266,25 @@ class WorkRepositoryV2 @Inject constructor(
     fun observeAllWorks() = workDao.observeAll()
 
     fun observeWork(workId: String) = workDao.observeById(workId)
+
+    fun observeAllWorksSorted(sortSpec: LibrarySortSpec) = when (sortSpec.key) {
+        LibrarySortKey.TITLE -> if (sortSpec.direction == SortDirection.ASC) {
+            workDao.observeAllByTitle()
+        } else {
+            workDao.observeAllByTitleDesc()
+        }
+        LibrarySortKey.ARTIST -> if (sortSpec.direction == SortDirection.ASC) {
+            workDao.observeAllByArtist()
+        } else {
+            workDao.observeAllByArtistDesc()
+        }
+        LibrarySortKey.RECENTLY_ADDED -> workDao.observeAllByCreatedDesc()
+        LibrarySortKey.YEAR -> if (sortSpec.direction == SortDirection.ASC) {
+            workDao.observeAllByYearAsc()
+        } else {
+            workDao.observeAllByYearDesc()
+        }
+    }
 
     suspend fun getWork(workId: String) = workDao.getById(workId)
 

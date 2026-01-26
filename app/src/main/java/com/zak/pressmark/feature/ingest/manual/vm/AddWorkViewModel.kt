@@ -1,12 +1,16 @@
 // FILE: app/src/main/java/com/zak/pressmark/feature/ingest/manual/vm/AddWorkViewModel.kt
 package com.zak.pressmark.feature.ingest.manual.vm
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zak.pressmark.BuildConfig
+import com.zak.pressmark.core.util.ocr.OcrHint
+import com.zak.pressmark.core.util.ocr.OcrService
 import com.zak.pressmark.data.remote.discogs.DiscogsClient
 import com.zak.pressmark.data.repository.v2.WorkRepositoryV2
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -27,6 +31,11 @@ data class AddWorkUiState(
     val artist: String = "",
     val title: String = "",
     val year: String = "",
+    val evidenceUris: List<String> = emptyList(),
+    val ocrTitleCandidates: List<String> = emptyList(),
+    val ocrArtistCandidates: List<String> = emptyList(),
+    val isOcrProcessing: Boolean = false,
+    val ocrMessage: String? = null,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val infoMessage: String? = null,
@@ -37,6 +46,7 @@ data class AddWorkUiState(
 class AddWorkViewModel @Inject constructor(
     private val discogsClient: DiscogsClient,
     private val workRepositoryV2: WorkRepositoryV2,
+    private val ocrService: OcrService,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddWorkUiState())
@@ -53,6 +63,67 @@ class AddWorkViewModel @Inject constructor(
     fun onYearChanged(value: String) {
         val cleaned = value.filter { it.isDigit() }
         _uiState.value = _uiState.value.copy(year = cleaned, errorMessage = null, infoMessage = null)
+    }
+
+    fun onOcrImageCaptured(uri: Uri, source: OcrCaptureSource) {
+        val state = _uiState.value
+        _uiState.value = state.copy(
+            isOcrProcessing = true,
+            ocrMessage = "Processing ${source.label}...",
+            errorMessage = null,
+            infoMessage = null,
+        )
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val hint = OcrHint(
+                fallbackTitle = state.title.takeIf { it.isNotBlank() },
+                fallbackArtist = state.artist.takeIf { it.isNotBlank() },
+            )
+
+            val result = ocrService.extractAnchors(uri, hint)
+            val updated = result.fold(
+                onSuccess = { anchors ->
+                    val titleCandidates = anchors.titleCandidates
+                    val artistCandidates = anchors.artistCandidates
+
+                    val newTitle = if (state.title.isBlank()) {
+                        titleCandidates.firstOrNull().orEmpty()
+                    } else {
+                        state.title
+                    }
+                    val newArtist = if (state.artist.isBlank()) {
+                        artistCandidates.firstOrNull().orEmpty()
+                    } else {
+                        state.artist
+                    }
+
+                    state.copy(
+                        title = newTitle,
+                        artist = newArtist,
+                        evidenceUris = state.evidenceUris + uri.toString(),
+                        ocrTitleCandidates = titleCandidates,
+                        ocrArtistCandidates = artistCandidates,
+                        isOcrProcessing = false,
+                        ocrMessage = "OCR complete.",
+                    )
+                },
+                onFailure = { error ->
+                    state.copy(
+                        isOcrProcessing = false,
+                        ocrMessage = error.message ?: "OCR failed.",
+                    )
+                },
+            )
+            _uiState.value = updated
+        }
+    }
+
+    fun applyTitleCandidate(value: String) {
+        _uiState.value = _uiState.value.copy(title = value)
+    }
+
+    fun applyArtistCandidate(value: String) {
+        _uiState.value = _uiState.value.copy(artist = value)
     }
 
     fun searchDiscogs() {
@@ -199,4 +270,9 @@ class AddWorkViewModel @Inject constructor(
             _uiState.value.artist.trim() to _uiState.value.title.trim()
         }
     }
+}
+
+enum class OcrCaptureSource(val label: String) {
+    COVER("cover"),
+    LABEL("label"),
 }
