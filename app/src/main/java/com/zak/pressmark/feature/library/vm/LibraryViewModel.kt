@@ -48,6 +48,7 @@ data class LibraryUiState(
     val groupKey: LibraryGroupKey = LibraryGroupKey.NONE,
 )
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     private val workRepositoryV2: WorkRepositoryV2,
