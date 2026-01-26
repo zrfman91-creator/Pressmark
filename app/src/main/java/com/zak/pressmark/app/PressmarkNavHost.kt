@@ -2,7 +2,7 @@ package com.zak.pressmark.app
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -66,7 +66,11 @@ fun PressmarkNavHost(
                 onDone = { navController.popBackStack() },
                 onScan = { navController.navigate(PressmarkRoutes.BARCODE_SCANNER) },
                 // Stay on the "Add by barcode" screen after add.
-                onAdded = { _ -> },
+                onAdded = { _, autoReopen ->
+                    if (autoReopen) {
+                        navController.navigate(PressmarkRoutes.BARCODE_SCANNER)
+                    }
+                },
             )
         }
 
