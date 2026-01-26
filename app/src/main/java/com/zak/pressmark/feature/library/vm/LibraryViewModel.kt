@@ -1,16 +1,19 @@
 // FILE: app/src/main/java/com/zak/pressmark/feature/library/vm/LibraryViewModel.kt
+@file:OptIn(ExperimentalCoroutinesApi::class)
+
 package com.zak.pressmark.feature.library.vm
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.zak.pressmark.data.repository.v2.WorkRepositoryV2
 import com.zak.pressmark.data.prefs.LibraryGroupKey
 import com.zak.pressmark.data.prefs.LibraryPreferences
 import com.zak.pressmark.data.prefs.LibrarySortKey
 import com.zak.pressmark.data.prefs.LibrarySortSpec
 import com.zak.pressmark.data.prefs.SortDirection
+import com.zak.pressmark.data.repository.v2.WorkRepositoryV2
 import com.zak.pressmark.data.util.Normalization
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -58,7 +61,6 @@ class LibraryViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(LibraryUiState())
     val uiState = _uiState.asStateFlow()
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     init {
         val sortSpecFlow = libraryPreferences.sortSpecFlow
         val groupKeyFlow = libraryPreferences.groupKeyFlow
