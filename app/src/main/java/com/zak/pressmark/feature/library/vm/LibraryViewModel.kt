@@ -57,6 +57,7 @@ class LibraryViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(LibraryUiState())
     val uiState = _uiState.asStateFlow()
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     init {
         val sortSpecFlow = libraryPreferences.sortSpecFlow
         val groupKeyFlow = libraryPreferences.groupKeyFlow
