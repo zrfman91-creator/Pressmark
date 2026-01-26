@@ -40,8 +40,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.MoreVert
 import coil3.compose.AsyncImage
 import com.zak.pressmark.data.prefs.LibraryGroupKey
@@ -104,12 +104,12 @@ fun LibraryRoute(
                 onCollapseAll = { groupIds ->
                     vm.collapseAll(groupIds)
                 },
-                listItems = state.listItems,
+                listItems = state.items,
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            if (state.listItems.isEmpty()) {
+            if (state.items.isEmpty()) {
                 Text("No works yet. Add one to get started.")
             } else {
                 LazyColumn(
@@ -117,7 +117,7 @@ fun LibraryRoute(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     items(
-                        items = state.listItems,
+                        items = state.items,
                         key = {
                             when (it) {
                                 is LibraryListItem.Header -> it.id
@@ -310,7 +310,7 @@ private fun LibraryGroupHeader(
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Icon(
-                imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowRight,
                 contentDescription = null,
             )
             Text(title)

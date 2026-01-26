@@ -11,7 +11,6 @@ import com.zak.pressmark.data.prefs.LibrarySortSpec
 import com.zak.pressmark.data.prefs.SortDirection
 import com.zak.pressmark.data.util.Normalization
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -44,8 +43,7 @@ sealed class LibraryListItem {
 }
 
 data class LibraryUiState(
-    val items: List<LibraryItemUi> = emptyList(),
-    val listItems: List<LibraryListItem> = emptyList(),
+    val items: List<LibraryListItem> = emptyList(),
     val sortSpec: LibrarySortSpec = LibrarySortSpec(LibrarySortKey.RECENTLY_ADDED, SortDirection.DESC),
     val groupKey: LibraryGroupKey = LibraryGroupKey.NONE,
 )
@@ -76,10 +74,8 @@ class LibraryViewModel @Inject constructor(
                     groupKey = groupKey,
                     collapsedGroupIds = collapsedIds,
                 )
-                val flatItems = works.map { it.toUi() }
                 LibraryUiState(
-                    items = flatItems,
-                    listItems = listItems,
+                    items = listItems,
                     sortSpec = sortSpec,
                     groupKey = groupKey,
                 )
