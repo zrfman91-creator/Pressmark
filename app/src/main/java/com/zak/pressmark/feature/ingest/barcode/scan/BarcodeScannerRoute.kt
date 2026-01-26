@@ -71,6 +71,9 @@ fun BarcodeScannerRoute(
         }
     }
 
+    val lastDetected = remember { mutableStateOf<String?>(null) }
+    val lastDetectedAt = remember { mutableStateOf(0L) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -108,7 +111,15 @@ fun BarcodeScannerRoute(
                     .padding(padding),
             ) {
                 BarcodeScannerCamera(
-                    onBarcodeDetected = onBarcodeDetected,
+                    onBarcodeDetected = { barcode ->
+                        val now = System.currentTimeMillis()
+                        val lastCode = lastDetected.value
+                        val lastTime = lastDetectedAt.value
+                        if (lastCode == barcode && now - lastTime < DEBOUNCE_MS) return@BarcodeScannerCamera
+                        lastDetected.value = barcode
+                        lastDetectedAt.value = now
+                        onBarcodeDetected(barcode)
+                    },
                 )
 
                 Row(
@@ -124,6 +135,8 @@ fun BarcodeScannerRoute(
         }
     }
 }
+
+private const val DEBOUNCE_MS = 2000L
 
 @SuppressLint("UnsafeOptInUsageError")
 @Composable
