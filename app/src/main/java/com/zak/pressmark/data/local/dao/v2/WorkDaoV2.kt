@@ -33,7 +33,32 @@ interface WorkDaoV2 {
     @Query(
         """
         SELECT * FROM ${DbSchemaV2.Work.TABLE}
+        WHERE ${DbSchemaV2.Work.ARTIST_NORMALIZED} = :artistNorm
+          AND ${DbSchemaV2.Work.TITLE_NORMALIZED} = :titleNorm
+          AND ((:year IS NULL AND ${DbSchemaV2.Work.YEAR} IS NULL)
+            OR ${DbSchemaV2.Work.YEAR} = :year)
         ORDER BY ${DbSchemaV2.Work.UPDATED_AT} DESC
+        LIMIT 1
+        """
+    )
+    suspend fun getByNormalized(artistNorm: String, titleNorm: String, year: Int?): WorkEntityV2?
+
+    @Query(
+        """
+        SELECT * FROM ${DbSchemaV2.Work.TABLE}
+        WHERE ${DbSchemaV2.Work.ARTIST_NORMALIZED} = :artistNorm
+          AND ${DbSchemaV2.Work.TITLE_NORMALIZED} = :titleNorm
+        ORDER BY ${DbSchemaV2.Work.UPDATED_AT} DESC
+        LIMIT 1
+        """
+    )
+    suspend fun getByNormalizedIgnoringYear(artistNorm: String, titleNorm: String): WorkEntityV2?
+
+    @Query(
+        """
+        SELECT * FROM ${DbSchemaV2.Work.TABLE}
+        ORDER BY ${DbSchemaV2.Work.UPDATED_AT} DESC,
+                 ${DbSchemaV2.Work.ID} ASC
         """
     )
     fun observeAll(): Flow<List<WorkEntityV2>>
@@ -41,7 +66,9 @@ interface WorkDaoV2 {
     @Query(
         """
         SELECT * FROM ${DbSchemaV2.Work.TABLE}
-        ORDER BY ${DbSchemaV2.Work.TITLE} COLLATE NOCASE ASC
+        ORDER BY ${DbSchemaV2.Work.TITLE} COLLATE NOCASE ASC,
+                 ${DbSchemaV2.Work.ARTIST_LINE} COLLATE NOCASE ASC,
+                 ${DbSchemaV2.Work.ID} ASC
         """
     )
     fun observeAllByTitle(): Flow<List<WorkEntityV2>>
@@ -50,7 +77,8 @@ interface WorkDaoV2 {
         """
         SELECT * FROM ${DbSchemaV2.Work.TABLE}
         ORDER BY ${DbSchemaV2.Work.ARTIST_LINE} COLLATE NOCASE ASC,
-                 ${DbSchemaV2.Work.TITLE} COLLATE NOCASE ASC
+                 ${DbSchemaV2.Work.TITLE} COLLATE NOCASE ASC,
+                 ${DbSchemaV2.Work.ID} ASC
         """
     )
     fun observeAllByArtist(): Flow<List<WorkEntityV2>>
@@ -58,8 +86,11 @@ interface WorkDaoV2 {
     @Query(
         """
         SELECT * FROM ${DbSchemaV2.Work.TABLE}
-        ORDER BY ${DbSchemaV2.Work.YEAR} DESC,
-                 ${DbSchemaV2.Work.TITLE} COLLATE NOCASE ASC
+        ORDER BY ${DbSchemaV2.Work.YEAR} IS NULL,
+                 ${DbSchemaV2.Work.YEAR} DESC,
+                 ${DbSchemaV2.Work.ARTIST_LINE} COLLATE NOCASE ASC,
+                 ${DbSchemaV2.Work.TITLE} COLLATE NOCASE ASC,
+                 ${DbSchemaV2.Work.ID} ASC
         """
     )
     fun observeAllByYearDesc(): Flow<List<WorkEntityV2>>
@@ -67,8 +98,51 @@ interface WorkDaoV2 {
     @Query(
         """
         SELECT * FROM ${DbSchemaV2.Work.TABLE}
-        ORDER BY ${DbSchemaV2.Work.UPDATED_AT} DESC
+        ORDER BY ${DbSchemaV2.Work.UPDATED_AT} DESC,
+                 ${DbSchemaV2.Work.ID} ASC
         """
     )
     fun observeAllByUpdatedDesc(): Flow<List<WorkEntityV2>>
+
+    @Query(
+        """
+        SELECT * FROM ${DbSchemaV2.Work.TABLE}
+        ORDER BY ${DbSchemaV2.Work.TITLE} COLLATE NOCASE DESC,
+                 ${DbSchemaV2.Work.ARTIST_LINE} COLLATE NOCASE ASC,
+                 ${DbSchemaV2.Work.ID} ASC
+        """
+    )
+    fun observeAllByTitleDesc(): Flow<List<WorkEntityV2>>
+
+    @Query(
+        """
+        SELECT * FROM ${DbSchemaV2.Work.TABLE}
+        ORDER BY ${DbSchemaV2.Work.ARTIST_LINE} COLLATE NOCASE DESC,
+                 ${DbSchemaV2.Work.TITLE} COLLATE NOCASE ASC,
+                 ${DbSchemaV2.Work.ID} ASC
+        """
+    )
+    fun observeAllByArtistDesc(): Flow<List<WorkEntityV2>>
+
+    @Query(
+        """
+        SELECT * FROM ${DbSchemaV2.Work.TABLE}
+        ORDER BY ${DbSchemaV2.Work.YEAR} IS NULL,
+                 ${DbSchemaV2.Work.YEAR} ASC,
+                 ${DbSchemaV2.Work.ARTIST_LINE} COLLATE NOCASE ASC,
+                 ${DbSchemaV2.Work.TITLE} COLLATE NOCASE ASC,
+                 ${DbSchemaV2.Work.ID} ASC
+        """
+    )
+    fun observeAllByYearAsc(): Flow<List<WorkEntityV2>>
+
+    @Query(
+        """
+        SELECT * FROM ${DbSchemaV2.Work.TABLE}
+        ORDER BY ${DbSchemaV2.Work.CREATED_AT} DESC,
+                 ${DbSchemaV2.Work.TITLE} COLLATE NOCASE ASC,
+                 ${DbSchemaV2.Work.ID} ASC
+        """
+    )
+    fun observeAllByCreatedDesc(): Flow<List<WorkEntityV2>>
 }

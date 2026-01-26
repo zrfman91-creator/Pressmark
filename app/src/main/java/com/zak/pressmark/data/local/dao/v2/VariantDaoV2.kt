@@ -18,6 +18,9 @@ interface VariantDaoV2 {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(variants: List<VariantEntityV2>)
 
+    @Query("DELETE FROM ${DbSchemaV2.Variant.TABLE} WHERE ${DbSchemaV2.Variant.WORK_ID} = :workId")
+    suspend fun deleteByWorkId(workId: String)
+
     @Query("SELECT * FROM ${DbSchemaV2.Variant.TABLE} WHERE ${DbSchemaV2.Variant.WORK_ID} = :workId ORDER BY ${DbSchemaV2.Variant.ADDED_AT} DESC")
     fun observeByWorkId(workId: String): Flow<List<VariantEntityV2>>
 

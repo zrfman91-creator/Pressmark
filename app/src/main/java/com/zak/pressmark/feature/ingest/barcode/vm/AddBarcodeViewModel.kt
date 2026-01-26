@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zak.pressmark.BuildConfig
 import com.zak.pressmark.data.remote.discogs.DiscogsApiService
+import com.zak.pressmark.data.prefs.ScannerPreferences
 import com.zak.pressmark.data.repository.v2.WorkRepositoryV2
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -40,23 +41,35 @@ data class AddBarcodeUiState(
     val barcode: String = "",
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
+    val infoMessage: String? = null,
     val masterCandidate: BarcodeMasterCandidateUi? = null,
+    val autoReopenScanner: Boolean = false,
 )
 
 @HiltViewModel
 class AddBarcodeViewModel @Inject constructor(
     private val discogsApi: DiscogsApiService,
     private val workRepositoryV2: WorkRepositoryV2,
+    private val scannerPreferences: ScannerPreferences,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddBarcodeUiState())
     val uiState = _uiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            scannerPreferences.autoReopenScannerFlow.collect { enabled ->
+                _uiState.value = _uiState.value.copy(autoReopenScanner = enabled)
+            }
+        }
+    }
 
     fun onBarcodeChanged(value: String) {
         val cleaned = value.filter(Char::isDigit)
         _uiState.value = _uiState.value.copy(
             barcode = cleaned,
             errorMessage = null,
+            infoMessage = null,
             masterCandidate = null,
         )
     }
@@ -86,7 +99,12 @@ class AddBarcodeViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null, masterCandidate = null)
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                errorMessage = null,
+                infoMessage = null,
+                masterCandidate = null,
+            )
 
             try {
                 val releaseSearch = discogsApi.searchReleases(
@@ -182,7 +200,7 @@ class AddBarcodeViewModel @Inject constructor(
      */
     fun addMasterToLibrary(
         candidate: BarcodeMasterCandidateUi,
-        onAdded: (String) -> Unit,
+        onAdded: (String, Boolean) -> Unit,
     ) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
@@ -199,7 +217,7 @@ class AddBarcodeViewModel @Inject constructor(
                 val title = master.title.ifBlank { candidate.releaseTitle }
                 val year = master.year ?: candidate.year
 
-                val workId = workRepositoryV2.upsertDiscogsMasterWork(
+                val result = workRepositoryV2.upsertDiscogsMasterWork(
                     discogsMasterId = master.id,
                     title = title,
                     artistLine = candidate.artistLine,
@@ -210,9 +228,21 @@ class AddBarcodeViewModel @Inject constructor(
                 )
 
                 // Reset the screen back to "Add by barcode" menu, ready for the next scan.
-                _uiState.value = AddBarcodeUiState()
+                val info = when (result) {
+                    is WorkRepositoryV2.UpsertResult.Created -> "Added to library."
+                    is WorkRepositoryV2.UpsertResult.UpdatedExisting -> "Already in library — updated details."
+                    is WorkRepositoryV2.UpsertResult.PossibleDuplicate -> "Possible duplicate — added anyway."
+                }
+                _uiState.value = AddBarcodeUiState(infoMessage = info)
 
-                onAdded(workId)
+                val workId = when (result) {
+                    is WorkRepositoryV2.UpsertResult.Created -> result.workId
+                    is WorkRepositoryV2.UpsertResult.UpdatedExisting -> result.workId
+                    is WorkRepositoryV2.UpsertResult.PossibleDuplicate -> result.existingWorkId.orEmpty()
+                }
+                if (workId.isNotBlank()) {
+                    onAdded(workId, _uiState.value.autoReopenScanner)
+                }
             } catch (t: Throwable) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -230,5 +260,11 @@ class AddBarcodeViewModel @Inject constructor(
     private fun parseTitleFromSearchTitle(searchTitle: String): String {
         val parts = searchTitle.split(" - ", limit = 2)
         return parts.getOrNull(1)?.trim() ?: searchTitle.trim()
+    }
+
+    fun setAutoReopen(enabled: Boolean) {
+        viewModelScope.launch {
+            scannerPreferences.setAutoReopenScanner(enabled)
+        }
     }
 }

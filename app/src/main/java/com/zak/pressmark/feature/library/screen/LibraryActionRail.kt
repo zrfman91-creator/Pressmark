@@ -1,4 +1,4 @@
-package com.zak.pressmark.feature.catalog.components
+package com.zak.pressmark.feature.library.screen
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -76,20 +77,20 @@ data class RailDimens(
     val controlGap: Dp = 12.dp,
 
     // square buttons / capsules baseline
-    val controlHeight: Dp = 48.dp,
-    val squareCornerRadius: Dp = 12.dp,
-    val iconSize: Dp = 22.dp,
+    val controlHeight: Dp = 64.dp,
+    val squareCornerRadius: Dp = 4.dp,
+    val iconSize: Dp = 32.dp,
 
     // add capsule (two-phase)
     val addCollapsedWidth: Dp = 48.dp,
-    val addExpandedWidth: Dp = 176.dp,
+    val addExpandedWidth: Dp = 160.dp,
     val addWidthAnimMs: Int = 170,
     val addStackDelayMs: Long = 150,
 
     // stack
     val stackSpacing: Dp = 10.dp,
     val stackItemHeight: Dp = 44.dp,
-    val stackItemCornerRadius: Dp = 12.dp,
+    val stackItemCornerRadius: Dp = 4.dp,
     val stackItemHorizontalPadding: Dp = 12.dp,
     val stackOffsetAboveCapsule: Dp = 10.dp,
 
@@ -143,7 +144,7 @@ data class RailShapes(
 data class RailConfig(
     val dimens: RailDimens = RailDimens(),
     val shapes: RailShapes = RailShapes(
-        capsuleShape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+        capsuleShape = RoundedCornerShape(12.dp),
         stackItemShape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
     ),
 
@@ -205,7 +206,7 @@ fun railTypographyDefaults(): RailTypography {
  * Right: Search capsule (expands leftward until it hits Add capsule).
  */
 @Composable
-fun CatalogActionRail(
+fun LibraryActionRail(
     mode: RailMode,
     onModeChange: (RailMode) -> Unit,
 
@@ -373,7 +374,7 @@ private fun AddRailLeft(
                 horizontalAlignment = Alignment.Start,
                 verticalArrangement = Arrangement.spacedBy(d.stackSpacing),
             ) {
-                StackAction(
+                /*StackAction(
                     icon = bulkIcon,
                     label = config.bulkAddLabel,
                     onClick = { onModeChange(RailMode.Idle); onBulkAdd() },
@@ -381,7 +382,7 @@ private fun AddRailLeft(
                     typography = typography,
                     shapes = shapes,
                     config = config,
-                )
+                )*/
                 StackAction(
                     icon = scanIcon,
                     label = config.scanBarcodeLabel,
