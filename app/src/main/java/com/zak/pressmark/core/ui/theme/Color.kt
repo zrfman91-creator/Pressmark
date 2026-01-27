@@ -14,7 +14,50 @@ import androidx.compose.ui.graphics.Color
  * Token names remain compatible with existing UI usage.
  */
 object PressmarkColors {
+    //Pressmark Classic
+    val primePC               = Color(0xFF2F6F6A) //Primary
+    val onPrimePC             = Color(0xFFFFFFFF) //OnPrimary
+    val primeContainerPC      = Color(0xFFCFEAE6) //primeContainer
+    val onPrimeContainerPC    = Color(0xFF0E2E2B) //onPrimeContainer
+    val secondPC              = Color(0xFF9B6B68)
+    val onSecondPC            = Color(0xFFFFFFFF)
+    val secondContainerPC     = Color(0xFFF0D6D3)
+    val onSecondContainerPC   = Color(0xFF2E1212)
+    val tertiaryPC            = Color(0xFF8A6A2F)
+    val onTertiaryPC          = Color(0xFFFFFFFF)
+    val tertiaryContainerPC   = Color(0xFFF1E2C5)
+    val onTertiaryContainerPC = Color(0xFF2A1E07)
+    val backgroundPC          = Color(0xFFF6F1E8)
+    val onBackgroundPC        = Color(0xFF1E1A16)
+    val surfacePC             = Color(0xFFFBF7F0)
+    val onSurfacePC           = Color(0xFF1E1A16)
+    val surfaceVariantPC      = Color(0xFFE9E1D6)
+    val onSurfaceVariantPC    = Color(0xFF1A1715)
+    val outlinePC             = Color(0xFF3A332E)
+    val outlineVariantPC      = Color(0xFFF0D6D3)
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    val Boys = Color(0x5F3EE6FF)
+    val Taylor = Color(0xFF0F53D2)
+    val Zak = Color(0x21E7A7FF)
     // ===== Neutrals =====
     val Ink = Color(0xFF111827)        // slate-900-ish (primary text)
     val Ink80 = Color(0xCC111827)      // secondary text
@@ -23,7 +66,7 @@ object PressmarkColors {
 
     // Surface layers
     val Surface = Color(0xFFFFFFFF)    // white cards/sheets
-    val Surface2 = Color(0xFFF3F4F6)   // gray-100/200-ish
+    val Surface2 = Color(0x93042719)   // gray-100/200-ish
     val Surface3 = Color(0xFFE5E7EB)   // gray-200/300-ish
 
     // Borders / hairlines
@@ -33,7 +76,7 @@ object PressmarkColors {
     // ===== Corporate Accents =====
     val Blue = Color(0xFF2563EB)       // blue-600
     val BlueDeep = Color(0xFF1D4ED8)   // blue-700
-    val BlueSoft = Color(0xFFDCEAFE)   // blue-100-ish
+    val BlueSoft = Color(0xFF005ED9)   // blue-100-ish
 
     val NeutralAccent = Color(0xFF64748B) // slate-500
 

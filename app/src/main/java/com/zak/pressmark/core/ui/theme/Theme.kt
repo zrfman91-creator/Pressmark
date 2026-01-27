@@ -20,34 +20,34 @@ import androidx.core.view.WindowCompat
 
 private val CorporateLightColorScheme: ColorScheme = lightColorScheme(
     // Primary (Office Blue)
-    primary =              PressmarkColors.BlueDeep,
-    onPrimary =            Color(0xFFFFFFFF),
-    primaryContainer =     PressmarkColors.BlueSoft,
-    onPrimaryContainer =   Color(0xFF0B1E55),
+    primary =              PressmarkColors.primePC,
+    onPrimary =            PressmarkColors.onPrimePC,
+    primaryContainer =     PressmarkColors.primeContainerPC,
+    onPrimaryContainer =   PressmarkColors.onPrimeContainerPC,
 
     // Secondary (Neutral slate)
-    secondary =            PressmarkColors.NeutralAccent,
-    onSecondary =          Color(0xFFFFFFFF),
-    secondaryContainer =   Color(0xFFE2E8F0), // slate-200
-    onSecondaryContainer = Color(0xFF111827),
+    secondary =            PressmarkColors.secondPC,
+    onSecondary =          PressmarkColors.onSecondPC,
+    secondaryContainer =   PressmarkColors.secondContainerPC,
+    onSecondaryContainer = PressmarkColors.onSecondContainerPC,
 
     // Tertiary (muted)
-    tertiary =             Color(0xFF0EA5E9), // sky-500 (subtle accent)
-    onTertiary =           Color(0xFFFFFFFF),
-    tertiaryContainer =    Color(0xFFCCEAF9),
-    onTertiaryContainer =  Color(0xFF0B2A3A),
+    tertiary =             PressmarkColors.tertiaryPC,
+    onTertiary =           PressmarkColors.onTertiaryPC,
+    tertiaryContainer =    PressmarkColors.tertiaryContainerPC,
+    onTertiaryContainer =  PressmarkColors.onTertiaryContainerPC,
 
     // Surfaces
-    background =           PressmarkColors.Paper,
-    onBackground =         PressmarkColors.Ink,
-    surface =              PressmarkColors.Surface,
-    onSurface =            PressmarkColors.Ink,
-    surfaceVariant =       PressmarkColors.Surface2,
-    onSurfaceVariant =     Color(0xFF4B5563),
+    background =           PressmarkColors.backgroundPC,
+    onBackground =         PressmarkColors.onBackgroundPC,
+    surface =              PressmarkColors.surfacePC,
+    onSurface =            PressmarkColors.onSurfacePC,
+    surfaceVariant =       PressmarkColors.surfaceVariantPC,
+    onSurfaceVariant =     PressmarkColors.onSurfaceVariantPC,
 
     // Borders / Dividers
-    outline =              PressmarkColors.Hairline,
-    outlineVariant =       PressmarkColors.HairlineSoft,
+    outline =              PressmarkColors.outlinePC,
+    outlineVariant =       PressmarkColors.outlineVariantPC,
 
     // Error
     error =                PressmarkColors.Error,
