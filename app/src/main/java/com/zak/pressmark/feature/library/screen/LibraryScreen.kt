@@ -57,6 +57,7 @@ import com.zak.pressmark.data.prefs.LibraryGroupKey
 import com.zak.pressmark.data.prefs.LibrarySortKey
 import com.zak.pressmark.data.prefs.LibrarySortSpec
 import com.zak.pressmark.data.prefs.SortDirection
+import com.zak.pressmark.feature.library.ui.LibraryActionRow
 import com.zak.pressmark.feature.library.vm.LibraryItemUi
 import com.zak.pressmark.feature.library.vm.LibraryListItem
 import com.zak.pressmark.feature.library.vm.LibraryUiState
@@ -122,10 +123,8 @@ fun LibraryScreen(
             LibraryControlsRow(
                 sortSpec = state.sortSpec,
                 groupKey = state.groupKey,
-                hasAnyCollapsed = hasAnyCollapsed,
                 onSortChanged = onSortChanged,
                 onGroupChanged = onGroupChanged,
-                onToggleAllSections = onToggleAllSections,
             )
 
             if (filteredItems.isEmpty()) {
@@ -188,32 +187,20 @@ fun LibraryScreen(
 private fun LibraryControlsRow(
     sortSpec: LibrarySortSpec,
     groupKey: LibraryGroupKey,
-    hasAnyCollapsed: Boolean,
     onSortChanged: (LibrarySortSpec) -> Unit,
     onGroupChanged: (LibraryGroupKey) -> Unit,
-    onToggleAllSections: (expand: Boolean) -> Unit,
 ) {
-    Row(
+    LibraryActionRow(
+        sort = sortSpec,
+        group = groupKey,
+        sortOptions = sortOptions(),
+        groupOptions = LibraryGroupKey.entries,
+        sortLabel = ::sortLabel,
+        groupLabel = ::groupLabel,
+        onSortSelected = onSortChanged,
+        onGroupSelected = onGroupChanged,
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        SortMenu(
-            current = sortSpec,
-            onChanged = onSortChanged,
-            modifier = Modifier.weight(1f),
-        )
-        GroupMenu(
-            current = groupKey,
-            onChanged = onGroupChanged,
-            modifier = Modifier.weight(1f),
-        )
-        SectionsButton(
-            enabled = groupKey != LibraryGroupKey.NONE,
-            expandAction = hasAnyCollapsed,
-            onClick = { onToggleAllSections(hasAnyCollapsed) }, // if anything collapsed -> expand all
-            modifier = Modifier.weight(1f),
-        )
-    }
+    )
 }
 
 @Composable
