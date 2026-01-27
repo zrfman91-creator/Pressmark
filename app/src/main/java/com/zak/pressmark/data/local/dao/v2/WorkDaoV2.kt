@@ -63,12 +63,24 @@ interface WorkDaoV2 {
     )
     fun observeAll(): Flow<List<WorkEntityV2>>
 
+    // --- Sort keys: ignore leading "The " (case-insensitive) ---
+    // NOTE: ltrim() removes leading spaces; lower() makes it case-insensitive.
+    // substr(..., 5) removes "the " (4 chars) => starting at position 5 (1-indexed).
+    // We keep COLLATE NOCASE on the final expression for consistent ordering.
+
     @Query(
         """
         SELECT * FROM ${DbSchemaV2.Work.TABLE}
-        ORDER BY ${DbSchemaV2.Work.TITLE} COLLATE NOCASE ASC,
-                 ${DbSchemaV2.Work.ARTIST_LINE} COLLATE NOCASE ASC,
-                 ${DbSchemaV2.Work.ID} ASC
+        ORDER BY
+          CASE
+            WHEN lower(ltrim(${DbSchemaV2.Work.TITLE})) LIKE 'the %' THEN substr(ltrim(${DbSchemaV2.Work.TITLE}), 5)
+            ELSE ltrim(${DbSchemaV2.Work.TITLE})
+          END COLLATE NOCASE ASC,
+          CASE
+            WHEN lower(ltrim(${DbSchemaV2.Work.ARTIST_LINE})) LIKE 'the %' THEN substr(ltrim(${DbSchemaV2.Work.ARTIST_LINE}), 5)
+            ELSE ltrim(${DbSchemaV2.Work.ARTIST_LINE})
+          END COLLATE NOCASE ASC,
+          ${DbSchemaV2.Work.ID} ASC
         """
     )
     fun observeAllByTitle(): Flow<List<WorkEntityV2>>
@@ -76,9 +88,33 @@ interface WorkDaoV2 {
     @Query(
         """
         SELECT * FROM ${DbSchemaV2.Work.TABLE}
-        ORDER BY ${DbSchemaV2.Work.ARTIST_LINE} COLLATE NOCASE ASC,
-                 ${DbSchemaV2.Work.TITLE} COLLATE NOCASE ASC,
-                 ${DbSchemaV2.Work.ID} ASC
+        ORDER BY
+          CASE
+            WHEN lower(ltrim(${DbSchemaV2.Work.TITLE})) LIKE 'the %' THEN substr(ltrim(${DbSchemaV2.Work.TITLE}), 5)
+            ELSE ltrim(${DbSchemaV2.Work.TITLE})
+          END COLLATE NOCASE DESC,
+          CASE
+            WHEN lower(ltrim(${DbSchemaV2.Work.ARTIST_LINE})) LIKE 'the %' THEN substr(ltrim(${DbSchemaV2.Work.ARTIST_LINE}), 5)
+            ELSE ltrim(${DbSchemaV2.Work.ARTIST_LINE})
+          END COLLATE NOCASE ASC,
+          ${DbSchemaV2.Work.ID} ASC
+        """
+    )
+    fun observeAllByTitleDesc(): Flow<List<WorkEntityV2>>
+
+    @Query(
+        """
+        SELECT * FROM ${DbSchemaV2.Work.TABLE}
+        ORDER BY
+          CASE
+            WHEN lower(ltrim(${DbSchemaV2.Work.ARTIST_LINE})) LIKE 'the %' THEN substr(ltrim(${DbSchemaV2.Work.ARTIST_LINE}), 5)
+            ELSE ltrim(${DbSchemaV2.Work.ARTIST_LINE})
+          END COLLATE NOCASE ASC,
+          CASE
+            WHEN lower(ltrim(${DbSchemaV2.Work.TITLE})) LIKE 'the %' THEN substr(ltrim(${DbSchemaV2.Work.TITLE}), 5)
+            ELSE ltrim(${DbSchemaV2.Work.TITLE})
+          END COLLATE NOCASE ASC,
+          ${DbSchemaV2.Work.ID} ASC
         """
     )
     fun observeAllByArtist(): Flow<List<WorkEntityV2>>
@@ -86,14 +122,55 @@ interface WorkDaoV2 {
     @Query(
         """
         SELECT * FROM ${DbSchemaV2.Work.TABLE}
+        ORDER BY
+          CASE
+            WHEN lower(ltrim(${DbSchemaV2.Work.ARTIST_LINE})) LIKE 'the %' THEN substr(ltrim(${DbSchemaV2.Work.ARTIST_LINE}), 5)
+            ELSE ltrim(${DbSchemaV2.Work.ARTIST_LINE})
+          END COLLATE NOCASE DESC,
+          CASE
+            WHEN lower(ltrim(${DbSchemaV2.Work.TITLE})) LIKE 'the %' THEN substr(ltrim(${DbSchemaV2.Work.TITLE}), 5)
+            ELSE ltrim(${DbSchemaV2.Work.TITLE})
+          END COLLATE NOCASE ASC,
+          ${DbSchemaV2.Work.ID} ASC
+        """
+    )
+    fun observeAllByArtistDesc(): Flow<List<WorkEntityV2>>
+
+    @Query(
+        """
+        SELECT * FROM ${DbSchemaV2.Work.TABLE}
         ORDER BY ${DbSchemaV2.Work.YEAR} IS NULL,
                  ${DbSchemaV2.Work.YEAR} DESC,
-                 ${DbSchemaV2.Work.ARTIST_LINE} COLLATE NOCASE ASC,
-                 ${DbSchemaV2.Work.TITLE} COLLATE NOCASE ASC,
+                 CASE
+                   WHEN lower(ltrim(${DbSchemaV2.Work.ARTIST_LINE})) LIKE 'the %' THEN substr(ltrim(${DbSchemaV2.Work.ARTIST_LINE}), 5)
+                   ELSE ltrim(${DbSchemaV2.Work.ARTIST_LINE})
+                 END COLLATE NOCASE ASC,
+                 CASE
+                   WHEN lower(ltrim(${DbSchemaV2.Work.TITLE})) LIKE 'the %' THEN substr(ltrim(${DbSchemaV2.Work.TITLE}), 5)
+                   ELSE ltrim(${DbSchemaV2.Work.TITLE})
+                 END COLLATE NOCASE ASC,
                  ${DbSchemaV2.Work.ID} ASC
         """
     )
     fun observeAllByYearDesc(): Flow<List<WorkEntityV2>>
+
+    @Query(
+        """
+        SELECT * FROM ${DbSchemaV2.Work.TABLE}
+        ORDER BY ${DbSchemaV2.Work.YEAR} IS NULL,
+                 ${DbSchemaV2.Work.YEAR} ASC,
+                 CASE
+                   WHEN lower(ltrim(${DbSchemaV2.Work.ARTIST_LINE})) LIKE 'the %' THEN substr(ltrim(${DbSchemaV2.Work.ARTIST_LINE}), 5)
+                   ELSE ltrim(${DbSchemaV2.Work.ARTIST_LINE})
+                 END COLLATE NOCASE ASC,
+                 CASE
+                   WHEN lower(ltrim(${DbSchemaV2.Work.TITLE})) LIKE 'the %' THEN substr(ltrim(${DbSchemaV2.Work.TITLE}), 5)
+                   ELSE ltrim(${DbSchemaV2.Work.TITLE})
+                 END COLLATE NOCASE ASC,
+                 ${DbSchemaV2.Work.ID} ASC
+        """
+    )
+    fun observeAllByYearAsc(): Flow<List<WorkEntityV2>>
 
     @Query(
         """
@@ -107,40 +184,15 @@ interface WorkDaoV2 {
     @Query(
         """
         SELECT * FROM ${DbSchemaV2.Work.TABLE}
-        ORDER BY ${DbSchemaV2.Work.TITLE} COLLATE NOCASE DESC,
-                 ${DbSchemaV2.Work.ARTIST_LINE} COLLATE NOCASE ASC,
-                 ${DbSchemaV2.Work.ID} ASC
-        """
-    )
-    fun observeAllByTitleDesc(): Flow<List<WorkEntityV2>>
-
-    @Query(
-        """
-        SELECT * FROM ${DbSchemaV2.Work.TABLE}
-        ORDER BY ${DbSchemaV2.Work.ARTIST_LINE} COLLATE NOCASE DESC,
-                 ${DbSchemaV2.Work.TITLE} COLLATE NOCASE ASC,
-                 ${DbSchemaV2.Work.ID} ASC
-        """
-    )
-    fun observeAllByArtistDesc(): Flow<List<WorkEntityV2>>
-
-    @Query(
-        """
-        SELECT * FROM ${DbSchemaV2.Work.TABLE}
-        ORDER BY ${DbSchemaV2.Work.YEAR} IS NULL,
-                 ${DbSchemaV2.Work.YEAR} ASC,
-                 ${DbSchemaV2.Work.ARTIST_LINE} COLLATE NOCASE ASC,
-                 ${DbSchemaV2.Work.TITLE} COLLATE NOCASE ASC,
-                 ${DbSchemaV2.Work.ID} ASC
-        """
-    )
-    fun observeAllByYearAsc(): Flow<List<WorkEntityV2>>
-
-    @Query(
-        """
-        SELECT * FROM ${DbSchemaV2.Work.TABLE}
         ORDER BY ${DbSchemaV2.Work.CREATED_AT} DESC,
-                 ${DbSchemaV2.Work.TITLE} COLLATE NOCASE ASC,
+                 CASE
+                   WHEN lower(ltrim(${DbSchemaV2.Work.TITLE})) LIKE 'the %' THEN substr(ltrim(${DbSchemaV2.Work.TITLE}), 5)
+                   ELSE ltrim(${DbSchemaV2.Work.TITLE})
+                 END COLLATE NOCASE ASC,
+                 CASE
+                   WHEN lower(ltrim(${DbSchemaV2.Work.ARTIST_LINE})) LIKE 'the %' THEN substr(ltrim(${DbSchemaV2.Work.ARTIST_LINE}), 5)
+                   ELSE ltrim(${DbSchemaV2.Work.ARTIST_LINE})
+                 END COLLATE NOCASE ASC,
                  ${DbSchemaV2.Work.ID} ASC
         """
     )
