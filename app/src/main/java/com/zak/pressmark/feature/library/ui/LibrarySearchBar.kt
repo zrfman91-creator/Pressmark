@@ -9,11 +9,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -58,10 +62,10 @@ fun LibrarySearchBar(
     placeholder: String = "Search library…",
     fabSize: Dp = 56.dp,
     height: Dp = 56.dp,
-    horizontalPadding: Dp = 16.dp,
-    bottomPadding: Dp = 16.dp,
+    horizontalPadding: Dp = 10.dp,
+    bottomPadding: Dp = 48.dp,
     scaffoldBottomPadding: Dp = 16.dp,
-    expandedKeyboardGap: Dp = 6.dp,
+    expandedKeyboardGap: Dp = 0.dp,
 ) {
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
@@ -99,7 +103,7 @@ fun LibrarySearchBar(
             .then(
                 if (expanded) {
                     Modifier
-                        .imePadding()
+                        .windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars))
                         .padding(bottom = expandedKeyboardGap)
                 } else {
                     Modifier.padding(bottom = scaffoldBottomPadding + bottomPadding)
@@ -112,6 +116,7 @@ fun LibrarySearchBar(
         ) {
             Surface(
                 modifier = Modifier
+                    .padding(end = 24.dp)
                     .width(animatedWidth)
                     .height(height)
                     // Consume clicks so outside layer doesn't collapse while interacting inside.
@@ -119,7 +124,7 @@ fun LibrarySearchBar(
                         indication = null,
                         interactionSource = remember { MutableInteractionSource() }
                     ) { },
-                shape = RoundedCornerShape(1.dp),
+                shape = RoundedCornerShape(4.dp),
                 color = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.onSurface,
                 tonalElevation = 0.dp,
@@ -137,6 +142,7 @@ fun LibrarySearchBar(
                             containerColor = containerColor,
                             contentColor = contentColor,
                             elevation = elevation,
+                            shape = RoundedCornerShape(4.dp)
                         ) {
                             Icon(Icons.Filled.Search, contentDescription = "Search")
                         }

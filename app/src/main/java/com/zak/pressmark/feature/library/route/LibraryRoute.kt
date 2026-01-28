@@ -1,10 +1,10 @@
 package com.zak.pressmark.feature.library.route
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.zak.pressmark.feature.library.screen.LibraryScreen
 import com.zak.pressmark.feature.library.vm.LibraryItemUi
 import com.zak.pressmark.feature.library.vm.LibraryViewModel
@@ -16,7 +16,7 @@ fun LibraryRoute(
     onAddManual: () -> Unit,
     onAddBarcode: () -> Unit,
 ) {
-    val state by vm.uiState.collectAsState()
+    val state by vm.uiState.collectAsStateWithLifecycle()
     val (deleteTarget, setDeleteTarget) = remember { mutableStateOf<LibraryItemUi?>(null) }
 
     LibraryScreen(
@@ -27,7 +27,6 @@ fun LibraryRoute(
         onSortChanged = vm::updateSort,
         onGroupChanged = vm::updateGroup,
         onToggleGroup = vm::toggleGroupExpanded,
-        onToggleAllSections = vm::toggleAllSections,
         deleteTarget = deleteTarget,
         onRequestDelete = { setDeleteTarget(it) },
         onDismissDelete = { setDeleteTarget(null) },

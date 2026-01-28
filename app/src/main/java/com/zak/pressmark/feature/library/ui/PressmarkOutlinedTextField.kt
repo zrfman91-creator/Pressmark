@@ -18,7 +18,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -85,7 +84,7 @@ private fun PressmarkOutlinedTextField_Preview_Default() {
         Surface(
             color = MaterialTheme.colorScheme.background
         ) {
-            val (text, setText) = remember<MutableState<String>> { mutableStateOf("Daft Punk") }
+            val (text, setText) = remember { mutableStateOf("Daft Punk") }
 
             Column(Modifier.padding(16.dp)) {
                 PressmarkOutlinedTextField(
