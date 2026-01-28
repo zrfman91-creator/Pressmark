@@ -4,6 +4,7 @@ package com.zak.pressmark.app.di
 import com.zak.pressmark.data.local.dao.v2.PressingDaoV2
 import com.zak.pressmark.data.local.dao.v2.ReleaseDaoV2
 import com.zak.pressmark.data.local.dao.v2.VariantDaoV2
+import com.zak.pressmark.data.local.dao.v2.WorkGenreStyleDaoV2
 import com.zak.pressmark.data.local.dao.v2.WorkDaoV2
 import com.zak.pressmark.data.local.db.v2.AppDatabaseV2
 import com.zak.pressmark.data.repository.v2.WorkRepositoryV2
@@ -25,6 +26,7 @@ object RepositoryModule {
         releaseDao: ReleaseDaoV2,
         pressingDao: PressingDaoV2,
         variantDao: VariantDaoV2,
+        workGenreStyleDao: WorkGenreStyleDaoV2,
     ): WorkRepositoryV2 {
         return WorkRepositoryV2(
             db = db,
@@ -32,6 +34,7 @@ object RepositoryModule {
             releaseDao = releaseDao,
             pressingDao = pressingDao,
             variantDao = variantDao,
+            workGenreStyleDao = workGenreStyleDao,
         )
     }
 }

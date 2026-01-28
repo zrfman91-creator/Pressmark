@@ -28,6 +28,7 @@ object DatabaseProviderV2 {
 
     private fun build(appContext: Context): AppDatabaseV2 {
         return Room.databaseBuilder(appContext, AppDatabaseV2::class.java, DB_NAME) // Wipes and rebuilds the database instead of migrating if no migration object is available. Perfect for starting fresh in development.
+            .addMigrations(MigrationsV2.MIGRATION_1_2)
             .fallbackToDestructiveMigration(dropAllTables = true)                 // The `true` parameter ensures all tables defined in old versions are dropped.
             .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)         // WAL is a good default, it allows reads and writes to happen concurrently.
             .build()
