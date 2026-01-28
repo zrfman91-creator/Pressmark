@@ -2,6 +2,7 @@
 
 package com.zak.pressmark.feature.library.vm
 
+import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zak.pressmark.data.local.entity.v2.WorkEntityV2
@@ -97,6 +98,7 @@ class LibraryViewModel @Inject constructor(
                 val items = buildLibraryItems(
                     works = works,
                     groupKey = groupKey,
+                    sortSpec = sortSpec,
                     collapsedOuterIds = collapsedOuterIds,
                     collapsedNestedIds = collapsedNestedIds,
                 )
@@ -172,146 +174,6 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch { workRepositoryV2.deleteWork(workId) }
     }
 
-    private fun buildLibraryItems(
-        works: List<WorkEntityV2>,
-        groupKey: LibraryGroupKey,
-        collapsedOuterIds: Set<String>,
-        collapsedNestedIds: Set<String>,
-    ): List<LibraryListItem> {
-        if (groupKey == LibraryGroupKey.NONE) {
-            return works.map { work ->
-                LibraryListItem.Row(
-                    id = "row:${work.id}",
-                    item = work.toUi(),
-                    level = 0,
-                )
-            }
-        }
-
-        // Artist grouping = single-level (persistent collapse)
-        if (groupKey == LibraryGroupKey.ARTIST) {
-            val grouped = LinkedHashMap<GroupKey, MutableList<LibraryListItem.Row>>()
-
-            works.forEach { work ->
-                val item = work.toUi()
-                val label = item.artistLine.takeIf { it.isNotBlank() } ?: "Unknown artist"
-                addGroupedRow(
-                    grouped = grouped,
-                    key = GroupKey.artist(label),
-                    item = item,
-                    rowLevel = 1,
-                )
-            }
-
-            val out = mutableListOf<LibraryListItem>()
-            grouped.forEach { (gk, rows) ->
-                val expanded = !collapsedOuterIds.contains(gk.id)
-                out += LibraryListItem.Header(
-                    id = gk.id,
-                    title = gk.label,
-                    count = rows.size,
-                    isExpanded = expanded,
-                    level = 0,
-                )
-                if (expanded) out += rows
-            }
-            return out
-        }
-
-        // Nested modes: outer = selected grouping, inner = artist (non-persistent collapse)
-        val outerMap =
-            LinkedHashMap<GroupKey, LinkedHashMap<GroupKey, MutableList<LibraryListItem.Row>>>()
-
-        fun addToOuter(outerKey: GroupKey, item: LibraryItemUi) {
-            val artistLabel = item.artistLine.takeIf { it.isNotBlank() } ?: "Unknown artist"
-            val innerArtistKey = GroupKey.nestedArtist(parentId = outerKey.id, artistLabel = artistLabel)
-
-            val innerMap = outerMap.getOrPut(outerKey) { LinkedHashMap() }
-            val rows = innerMap.getOrPut(innerArtistKey) { mutableListOf() }
-
-            rows += LibraryListItem.Row(
-                id = "row:${item.workId}:${outerKey.id}:${innerArtistKey.id}",
-                item = item,
-                level = 2,
-            )
-        }
-
-        works.forEach { work ->
-            val item = work.toUi()
-            when (groupKey) {
-                LibraryGroupKey.YEAR -> {
-                    val label = work.year?.toString() ?: "Unknown year"
-                    addToOuter(GroupKey.year(label), item)
-                }
-
-                LibraryGroupKey.DECADE -> {
-                    val label = work.year?.let { "${(it / 10) * 10}s" } ?: "Unknown year"
-                    val idValue = work.year?.let { ((it / 10) * 10).toString() } ?: "unknown"
-                    addToOuter(GroupKey.decade(label, idValue), item)
-                }
-
-                LibraryGroupKey.GENRE -> {
-                    val genres = work.genres()
-                    if (genres.isEmpty()) addToOuter(GroupKey.genre("Unknown genre"), item)
-                    else genres.forEach { g -> addToOuter(GroupKey.genre(g), item) }
-                }
-
-                LibraryGroupKey.STYLE -> {
-                    val styles = work.styles()
-                    if (styles.isEmpty()) addToOuter(GroupKey.style("Unknown style"), item)
-                    else styles.forEach { s -> addToOuter(GroupKey.style(s), item) }
-                }
-
-                LibraryGroupKey.NONE, LibraryGroupKey.ARTIST -> Unit
-            }
-        }
-
-        val out = mutableListOf<LibraryListItem>()
-
-        outerMap.forEach { (outerKey, innerMap) ->
-            val outerExpanded = !collapsedOuterIds.contains(outerKey.id)
-            val outerCount = innerMap.values.sumOf { it.size }
-
-            out += LibraryListItem.Header(
-                id = outerKey.id,
-                title = outerKey.label,
-                count = outerCount,
-                isExpanded = outerExpanded,
-                level = 0,
-            )
-
-            if (!outerExpanded) return@forEach
-
-            innerMap.forEach { (artistKey, rows) ->
-                val innerExpanded = !collapsedNestedIds.contains(artistKey.id)
-                out += LibraryListItem.Header(
-                    id = artistKey.id,
-                    title = artistKey.label,
-                    count = rows.size,
-                    isExpanded = innerExpanded,
-                    level = 1,
-                )
-                if (innerExpanded) out += rows
-            }
-        }
-
-        return out
-    }
-
-    private fun addGroupedRow(
-        grouped: LinkedHashMap<GroupKey, MutableList<LibraryListItem.Row>>,
-        key: GroupKey,
-        item: LibraryItemUi,
-        rowLevel: Int,
-    ) {
-        val rows = grouped.getOrPut(key) { mutableListOf() }
-        rows += LibraryListItem.Row(
-            id = "row:${item.workId}:${key.id}",
-            item = item,
-            level = rowLevel,
-        )
-    }
-
     private fun syncNestedArtistCollapsedIdsIfNeeded(
         groupKey: LibraryGroupKey,
         works: List<WorkEntityV2>,
@@ -339,139 +201,362 @@ class LibraryViewModel @Inject constructor(
         if (next != current) _nestedArtistCollapsedIds.value = next
     }
 
-    private fun isNestedMode(groupKey: LibraryGroupKey): Boolean =
-        groupKey != LibraryGroupKey.NONE && groupKey != LibraryGroupKey.ARTIST
-
     private fun computeOuterGroupIds(groupKey: LibraryGroupKey, works: List<WorkEntityV2>): List<String> {
-        val ids = LinkedHashSet<String>()
-
-        works.forEach { work ->
-            val item = work.toUi()
-            when (groupKey) {
-                LibraryGroupKey.ARTIST -> {
-                    val label = item.artistLine.takeIf { it.isNotBlank() } ?: "Unknown artist"
-                    ids.add(GroupKey.artist(label).id)
-                }
-
-                LibraryGroupKey.YEAR -> {
-                    val label = work.year?.toString() ?: "Unknown year"
-                    ids.add(GroupKey.year(label).id)
-                }
-
-                LibraryGroupKey.DECADE -> {
-                    val label = work.year?.let { "${(it / 10) * 10}s" } ?: "Unknown year"
-                    val idValue = work.year?.let { ((it / 10) * 10).toString() } ?: "unknown"
-                    ids.add(GroupKey.decade(label, idValue).id)
-                }
-
-                LibraryGroupKey.GENRE -> {
-                    val genres = work.genres()
-                    if (genres.isEmpty()) ids.add(GroupKey.genre("Unknown genre").id)
-                    else genres.forEach { g -> ids.add(GroupKey.genre(g).id) }
-                }
-
-                LibraryGroupKey.STYLE -> {
-                    val styles = work.styles()
-                    if (styles.isEmpty()) ids.add(GroupKey.style("Unknown style").id)
-                    else styles.forEach { s -> ids.add(GroupKey.style(s).id) }
-                }
-
-                LibraryGroupKey.NONE -> Unit
-            }
-        }
-
-        return ids.toList()
+        return computeOuterGroupIdsForWorks(groupKey, works)
     }
 
     private fun computeNestedArtistHeaderIds(groupKey: LibraryGroupKey, works: List<WorkEntityV2>): Set<String> {
-        if (!isNestedMode(groupKey)) return emptySet()
-
-        val ids = LinkedHashSet<String>()
-
-        works.forEach { work ->
-            val item = work.toUi()
-            val artistLabel = item.artistLine.takeIf { it.isNotBlank() } ?: "Unknown artist"
-
-            fun addOuter(outerKey: GroupKey) {
-                ids.add(GroupKey.nestedArtist(parentId = outerKey.id, artistLabel = artistLabel).id)
-            }
-
-            when (groupKey) {
-                LibraryGroupKey.YEAR -> {
-                    val label = work.year?.toString() ?: "Unknown year"
-                    addOuter(GroupKey.year(label))
-                }
-
-                LibraryGroupKey.DECADE -> {
-                    val label = work.year?.let { "${(it / 10) * 10}s" } ?: "Unknown year"
-                    val idValue = work.year?.let { ((it / 10) * 10).toString() } ?: "unknown"
-                    addOuter(GroupKey.decade(label, idValue))
-                }
-
-                LibraryGroupKey.GENRE -> {
-                    val genres = work.genres()
-                    if (genres.isEmpty()) addOuter(GroupKey.genre("Unknown genre"))
-                    else genres.forEach { g -> addOuter(GroupKey.genre(g)) }
-                }
-
-                LibraryGroupKey.STYLE -> {
-                    val styles = work.styles()
-                    if (styles.isEmpty()) addOuter(GroupKey.style("Unknown style"))
-                    else styles.forEach { s -> addOuter(GroupKey.style(s)) }
-                }
-
-                LibraryGroupKey.ARTIST, LibraryGroupKey.NONE -> Unit
-            }
-        }
-
-        return ids
+        return computeNestedArtistHeaderIdsForWorks(groupKey, works)
     }
-
-    private fun WorkEntityV2.toUi(): LibraryItemUi =
-        LibraryItemUi(
-            workId = id,
-            title = title,
-            artistLine = artistLine,
-            year = year,
-            artworkUri = primaryArtworkUri,
-        )
 
     private fun WorkEntityV2.genres(): List<String> = parseJsonList(genresJson)
     private fun WorkEntityV2.styles(): List<String> = parseJsonList(stylesJson)
+}
 
-    private fun parseJsonList(json: String?): List<String> {
-        if (json.isNullOrBlank()) return emptyList()
-        return try {
-            val arr = JSONArray(json)
-            buildList {
-                for (i in 0 until arr.length()) {
-                    val v = arr.optString(i).trim()
-                    if (v.isNotBlank()) add(v)
-                }
-            }
-        } catch (_: Throwable) {
-            emptyList()
+@VisibleForTesting
+internal fun buildLibraryItems(
+    works: List<WorkEntityV2>,
+    groupKey: LibraryGroupKey,
+    sortSpec: LibrarySortSpec,
+    collapsedOuterIds: Set<String>,
+    collapsedNestedIds: Set<String>,
+): List<LibraryListItem> {
+    if (groupKey == LibraryGroupKey.NONE) {
+        return works.map { work ->
+            LibraryListItem.Row(
+                id = "row:${work.id}",
+                item = work.toUi(),
+                level = 0,
+            )
         }
     }
 
-    private data class GroupKey(
-        val id: String,
-        val label: String,
-    ) {
-        companion object {
-            fun artist(label: String) = GroupKey("group:artist:${normalizeKey(label)}", label)
-            fun year(label: String) = GroupKey("group:year:${normalizeKey(label)}", label)
-            fun decade(label: String, idValue: String) = GroupKey("group:decade:$idValue", label)
-            fun genre(label: String) = GroupKey("group:genre:${normalizeKey(label)}", label)
-            fun style(label: String) = GroupKey("group:style:${normalizeKey(label)}", label)
+    val albumComparator = albumComparator(sortSpec)
+    val headingComparator = headingComparator(groupKey, sortSpec)
+    val artistComparator = artistComparator(sortSpec)
 
-            fun nestedArtist(parentId: String, artistLabel: String) = GroupKey(
-                id = "${parentId}|artist:${normalizeKey(artistLabel)}",
-                label = artistLabel,
+    if (groupKey == LibraryGroupKey.ARTIST) {
+        val grouped = mutableMapOf<GroupKey, MutableList<WorkEntityV2>>()
+
+        works.forEach { work ->
+            val artistLabel = work.artistLabel()
+            grouped.getOrPut(GroupKey.artist(artistLabel)) { mutableListOf() }.add(work)
+        }
+
+        val out = mutableListOf<LibraryListItem>()
+        grouped.entries
+            .sortedWith { left, right -> headingComparator.compare(left.key, right.key) }
+            .forEach { (group, groupWorks) ->
+                val expanded = !collapsedOuterIds.contains(group.id)
+                val rows = groupWorks.sortedWith(albumComparator).map { work ->
+                    LibraryListItem.Row(
+                        id = "row:${work.id}:${group.id}",
+                        item = work.toUi(),
+                        level = 1,
+                    )
+                }
+                out += LibraryListItem.Header(
+                    id = group.id,
+                    title = group.label,
+                    count = rows.size,
+                    isExpanded = expanded,
+                    level = 0,
+                )
+                if (expanded) out += rows
+            }
+
+        return out
+    }
+
+    val outerMap = mutableMapOf<GroupKey, MutableMap<GroupKey, MutableList<WorkEntityV2>>>()
+
+    fun addToOuter(outerKey: GroupKey, work: WorkEntityV2) {
+        val artistLabel = work.artistLabel()
+        val innerArtistKey = GroupKey.nestedArtist(parentId = outerKey.id, artistLabel = artistLabel)
+        val innerMap = outerMap.getOrPut(outerKey) { mutableMapOf() }
+        innerMap.getOrPut(innerArtistKey) { mutableListOf() }.add(work)
+    }
+
+    works.forEach { work ->
+        when (groupKey) {
+            LibraryGroupKey.YEAR -> addToOuter(GroupKey.year(work.yearLabel()), work)
+            LibraryGroupKey.DECADE -> addToOuter(GroupKey.decade(work.decadeLabel(), work.decadeIdValue()), work)
+            LibraryGroupKey.GENRE -> {
+                val genres = work.genres()
+                if (genres.isEmpty()) addToOuter(GroupKey.genre("Unknown genre"), work)
+                else genres.forEach { genre -> addToOuter(GroupKey.genre(genre), work) }
+            }
+
+            LibraryGroupKey.STYLE -> {
+                val styles = work.styles()
+                if (styles.isEmpty()) addToOuter(GroupKey.style("Unknown style"), work)
+                else styles.forEach { style -> addToOuter(GroupKey.style(style), work) }
+            }
+
+            LibraryGroupKey.NONE, LibraryGroupKey.ARTIST -> Unit
+        }
+    }
+
+    val out = mutableListOf<LibraryListItem>()
+    outerMap.entries
+        .sortedWith { left, right -> headingComparator.compare(left.key, right.key) }
+        .forEach { (outerKey, innerMap) ->
+            val outerExpanded = !collapsedOuterIds.contains(outerKey.id)
+            val outerCount = innerMap.values.sumOf { it.size }
+            out += LibraryListItem.Header(
+                id = outerKey.id,
+                title = outerKey.label,
+                count = outerCount,
+                isExpanded = outerExpanded,
+                level = 0,
             )
 
-            private fun normalizeKey(raw: String): String =
-                raw.trim().lowercase().replace(Regex("\\s+"), " ")
+            if (!outerExpanded) return@forEach
+
+            innerMap.entries
+                .sortedWith { left, right -> artistComparator.compare(left.key, right.key) }
+                .forEach { (artistKey, rows) ->
+                    val innerExpanded = !collapsedNestedIds.contains(artistKey.id)
+                    out += LibraryListItem.Header(
+                        id = artistKey.id,
+                        title = artistKey.label,
+                        count = rows.size,
+                        isExpanded = innerExpanded,
+                        level = 1,
+                    )
+                    if (innerExpanded) {
+                        out += rows
+                            .sortedWith(albumComparator)
+                            .map { work ->
+                                LibraryListItem.Row(
+                                    id = "row:${work.id}:${outerKey.id}:${artistKey.id}",
+                                    item = work.toUi(),
+                                    level = 2,
+                                )
+                            }
+                    }
+                }
         }
+
+    return out
+}
+
+private fun headingComparator(
+    groupKey: LibraryGroupKey,
+    sortSpec: LibrarySortSpec,
+): Comparator<GroupKey> = when (groupKey) {
+    LibraryGroupKey.GENRE, LibraryGroupKey.STYLE -> compareBy<GroupKey> { it.sortKey }.thenBy { it.label }
+    LibraryGroupKey.ARTIST -> compareBy<GroupKey> { it.sortKey }.thenBy { it.label }
+    LibraryGroupKey.YEAR, LibraryGroupKey.DECADE -> {
+        val direction = if (sortSpec.key == LibrarySortKey.YEAR) sortSpec.direction else SortDirection.ASC
+        Comparator { left, right ->
+            val numeric = compareNullableInts(left.sortValue, right.sortValue, direction)
+            if (numeric != 0) numeric else left.sortKey.compareTo(right.sortKey)
+        }
+    }
+
+    LibraryGroupKey.NONE -> compareBy<GroupKey> { it.sortKey }
+}
+
+private fun artistComparator(sortSpec: LibrarySortSpec): Comparator<GroupKey> {
+    val direction = if (sortSpec.key == LibrarySortKey.ARTIST) sortSpec.direction else SortDirection.ASC
+    return Comparator { left, right ->
+        val primary = if (direction == SortDirection.ASC) {
+            left.sortKey.compareTo(right.sortKey)
+        } else {
+            right.sortKey.compareTo(left.sortKey)
+        }
+        if (primary != 0) primary else left.label.compareTo(right.label)
+    }
+}
+
+private fun albumComparator(sortSpec: LibrarySortSpec): Comparator<WorkEntityV2> = when (sortSpec.key) {
+    LibrarySortKey.ARTIST -> compareBy<WorkEntityV2> { normalizeForSort(it.title) }
+    LibrarySortKey.TITLE -> {
+        val base = compareBy<WorkEntityV2> { normalizeForSort(it.title) }
+        if (sortSpec.direction == SortDirection.ASC) base else base.reversed()
+    }
+
+    LibrarySortKey.YEAR -> Comparator { left, right ->
+        val primary = compareNullableInts(left.year, right.year, sortSpec.direction)
+        if (primary != 0) primary else normalizeForSort(left.title).compareTo(normalizeForSort(right.title))
+    }
+
+    LibrarySortKey.RECENTLY_ADDED -> Comparator { left, right ->
+        val primary = compareNullableLongs(left.createdAt, right.createdAt, sortSpec.direction)
+        if (primary != 0) primary else normalizeForSort(left.title).compareTo(normalizeForSort(right.title))
+    }
+}
+
+private fun compareNullableInts(left: Int?, right: Int?, direction: SortDirection): Int {
+    if (left == null && right == null) return 0
+    if (left == null) return if (direction == SortDirection.ASC) 1 else -1
+    if (right == null) return if (direction == SortDirection.ASC) -1 else 1
+    return if (direction == SortDirection.ASC) left.compareTo(right) else right.compareTo(left)
+}
+
+private fun compareNullableLongs(left: Long?, right: Long?, direction: SortDirection): Int {
+    if (left == null && right == null) return 0
+    if (left == null) return if (direction == SortDirection.ASC) 1 else -1
+    if (right == null) return if (direction == SortDirection.ASC) -1 else 1
+    return if (direction == SortDirection.ASC) left.compareTo(right) else right.compareTo(left)
+}
+
+private fun computeOuterGroupIdsForWorks(groupKey: LibraryGroupKey, works: List<WorkEntityV2>): List<String> {
+    val ids = LinkedHashSet<String>()
+
+    works.forEach { work ->
+        when (groupKey) {
+            LibraryGroupKey.ARTIST -> ids.add(GroupKey.artist(work.artistLabel()).id)
+            LibraryGroupKey.YEAR -> ids.add(GroupKey.year(work.yearLabel()).id)
+            LibraryGroupKey.DECADE -> ids.add(GroupKey.decade(work.decadeLabel(), work.decadeIdValue()).id)
+            LibraryGroupKey.GENRE -> {
+                val genres = work.genres()
+                if (genres.isEmpty()) ids.add(GroupKey.genre("Unknown genre").id)
+                else genres.forEach { genre -> ids.add(GroupKey.genre(genre).id) }
+            }
+
+            LibraryGroupKey.STYLE -> {
+                val styles = work.styles()
+                if (styles.isEmpty()) ids.add(GroupKey.style("Unknown style").id)
+                else styles.forEach { style -> ids.add(GroupKey.style(style).id) }
+            }
+
+            LibraryGroupKey.NONE -> Unit
+        }
+    }
+
+    return ids.toList()
+}
+
+private fun computeNestedArtistHeaderIdsForWorks(groupKey: LibraryGroupKey, works: List<WorkEntityV2>): Set<String> {
+    if (!isNestedMode(groupKey)) return emptySet()
+
+    val ids = LinkedHashSet<String>()
+
+    works.forEach { work ->
+        val artistLabel = work.artistLabel()
+
+        fun addOuter(outerKey: GroupKey) {
+            ids.add(GroupKey.nestedArtist(parentId = outerKey.id, artistLabel = artistLabel).id)
+        }
+
+        when (groupKey) {
+            LibraryGroupKey.YEAR -> addOuter(GroupKey.year(work.yearLabel()))
+            LibraryGroupKey.DECADE -> addOuter(GroupKey.decade(work.decadeLabel(), work.decadeIdValue()))
+            LibraryGroupKey.GENRE -> {
+                val genres = work.genres()
+                if (genres.isEmpty()) addOuter(GroupKey.genre("Unknown genre"))
+                else genres.forEach { genre -> addOuter(GroupKey.genre(genre)) }
+            }
+
+            LibraryGroupKey.STYLE -> {
+                val styles = work.styles()
+                if (styles.isEmpty()) addOuter(GroupKey.style("Unknown style"))
+                else styles.forEach { style -> addOuter(GroupKey.style(style)) }
+            }
+
+            LibraryGroupKey.ARTIST, LibraryGroupKey.NONE -> Unit
+        }
+    }
+
+    return ids
+}
+
+private fun isNestedMode(groupKey: LibraryGroupKey): Boolean =
+    groupKey != LibraryGroupKey.NONE && groupKey != LibraryGroupKey.ARTIST
+
+private fun WorkEntityV2.artistLabel(): String =
+    artistLine.takeIf { it.isNotBlank() } ?: "Unknown artist"
+
+private fun WorkEntityV2.yearLabel(): String =
+    year?.toString() ?: "Unknown year"
+
+private fun WorkEntityV2.decadeLabel(): String =
+    year?.let { "${(it / 10) * 10}s" } ?: "Unknown year"
+
+private fun WorkEntityV2.decadeIdValue(): String =
+    year?.let { ((it / 10) * 10).toString() } ?: "unknown"
+
+private fun WorkEntityV2.toUi(): LibraryItemUi =
+    LibraryItemUi(
+        workId = id,
+        title = title,
+        artistLine = artistLine,
+        year = year,
+        artworkUri = primaryArtworkUri,
+    )
+
+private fun WorkEntityV2.genres(): List<String> = parseJsonList(genresJson)
+private fun WorkEntityV2.styles(): List<String> = parseJsonList(stylesJson)
+
+private fun parseJsonList(json: String?): List<String> {
+    if (json.isNullOrBlank()) return emptyList()
+    return try {
+        val arr = JSONArray(json)
+        buildList {
+            for (i in 0 until arr.length()) {
+                val v = arr.optString(i).trim()
+                if (v.isNotBlank()) add(v)
+            }
+        }
+    } catch (_: Throwable) {
+        emptyList()
+    }
+}
+
+internal fun normalizeForSort(raw: String, stripLeadingThe: Boolean = false): String {
+    val trimmed = raw.trim().lowercase().replace(Regex("\\s+"), " ")
+    if (!stripLeadingThe) return trimmed
+    return trimmed.removePrefix("the ").trimStart()
+}
+
+private data class GroupKey(
+    val id: String,
+    val label: String,
+    val sortKey: String,
+    val sortValue: Int? = null,
+) {
+    companion object {
+        fun artist(label: String) = GroupKey(
+            id = "group:artist:${normalizeKey(label)}",
+            label = label,
+            sortKey = normalizeForSort(label, stripLeadingThe = true),
+        )
+
+        fun year(label: String) = GroupKey(
+            id = "group:year:${normalizeKey(label)}",
+            label = label,
+            sortKey = normalizeForSort(label),
+            sortValue = label.toIntOrNull(),
+        )
+
+        fun decade(label: String, idValue: String) = GroupKey(
+            id = "group:decade:$idValue",
+            label = label,
+            sortKey = normalizeForSort(label),
+            sortValue = idValue.toIntOrNull(),
+        )
+
+        fun genre(label: String) = GroupKey(
+            id = "group:genre:${normalizeKey(label)}",
+            label = label,
+            sortKey = normalizeForSort(label),
+        )
+
+        fun style(label: String) = GroupKey(
+            id = "group:style:${normalizeKey(label)}",
+            label = label,
+            sortKey = normalizeForSort(label),
+        )
+
+        fun nestedArtist(parentId: String, artistLabel: String) = GroupKey(
+            id = "${parentId}|artist:${normalizeKey(artistLabel)}",
+            label = artistLabel,
+            sortKey = normalizeForSort(artistLabel, stripLeadingThe = true),
+        )
+
+        private fun normalizeKey(raw: String): String =
+            raw.trim().lowercase().replace(Regex("\\s+"), " ")
     }
 }
