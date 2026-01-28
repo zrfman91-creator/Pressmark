@@ -61,7 +61,7 @@ fun LibrarySearchBar(
     horizontalPadding: Dp = 16.dp,
     bottomPadding: Dp = 16.dp,
     scaffoldBottomPadding: Dp = 16.dp,
-    keyboardGap: Dp = 2.dp,
+    expandedKeyboardGap: Dp = 6.dp,
 ) {
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
@@ -96,9 +96,15 @@ fun LibrarySearchBar(
             .fillMaxSize()
             .padding(horizontal = horizontalPadding)
             // When expanded: sit above IME + small gap (ignore scaffold bottom bar padding)
-            .then(if (expanded) Modifier.imePadding() else Modifier)
-            .then(if (expanded) Modifier.padding(bottom = keyboardGap) else Modifier.padding(bottom = scaffoldBottomPadding + bottomPadding))
-
+            .then(
+                if (expanded) {
+                    Modifier
+                        .imePadding()
+                        .padding(bottom = expandedKeyboardGap)
+                } else {
+                    Modifier.padding(bottom = scaffoldBottomPadding + bottomPadding)
+                }
+            )
 
         Box(
             modifier = anchorModifier,
