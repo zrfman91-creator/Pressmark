@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -109,12 +111,12 @@ fun LibraryScreen(
             )
         },
     ) { padding ->
-        val scaffoldBottom = padding.calculateBottomPadding()
+        val navBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding() // IMPORTANT: includes bottomBar padding if you added it
+                .padding(padding)
         ) {
             Column(
                 modifier = Modifier
@@ -133,7 +135,9 @@ fun LibraryScreen(
                     EmptyState(isSearching = searchQuery.isNotBlank())
                 } else {
                     LazyColumn(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                     items(
@@ -180,8 +184,8 @@ fun LibraryScreen(
                 expanded = isSearchExpanded,
                 onExpandedChange = { isSearchExpanded = it },
                 placeholder = "Search library…",
-                scaffoldBottomPadding = scaffoldBottom, // <--
-                keyboardGap = 6.dp,
+                scaffoldBottomPadding = navBarBottom,
+                expandedKeyboardGap = 6.dp,
             )
         }
     }
