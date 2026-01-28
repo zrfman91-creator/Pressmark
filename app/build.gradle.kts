@@ -114,7 +114,6 @@ dependencies {
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
-    implementation(libs.androidx.exifinterface)
     implementation(libs.androidx.work.runtime)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.mlkit.text.recognition)
@@ -122,7 +121,7 @@ dependencies {
     implementation(libs.hilt.android)
     implementation(libs.androidx.hilt.work)
     implementation(libs.androidx.compose.ui.text)
-    implementation(libs.androidx.foundation.layout)
+    implementation(libs.androidx.compose.foundation.layout)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 
