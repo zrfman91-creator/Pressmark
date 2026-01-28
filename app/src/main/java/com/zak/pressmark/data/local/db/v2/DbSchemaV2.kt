@@ -18,9 +18,11 @@ object DbSchemaV2 {
 
         const val TITLE = "title"
         const val TITLE_NORMALIZED = "title_normalized"
+        const val TITLE_SORT = "title_sort"
 
         const val ARTIST_LINE = "artist_line"
         const val ARTIST_NORMALIZED = "artist_normalized"
+        const val ARTIST_SORT = "artist_sort"
 
         const val YEAR = "year"
 
@@ -36,6 +38,32 @@ object DbSchemaV2 {
 
         const val CREATED_AT = "created_at"
         const val UPDATED_AT = "updated_at"
+    }
+
+    object Genre {
+        const val TABLE = "v2_genres"
+        const val ID = "id"
+        const val NAME_NORMALIZED = "name_normalized"
+        const val NAME_DISPLAY = "name_display"
+    }
+
+    object Style {
+        const val TABLE = "v2_styles"
+        const val ID = "id"
+        const val NAME_NORMALIZED = "name_normalized"
+        const val NAME_DISPLAY = "name_display"
+    }
+
+    object WorkGenre {
+        const val TABLE = "v2_work_genres"
+        const val WORK_ID = "work_id"
+        const val GENRE_ID = "genre_id"
+    }
+
+    object WorkStyle {
+        const val TABLE = "v2_work_styles"
+        const val WORK_ID = "work_id"
+        const val STYLE_ID = "style_id"
     }
 
     object Release {

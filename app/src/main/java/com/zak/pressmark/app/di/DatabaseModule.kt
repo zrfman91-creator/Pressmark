@@ -6,8 +6,10 @@ import androidx.room.Room
 import com.zak.pressmark.data.local.dao.v2.PressingDaoV2
 import com.zak.pressmark.data.local.dao.v2.ReleaseDaoV2
 import com.zak.pressmark.data.local.dao.v2.VariantDaoV2
+import com.zak.pressmark.data.local.dao.v2.WorkGenreStyleDaoV2
 import com.zak.pressmark.data.local.dao.v2.WorkDaoV2
 import com.zak.pressmark.data.local.db.v2.AppDatabaseV2
+import com.zak.pressmark.data.local.db.v2.MigrationsV2
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -32,6 +34,7 @@ object DatabaseModule {
         @ApplicationContext context: Context,
     ): AppDatabaseV2 {
         return Room.databaseBuilder(context, AppDatabaseV2::class.java, DB_NAME)
+            .addMigrations(MigrationsV2.MIGRATION_1_2)
             // Dev-friendly. Remove/replace with proper migrations when schema stabilizes.
             .fallbackToDestructiveMigration()
             .build()
@@ -52,4 +55,8 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideVariantDaoV2(db: AppDatabaseV2): VariantDaoV2 = db.variantDaoV2()
+
+    @Provides
+    @Singleton
+    fun provideWorkGenreStyleDaoV2(db: AppDatabaseV2): WorkGenreStyleDaoV2 = db.workGenreStyleDaoV2()
 }

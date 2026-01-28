@@ -5,6 +5,8 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.RawQuery
+import androidx.sqlite.db.SupportSQLiteQuery
 import com.zak.pressmark.data.local.db.v2.DbSchemaV2
 import com.zak.pressmark.data.local.entity.v2.WorkEntityV2
 import kotlinx.coroutines.flow.Flow
@@ -72,14 +74,8 @@ interface WorkDaoV2 {
         """
         SELECT * FROM ${DbSchemaV2.Work.TABLE}
         ORDER BY
-          CASE
-            WHEN lower(ltrim(${DbSchemaV2.Work.TITLE})) LIKE 'the %' THEN substr(ltrim(${DbSchemaV2.Work.TITLE}), 5)
-            ELSE ltrim(${DbSchemaV2.Work.TITLE})
-          END COLLATE NOCASE ASC,
-          CASE
-            WHEN lower(ltrim(${DbSchemaV2.Work.ARTIST_LINE})) LIKE 'the %' THEN substr(ltrim(${DbSchemaV2.Work.ARTIST_LINE}), 5)
-            ELSE ltrim(${DbSchemaV2.Work.ARTIST_LINE})
-          END COLLATE NOCASE ASC,
+          ${DbSchemaV2.Work.TITLE_SORT} ASC,
+          ${DbSchemaV2.Work.ARTIST_SORT} ASC,
           ${DbSchemaV2.Work.ID} ASC
         """
     )
@@ -89,14 +85,8 @@ interface WorkDaoV2 {
         """
         SELECT * FROM ${DbSchemaV2.Work.TABLE}
         ORDER BY
-          CASE
-            WHEN lower(ltrim(${DbSchemaV2.Work.TITLE})) LIKE 'the %' THEN substr(ltrim(${DbSchemaV2.Work.TITLE}), 5)
-            ELSE ltrim(${DbSchemaV2.Work.TITLE})
-          END COLLATE NOCASE DESC,
-          CASE
-            WHEN lower(ltrim(${DbSchemaV2.Work.ARTIST_LINE})) LIKE 'the %' THEN substr(ltrim(${DbSchemaV2.Work.ARTIST_LINE}), 5)
-            ELSE ltrim(${DbSchemaV2.Work.ARTIST_LINE})
-          END COLLATE NOCASE ASC,
+          ${DbSchemaV2.Work.TITLE_SORT} DESC,
+          ${DbSchemaV2.Work.ARTIST_SORT} ASC,
           ${DbSchemaV2.Work.ID} ASC
         """
     )
@@ -106,14 +96,8 @@ interface WorkDaoV2 {
         """
         SELECT * FROM ${DbSchemaV2.Work.TABLE}
         ORDER BY
-          CASE
-            WHEN lower(ltrim(${DbSchemaV2.Work.ARTIST_LINE})) LIKE 'the %' THEN substr(ltrim(${DbSchemaV2.Work.ARTIST_LINE}), 5)
-            ELSE ltrim(${DbSchemaV2.Work.ARTIST_LINE})
-          END COLLATE NOCASE ASC,
-          CASE
-            WHEN lower(ltrim(${DbSchemaV2.Work.TITLE})) LIKE 'the %' THEN substr(ltrim(${DbSchemaV2.Work.TITLE}), 5)
-            ELSE ltrim(${DbSchemaV2.Work.TITLE})
-          END COLLATE NOCASE ASC,
+          ${DbSchemaV2.Work.ARTIST_SORT} ASC,
+          ${DbSchemaV2.Work.TITLE_SORT} ASC,
           ${DbSchemaV2.Work.ID} ASC
         """
     )
@@ -123,14 +107,8 @@ interface WorkDaoV2 {
         """
         SELECT * FROM ${DbSchemaV2.Work.TABLE}
         ORDER BY
-          CASE
-            WHEN lower(ltrim(${DbSchemaV2.Work.ARTIST_LINE})) LIKE 'the %' THEN substr(ltrim(${DbSchemaV2.Work.ARTIST_LINE}), 5)
-            ELSE ltrim(${DbSchemaV2.Work.ARTIST_LINE})
-          END COLLATE NOCASE DESC,
-          CASE
-            WHEN lower(ltrim(${DbSchemaV2.Work.TITLE})) LIKE 'the %' THEN substr(ltrim(${DbSchemaV2.Work.TITLE}), 5)
-            ELSE ltrim(${DbSchemaV2.Work.TITLE})
-          END COLLATE NOCASE ASC,
+          ${DbSchemaV2.Work.ARTIST_SORT} DESC,
+          ${DbSchemaV2.Work.TITLE_SORT} ASC,
           ${DbSchemaV2.Work.ID} ASC
         """
     )
@@ -141,14 +119,8 @@ interface WorkDaoV2 {
         SELECT * FROM ${DbSchemaV2.Work.TABLE}
         ORDER BY ${DbSchemaV2.Work.YEAR} IS NULL,
                  ${DbSchemaV2.Work.YEAR} DESC,
-                 CASE
-                   WHEN lower(ltrim(${DbSchemaV2.Work.ARTIST_LINE})) LIKE 'the %' THEN substr(ltrim(${DbSchemaV2.Work.ARTIST_LINE}), 5)
-                   ELSE ltrim(${DbSchemaV2.Work.ARTIST_LINE})
-                 END COLLATE NOCASE ASC,
-                 CASE
-                   WHEN lower(ltrim(${DbSchemaV2.Work.TITLE})) LIKE 'the %' THEN substr(ltrim(${DbSchemaV2.Work.TITLE}), 5)
-                   ELSE ltrim(${DbSchemaV2.Work.TITLE})
-                 END COLLATE NOCASE ASC,
+                 ${DbSchemaV2.Work.ARTIST_SORT} ASC,
+                 ${DbSchemaV2.Work.TITLE_SORT} ASC,
                  ${DbSchemaV2.Work.ID} ASC
         """
     )
@@ -159,14 +131,8 @@ interface WorkDaoV2 {
         SELECT * FROM ${DbSchemaV2.Work.TABLE}
         ORDER BY ${DbSchemaV2.Work.YEAR} IS NULL,
                  ${DbSchemaV2.Work.YEAR} ASC,
-                 CASE
-                   WHEN lower(ltrim(${DbSchemaV2.Work.ARTIST_LINE})) LIKE 'the %' THEN substr(ltrim(${DbSchemaV2.Work.ARTIST_LINE}), 5)
-                   ELSE ltrim(${DbSchemaV2.Work.ARTIST_LINE})
-                 END COLLATE NOCASE ASC,
-                 CASE
-                   WHEN lower(ltrim(${DbSchemaV2.Work.TITLE})) LIKE 'the %' THEN substr(ltrim(${DbSchemaV2.Work.TITLE}), 5)
-                   ELSE ltrim(${DbSchemaV2.Work.TITLE})
-                 END COLLATE NOCASE ASC,
+                 ${DbSchemaV2.Work.ARTIST_SORT} ASC,
+                 ${DbSchemaV2.Work.TITLE_SORT} ASC,
                  ${DbSchemaV2.Work.ID} ASC
         """
     )
@@ -185,16 +151,232 @@ interface WorkDaoV2 {
         """
         SELECT * FROM ${DbSchemaV2.Work.TABLE}
         ORDER BY ${DbSchemaV2.Work.CREATED_AT} DESC,
-                 CASE
-                   WHEN lower(ltrim(${DbSchemaV2.Work.TITLE})) LIKE 'the %' THEN substr(ltrim(${DbSchemaV2.Work.TITLE}), 5)
-                   ELSE ltrim(${DbSchemaV2.Work.TITLE})
-                 END COLLATE NOCASE ASC,
-                 CASE
-                   WHEN lower(ltrim(${DbSchemaV2.Work.ARTIST_LINE})) LIKE 'the %' THEN substr(ltrim(${DbSchemaV2.Work.ARTIST_LINE}), 5)
-                   ELSE ltrim(${DbSchemaV2.Work.ARTIST_LINE})
-                 END COLLATE NOCASE ASC,
+                 ${DbSchemaV2.Work.TITLE_SORT} ASC,
+                 ${DbSchemaV2.Work.ARTIST_SORT} ASC,
                  ${DbSchemaV2.Work.ID} ASC
         """
     )
     fun observeAllByCreatedDesc(): Flow<List<WorkEntityV2>>
+
+    @RawQuery(observedEntities = [WorkEntityV2::class])
+    fun observeWorksByQuery(query: SupportSQLiteQuery): Flow<List<WorkEntityV2>>
+
+    @Query(
+        """
+        SELECT DISTINCT ${DbSchemaV2.Work.ARTIST_LINE} AS label,
+                        ${DbSchemaV2.Work.ARTIST_SORT} AS sortKey
+        FROM ${DbSchemaV2.Work.TABLE}
+        ORDER BY ${DbSchemaV2.Work.ARTIST_SORT} ASC, ${DbSchemaV2.Work.ARTIST_LINE} ASC
+        """
+    )
+    fun observeArtistHeadings(): Flow<List<ArtistHeading>>
+
+    @Query(
+        """
+        SELECT DISTINCT ${DbSchemaV2.Work.YEAR} AS year
+        FROM ${DbSchemaV2.Work.TABLE}
+        ORDER BY ${DbSchemaV2.Work.YEAR} IS NULL, ${DbSchemaV2.Work.YEAR} ASC
+        """
+    )
+    fun observeYearHeadingsAsc(): Flow<List<YearHeading>>
+
+    @Query(
+        """
+        SELECT DISTINCT ${DbSchemaV2.Work.YEAR} AS year
+        FROM ${DbSchemaV2.Work.TABLE}
+        ORDER BY ${DbSchemaV2.Work.YEAR} IS NULL DESC, ${DbSchemaV2.Work.YEAR} DESC
+        """
+    )
+    fun observeYearHeadingsDesc(): Flow<List<YearHeading>>
+
+    @Query(
+        """
+        SELECT DISTINCT
+          CASE
+            WHEN ${DbSchemaV2.Work.YEAR} IS NULL THEN NULL
+            ELSE (${DbSchemaV2.Work.YEAR} / 10) * 10
+          END AS decade
+        FROM ${DbSchemaV2.Work.TABLE}
+        ORDER BY decade IS NULL, decade ASC
+        """
+    )
+    fun observeDecadeHeadingsAsc(): Flow<List<DecadeHeading>>
+
+    @Query(
+        """
+        SELECT DISTINCT
+          CASE
+            WHEN ${DbSchemaV2.Work.YEAR} IS NULL THEN NULL
+            ELSE (${DbSchemaV2.Work.YEAR} / 10) * 10
+          END AS decade
+        FROM ${DbSchemaV2.Work.TABLE}
+        ORDER BY decade IS NULL DESC, decade DESC
+        """
+    )
+    fun observeDecadeHeadingsDesc(): Flow<List<DecadeHeading>>
+
+    @Query(
+        """
+        SELECT label, normalized FROM (
+            SELECT ${DbSchemaV2.Genre.NAME_DISPLAY} AS label,
+                   ${DbSchemaV2.Genre.NAME_NORMALIZED} AS normalized
+            FROM ${DbSchemaV2.Genre.TABLE}
+            INNER JOIN ${DbSchemaV2.WorkGenre.TABLE}
+              ON ${DbSchemaV2.WorkGenre.TABLE}.${DbSchemaV2.WorkGenre.GENRE_ID} = ${DbSchemaV2.Genre.TABLE}.${DbSchemaV2.Genre.ID}
+            INNER JOIN ${DbSchemaV2.Work.TABLE}
+              ON ${DbSchemaV2.Work.TABLE}.${DbSchemaV2.Work.ID} = ${DbSchemaV2.WorkGenre.TABLE}.${DbSchemaV2.WorkGenre.WORK_ID}
+            GROUP BY ${DbSchemaV2.Genre.TABLE}.${DbSchemaV2.Genre.ID}
+            UNION ALL
+            SELECT 'Unknown genre' AS label, 'unknown genre' AS normalized
+            WHERE EXISTS (
+                SELECT 1 FROM ${DbSchemaV2.Work.TABLE}
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM ${DbSchemaV2.WorkGenre.TABLE}
+                    WHERE ${DbSchemaV2.WorkGenre.TABLE}.${DbSchemaV2.WorkGenre.WORK_ID} = ${DbSchemaV2.Work.TABLE}.${DbSchemaV2.Work.ID}
+                )
+            )
+        )
+        ORDER BY normalized ASC, label ASC
+        """
+    )
+    fun observeGenreHeadings(): Flow<List<NamedHeading>>
+
+    @Query(
+        """
+        SELECT label, normalized FROM (
+            SELECT ${DbSchemaV2.Style.NAME_DISPLAY} AS label,
+                   ${DbSchemaV2.Style.NAME_NORMALIZED} AS normalized
+            FROM ${DbSchemaV2.Style.TABLE}
+            INNER JOIN ${DbSchemaV2.WorkStyle.TABLE}
+              ON ${DbSchemaV2.WorkStyle.TABLE}.${DbSchemaV2.WorkStyle.STYLE_ID} = ${DbSchemaV2.Style.TABLE}.${DbSchemaV2.Style.ID}
+            INNER JOIN ${DbSchemaV2.Work.TABLE}
+              ON ${DbSchemaV2.Work.TABLE}.${DbSchemaV2.Work.ID} = ${DbSchemaV2.WorkStyle.TABLE}.${DbSchemaV2.WorkStyle.WORK_ID}
+            GROUP BY ${DbSchemaV2.Style.TABLE}.${DbSchemaV2.Style.ID}
+            UNION ALL
+            SELECT 'Unknown style' AS label, 'unknown style' AS normalized
+            WHERE EXISTS (
+                SELECT 1 FROM ${DbSchemaV2.Work.TABLE}
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM ${DbSchemaV2.WorkStyle.TABLE}
+                    WHERE ${DbSchemaV2.WorkStyle.TABLE}.${DbSchemaV2.WorkStyle.WORK_ID} = ${DbSchemaV2.Work.TABLE}.${DbSchemaV2.Work.ID}
+                )
+            )
+        )
+        ORDER BY normalized ASC, label ASC
+        """
+    )
+    fun observeStyleHeadings(): Flow<List<NamedHeading>>
+
+    @Query(
+        """
+        SELECT DISTINCT ${DbSchemaV2.Work.ARTIST_LINE} AS label,
+                        ${DbSchemaV2.Work.ARTIST_SORT} AS sortKey
+        FROM ${DbSchemaV2.Work.TABLE}
+        WHERE (${DbSchemaV2.Work.YEAR} = :year OR (${DbSchemaV2.Work.YEAR} IS NULL AND :year IS NULL))
+        ORDER BY ${DbSchemaV2.Work.ARTIST_SORT} ASC, ${DbSchemaV2.Work.ARTIST_LINE} ASC
+        """
+    )
+    fun observeArtistHeadingsForYear(year: Int?): Flow<List<ArtistHeading>>
+
+    @Query(
+        """
+        SELECT DISTINCT ${DbSchemaV2.Work.ARTIST_LINE} AS label,
+                        ${DbSchemaV2.Work.ARTIST_SORT} AS sortKey
+        FROM ${DbSchemaV2.Work.TABLE}
+        WHERE ${DbSchemaV2.Work.YEAR} BETWEEN :startYear AND :endYear
+        ORDER BY ${DbSchemaV2.Work.ARTIST_SORT} ASC, ${DbSchemaV2.Work.ARTIST_LINE} ASC
+        """
+    )
+    fun observeArtistHeadingsForDecade(startYear: Int, endYear: Int): Flow<List<ArtistHeading>>
+
+    @Query(
+        """
+        SELECT DISTINCT ${DbSchemaV2.Work.ARTIST_LINE} AS label,
+                        ${DbSchemaV2.Work.ARTIST_SORT} AS sortKey
+        FROM ${DbSchemaV2.Work.TABLE}
+        WHERE ${DbSchemaV2.Work.YEAR} IS NULL
+        ORDER BY ${DbSchemaV2.Work.ARTIST_SORT} ASC, ${DbSchemaV2.Work.ARTIST_LINE} ASC
+        """
+    )
+    fun observeArtistHeadingsForUnknownYear(): Flow<List<ArtistHeading>>
+
+    @Query(
+        """
+        SELECT DISTINCT ${DbSchemaV2.Work.ARTIST_LINE} AS label,
+                        ${DbSchemaV2.Work.ARTIST_SORT} AS sortKey
+        FROM ${DbSchemaV2.Work.TABLE}
+        WHERE ${DbSchemaV2.Work.ID} IN (
+            SELECT ${DbSchemaV2.WorkGenre.TABLE}.${DbSchemaV2.WorkGenre.WORK_ID}
+            FROM ${DbSchemaV2.WorkGenre.TABLE}
+            INNER JOIN ${DbSchemaV2.Genre.TABLE}
+              ON ${DbSchemaV2.Genre.TABLE}.${DbSchemaV2.Genre.ID} = ${DbSchemaV2.WorkGenre.TABLE}.${DbSchemaV2.WorkGenre.GENRE_ID}
+            WHERE ${DbSchemaV2.Genre.TABLE}.${DbSchemaV2.Genre.NAME_NORMALIZED} = :genreNormalized
+        )
+        ORDER BY ${DbSchemaV2.Work.ARTIST_SORT} ASC, ${DbSchemaV2.Work.ARTIST_LINE} ASC
+        """
+    )
+    fun observeArtistHeadingsForGenre(genreNormalized: String): Flow<List<ArtistHeading>>
+
+    @Query(
+        """
+        SELECT DISTINCT ${DbSchemaV2.Work.ARTIST_LINE} AS label,
+                        ${DbSchemaV2.Work.ARTIST_SORT} AS sortKey
+        FROM ${DbSchemaV2.Work.TABLE}
+        WHERE NOT EXISTS (
+            SELECT 1 FROM ${DbSchemaV2.WorkGenre.TABLE}
+            WHERE ${DbSchemaV2.WorkGenre.TABLE}.${DbSchemaV2.WorkGenre.WORK_ID} = ${DbSchemaV2.Work.TABLE}.${DbSchemaV2.Work.ID}
+        )
+        ORDER BY ${DbSchemaV2.Work.ARTIST_SORT} ASC, ${DbSchemaV2.Work.ARTIST_LINE} ASC
+        """
+    )
+    fun observeArtistHeadingsForUnknownGenre(): Flow<List<ArtistHeading>>
+
+    @Query(
+        """
+        SELECT DISTINCT ${DbSchemaV2.Work.ARTIST_LINE} AS label,
+                        ${DbSchemaV2.Work.ARTIST_SORT} AS sortKey
+        FROM ${DbSchemaV2.Work.TABLE}
+        WHERE ${DbSchemaV2.Work.ID} IN (
+            SELECT ${DbSchemaV2.WorkStyle.TABLE}.${DbSchemaV2.WorkStyle.WORK_ID}
+            FROM ${DbSchemaV2.WorkStyle.TABLE}
+            INNER JOIN ${DbSchemaV2.Style.TABLE}
+              ON ${DbSchemaV2.Style.TABLE}.${DbSchemaV2.Style.ID} = ${DbSchemaV2.WorkStyle.TABLE}.${DbSchemaV2.WorkStyle.STYLE_ID}
+            WHERE ${DbSchemaV2.Style.TABLE}.${DbSchemaV2.Style.NAME_NORMALIZED} = :styleNormalized
+        )
+        ORDER BY ${DbSchemaV2.Work.ARTIST_SORT} ASC, ${DbSchemaV2.Work.ARTIST_LINE} ASC
+        """
+    )
+    fun observeArtistHeadingsForStyle(styleNormalized: String): Flow<List<ArtistHeading>>
+
+    @Query(
+        """
+        SELECT DISTINCT ${DbSchemaV2.Work.ARTIST_LINE} AS label,
+                        ${DbSchemaV2.Work.ARTIST_SORT} AS sortKey
+        FROM ${DbSchemaV2.Work.TABLE}
+        WHERE NOT EXISTS (
+            SELECT 1 FROM ${DbSchemaV2.WorkStyle.TABLE}
+            WHERE ${DbSchemaV2.WorkStyle.TABLE}.${DbSchemaV2.WorkStyle.WORK_ID} = ${DbSchemaV2.Work.TABLE}.${DbSchemaV2.Work.ID}
+        )
+        ORDER BY ${DbSchemaV2.Work.ARTIST_SORT} ASC, ${DbSchemaV2.Work.ARTIST_LINE} ASC
+        """
+    )
+    fun observeArtistHeadingsForUnknownStyle(): Flow<List<ArtistHeading>>
 }
+
+data class ArtistHeading(
+    val label: String,
+    val sortKey: String,
+)
+
+data class YearHeading(
+    val year: Int?,
+)
+
+data class DecadeHeading(
+    val decade: Int?,
+)
+
+data class NamedHeading(
+    val label: String,
+    val normalized: String,
+)
