@@ -337,7 +337,7 @@ class LibraryViewModel @Inject constructor(
         else -> emptySet()
     }
 
-    private fun <T> combineFlows(flows: List<kotlinx.coroutines.flow.Flow<T>>) =
+    private inline fun <reified T> combineFlows(flows: List<kotlinx.coroutines.flow.Flow<T>>) =
         if (flows.isEmpty()) flowOf(emptyList()) else combine(flows) { it.toList() }
 }
 

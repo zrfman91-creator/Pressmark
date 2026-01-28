@@ -357,7 +357,7 @@ class WorkRepositoryV2 @Inject constructor(
     fun observeWorksForArtist(artistLine: String, sortSpec: LibrarySortSpec): Flow<List<WorkEntityV2>> {
         val query = buildWorksQuery(
             whereClause = "${DbSchemaV2.Work.ARTIST_LINE} = ?",
-            args = arrayOf(artistLine),
+            args = arrayOf<Any?>(artistLine),
             sortSpec = sortSpec,
         )
         return workDao.observeWorksByQuery(query)
@@ -366,7 +366,7 @@ class WorkRepositoryV2 @Inject constructor(
     fun observeWorksForYearAndArtist(year: Int?, artistLine: String, sortSpec: LibrarySortSpec): Flow<List<WorkEntityV2>> {
         val query = buildWorksQuery(
             whereClause = "(${DbSchemaV2.Work.YEAR} = ? OR (${DbSchemaV2.Work.YEAR} IS NULL AND ? IS NULL)) AND ${DbSchemaV2.Work.ARTIST_LINE} = ?",
-            args = arrayOf(year, year, artistLine),
+            args = arrayOf<Any?>(year, year, artistLine),
             sortSpec = sortSpec,
         )
         return workDao.observeWorksByQuery(query)
@@ -374,16 +374,20 @@ class WorkRepositoryV2 @Inject constructor(
 
     fun observeWorksForDecadeAndArtist(decadeStart: Int?, artistLine: String, sortSpec: LibrarySortSpec): Flow<List<WorkEntityV2>> {
         val (whereClause, args) = if (decadeStart == null) {
-            "${DbSchemaV2.Work.YEAR} IS NULL AND ${DbSchemaV2.Work.ARTIST_LINE} = ?" to arrayOf(artistLine)
+            "${DbSchemaV2.Work.YEAR} IS NULL AND ${DbSchemaV2.Work.ARTIST_LINE} = ?" to arrayOf<Any?>(artistLine)
         } else {
-            "${DbSchemaV2.Work.YEAR} BETWEEN ? AND ? AND ${DbSchemaV2.Work.ARTIST_LINE} = ?" to arrayOf(decadeStart, decadeStart + 9, artistLine)
+            "${DbSchemaV2.Work.YEAR} BETWEEN ? AND ? AND ${DbSchemaV2.Work.ARTIST_LINE} = ?" to arrayOf<Any?>(
+                decadeStart,
+                decadeStart + 9,
+                artistLine,
+            )
         }
         return workDao.observeWorksByQuery(buildWorksQuery(whereClause, args, sortSpec))
     }
 
     fun observeWorksForGenreAndArtist(genreNormalized: String?, artistLine: String, sortSpec: LibrarySortSpec): Flow<List<WorkEntityV2>> {
         val (whereClause, args) = if (genreNormalized == null) {
-            "NOT EXISTS (SELECT 1 FROM ${DbSchemaV2.WorkGenre.TABLE} WHERE ${DbSchemaV2.WorkGenre.TABLE}.${DbSchemaV2.WorkGenre.WORK_ID} = ${DbSchemaV2.Work.TABLE}.${DbSchemaV2.Work.ID}) AND ${DbSchemaV2.Work.ARTIST_LINE} = ?" to arrayOf(artistLine)
+            "NOT EXISTS (SELECT 1 FROM ${DbSchemaV2.WorkGenre.TABLE} WHERE ${DbSchemaV2.WorkGenre.TABLE}.${DbSchemaV2.WorkGenre.WORK_ID} = ${DbSchemaV2.Work.TABLE}.${DbSchemaV2.Work.ID}) AND ${DbSchemaV2.Work.ARTIST_LINE} = ?" to arrayOf<Any?>(artistLine)
         } else {
             """
             EXISTS (
@@ -393,14 +397,14 @@ class WorkRepositoryV2 @Inject constructor(
               WHERE ${DbSchemaV2.WorkGenre.TABLE}.${DbSchemaV2.WorkGenre.WORK_ID} = ${DbSchemaV2.Work.TABLE}.${DbSchemaV2.Work.ID}
                 AND ${DbSchemaV2.Genre.TABLE}.${DbSchemaV2.Genre.NAME_NORMALIZED} = ?
             ) AND ${DbSchemaV2.Work.ARTIST_LINE} = ?
-            """.trimIndent() to arrayOf(genreNormalized, artistLine)
+            """.trimIndent() to arrayOf<Any?>(genreNormalized, artistLine)
         }
         return workDao.observeWorksByQuery(buildWorksQuery(whereClause, args, sortSpec))
     }
 
     fun observeWorksForStyleAndArtist(styleNormalized: String?, artistLine: String, sortSpec: LibrarySortSpec): Flow<List<WorkEntityV2>> {
         val (whereClause, args) = if (styleNormalized == null) {
-            "NOT EXISTS (SELECT 1 FROM ${DbSchemaV2.WorkStyle.TABLE} WHERE ${DbSchemaV2.WorkStyle.TABLE}.${DbSchemaV2.WorkStyle.WORK_ID} = ${DbSchemaV2.Work.TABLE}.${DbSchemaV2.Work.ID}) AND ${DbSchemaV2.Work.ARTIST_LINE} = ?" to arrayOf(artistLine)
+            "NOT EXISTS (SELECT 1 FROM ${DbSchemaV2.WorkStyle.TABLE} WHERE ${DbSchemaV2.WorkStyle.TABLE}.${DbSchemaV2.WorkStyle.WORK_ID} = ${DbSchemaV2.Work.TABLE}.${DbSchemaV2.Work.ID}) AND ${DbSchemaV2.Work.ARTIST_LINE} = ?" to arrayOf<Any?>(artistLine)
         } else {
             """
             EXISTS (
@@ -410,7 +414,7 @@ class WorkRepositoryV2 @Inject constructor(
               WHERE ${DbSchemaV2.WorkStyle.TABLE}.${DbSchemaV2.WorkStyle.WORK_ID} = ${DbSchemaV2.Work.TABLE}.${DbSchemaV2.Work.ID}
                 AND ${DbSchemaV2.Style.TABLE}.${DbSchemaV2.Style.NAME_NORMALIZED} = ?
             ) AND ${DbSchemaV2.Work.ARTIST_LINE} = ?
-            """.trimIndent() to arrayOf(styleNormalized, artistLine)
+            """.trimIndent() to arrayOf<Any?>(styleNormalized, artistLine)
         }
         return workDao.observeWorksByQuery(buildWorksQuery(whereClause, args, sortSpec))
     }
