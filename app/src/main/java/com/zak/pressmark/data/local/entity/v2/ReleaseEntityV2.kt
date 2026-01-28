@@ -3,12 +3,21 @@ package com.zak.pressmark.data.local.entity.v2
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.zak.pressmark.data.local.db.v2.DbSchemaV2
 
 @Entity(
     tableName = DbSchemaV2.Release.TABLE,
+    foreignKeys = [
+        ForeignKey(
+            entity = WorkEntityV2::class,
+            parentColumns = [DbSchemaV2.Work.ID],
+            childColumns = [DbSchemaV2.Release.WORK_ID],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
     indices = [
         Index(value = [DbSchemaV2.Release.WORK_ID]),
         Index(value = [DbSchemaV2.Release.LABEL_NORMALIZED]),

@@ -1,0 +1,535 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 14,
+    "identityHash": "334801679537dc7edf0a235149c54eb3",
+    "entities": [
+      {
+        "tableName": "ArtistEntity",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `displayName` TEXT NOT NULL, `sortName` TEXT NOT NULL, `nameNormalized` TEXT NOT NULL, `artistType` TEXT)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "displayName",
+            "columnName": "displayName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sortName",
+            "columnName": "sortName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nameNormalized",
+            "columnName": "nameNormalized",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "artistType",
+            "columnName": "artistType",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "v2_works",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `title` TEXT NOT NULL, `title_normalized` TEXT NOT NULL, `artist_line` TEXT NOT NULL, `artist_normalized` TEXT NOT NULL, `year` INTEGER, `genres_json` TEXT NOT NULL, `styles_json` TEXT NOT NULL, `primary_artwork_uri` TEXT, `discogs_master_id` INTEGER, `musicbrainz_release_group_id` TEXT, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "titleNormalized",
+            "columnName": "title_normalized",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "artistLine",
+            "columnName": "artist_line",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "artistNormalized",
+            "columnName": "artist_normalized",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "year",
+            "columnName": "year",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "genresJson",
+            "columnName": "genres_json",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "stylesJson",
+            "columnName": "styles_json",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "primaryArtworkUri",
+            "columnName": "primary_artwork_uri",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "discogsMasterId",
+            "columnName": "discogs_master_id",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "musicBrainzReleaseGroupId",
+            "columnName": "musicbrainz_release_group_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_v2_works_title_normalized",
+            "unique": false,
+            "columnNames": [
+              "title_normalized"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_v2_works_title_normalized` ON `${TABLE_NAME}` (`title_normalized`)"
+          },
+          {
+            "name": "index_v2_works_artist_normalized",
+            "unique": false,
+            "columnNames": [
+              "artist_normalized"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_v2_works_artist_normalized` ON `${TABLE_NAME}` (`artist_normalized`)"
+          },
+          {
+            "name": "index_v2_works_year",
+            "unique": false,
+            "columnNames": [
+              "year"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_v2_works_year` ON `${TABLE_NAME}` (`year`)"
+          },
+          {
+            "name": "index_v2_works_updated_at",
+            "unique": false,
+            "columnNames": [
+              "updated_at"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_v2_works_updated_at` ON `${TABLE_NAME}` (`updated_at`)"
+          },
+          {
+            "name": "index_v2_works_discogs_master_id",
+            "unique": false,
+            "columnNames": [
+              "discogs_master_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_v2_works_discogs_master_id` ON `${TABLE_NAME}` (`discogs_master_id`)"
+          },
+          {
+            "name": "index_v2_works_musicbrainz_release_group_id",
+            "unique": false,
+            "columnNames": [
+              "musicbrainz_release_group_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_v2_works_musicbrainz_release_group_id` ON `${TABLE_NAME}` (`musicbrainz_release_group_id`)"
+          }
+        ]
+      },
+      {
+        "tableName": "v2_releases",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `work_id` TEXT NOT NULL, `label` TEXT, `label_normalized` TEXT, `catalog_no` TEXT, `catalog_no_normalized` TEXT, `country` TEXT, `format` TEXT, `release_year` INTEGER, `release_type` TEXT, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "workId",
+            "columnName": "work_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "label",
+            "columnName": "label",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "labelNormalized",
+            "columnName": "label_normalized",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "catalogNo",
+            "columnName": "catalog_no",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "catalogNoNormalized",
+            "columnName": "catalog_no_normalized",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "country",
+            "columnName": "country",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "format",
+            "columnName": "format",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "releaseYear",
+            "columnName": "release_year",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "releaseType",
+            "columnName": "release_type",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_v2_releases_work_id",
+            "unique": false,
+            "columnNames": [
+              "work_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_v2_releases_work_id` ON `${TABLE_NAME}` (`work_id`)"
+          },
+          {
+            "name": "index_v2_releases_label_normalized",
+            "unique": false,
+            "columnNames": [
+              "label_normalized"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_v2_releases_label_normalized` ON `${TABLE_NAME}` (`label_normalized`)"
+          },
+          {
+            "name": "index_v2_releases_catalog_no_normalized",
+            "unique": false,
+            "columnNames": [
+              "catalog_no_normalized"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_v2_releases_catalog_no_normalized` ON `${TABLE_NAME}` (`catalog_no_normalized`)"
+          },
+          {
+            "name": "index_v2_releases_release_year",
+            "unique": false,
+            "columnNames": [
+              "release_year"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_v2_releases_release_year` ON `${TABLE_NAME}` (`release_year`)"
+          }
+        ]
+      },
+      {
+        "tableName": "v2_pressings",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `release_id` TEXT NOT NULL, `barcode` TEXT, `barcode_normalized` TEXT, `runouts_json` TEXT NOT NULL, `pressing_plant` TEXT, `label` TEXT, `catalog_no` TEXT, `country` TEXT, `format` TEXT, `release_year` INTEGER, `discogs_release_id` INTEGER, `musicbrainz_release_id` TEXT, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "releaseId",
+            "columnName": "release_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "barcode",
+            "columnName": "barcode",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "barcodeNormalized",
+            "columnName": "barcode_normalized",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "runoutsJson",
+            "columnName": "runouts_json",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pressingPlant",
+            "columnName": "pressing_plant",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "label",
+            "columnName": "label",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "catalogNo",
+            "columnName": "catalog_no",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "country",
+            "columnName": "country",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "format",
+            "columnName": "format",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "releaseYear",
+            "columnName": "release_year",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "discogsReleaseId",
+            "columnName": "discogs_release_id",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "musicBrainzReleaseId",
+            "columnName": "musicbrainz_release_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_v2_pressings_release_id",
+            "unique": false,
+            "columnNames": [
+              "release_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_v2_pressings_release_id` ON `${TABLE_NAME}` (`release_id`)"
+          },
+          {
+            "name": "index_v2_pressings_barcode_normalized",
+            "unique": false,
+            "columnNames": [
+              "barcode_normalized"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_v2_pressings_barcode_normalized` ON `${TABLE_NAME}` (`barcode_normalized`)"
+          },
+          {
+            "name": "index_v2_pressings_discogs_release_id",
+            "unique": false,
+            "columnNames": [
+              "discogs_release_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_v2_pressings_discogs_release_id` ON `${TABLE_NAME}` (`discogs_release_id`)"
+          },
+          {
+            "name": "index_v2_pressings_musicbrainz_release_id",
+            "unique": false,
+            "columnNames": [
+              "musicbrainz_release_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_v2_pressings_musicbrainz_release_id` ON `${TABLE_NAME}` (`musicbrainz_release_id`)"
+          },
+          {
+            "name": "index_v2_pressings_updated_at",
+            "unique": false,
+            "columnNames": [
+              "updated_at"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_v2_pressings_updated_at` ON `${TABLE_NAME}` (`updated_at`)"
+          }
+        ]
+      },
+      {
+        "tableName": "v2_variants",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `work_id` TEXT NOT NULL, `pressing_id` TEXT NOT NULL, `variant_key` TEXT NOT NULL, `notes` TEXT, `rating` INTEGER, `added_at` INTEGER NOT NULL, `last_played_at` INTEGER, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "workId",
+            "columnName": "work_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pressingId",
+            "columnName": "pressing_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "variantKey",
+            "columnName": "variant_key",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "notes",
+            "columnName": "notes",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "rating",
+            "columnName": "rating",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "addedAt",
+            "columnName": "added_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastPlayedAt",
+            "columnName": "last_played_at",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_v2_variants_work_id",
+            "unique": false,
+            "columnNames": [
+              "work_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_v2_variants_work_id` ON `${TABLE_NAME}` (`work_id`)"
+          },
+          {
+            "name": "index_v2_variants_pressing_id",
+            "unique": false,
+            "columnNames": [
+              "pressing_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_v2_variants_pressing_id` ON `${TABLE_NAME}` (`pressing_id`)"
+          },
+          {
+            "name": "index_v2_variants_variant_key",
+            "unique": false,
+            "columnNames": [
+              "variant_key"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_v2_variants_variant_key` ON `${TABLE_NAME}` (`variant_key`)"
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '334801679537dc7edf0a235149c54eb3')"
+    ]
+  }
+}

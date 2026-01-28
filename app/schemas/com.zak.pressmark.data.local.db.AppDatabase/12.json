@@ -1,0 +1,919 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 12,
+    "identityHash": "59bad54b85d7a8803e8d8bfb9b429cbd",
+    "entities": [
+      {
+        "tableName": "albums",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `title` TEXT NOT NULL, `artist_id` INTEGER, `release_year` INTEGER, `catalog_no` TEXT, `label` TEXT, `cover_uri` TEXT, `notes` TEXT, `discogs_release_id` INTEGER, `rating` INTEGER, `added_at` INTEGER NOT NULL, `last_played_at` INTEGER, `master_id` INTEGER, `format` TEXT, `artwork_provider` TEXT, `artwork_provider_item_id` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`artist_id`) REFERENCES `artists`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "artistId",
+            "columnName": "artist_id",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "releaseYear",
+            "columnName": "release_year",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "catalogNo",
+            "columnName": "catalog_no",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "label",
+            "columnName": "label",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "coverUri",
+            "columnName": "cover_uri",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "notes",
+            "columnName": "notes",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "discogsReleaseId",
+            "columnName": "discogs_release_id",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "rating",
+            "columnName": "rating",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "addedAt",
+            "columnName": "added_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastPlayedAt",
+            "columnName": "last_played_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "masterId",
+            "columnName": "master_id",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "format",
+            "columnName": "format",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "artworkProvider",
+            "columnName": "artwork_provider",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "artworkProviderItemId",
+            "columnName": "artwork_provider_item_id",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_albums_artist_id",
+            "unique": false,
+            "columnNames": [
+              "artist_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_albums_artist_id` ON `${TABLE_NAME}` (`artist_id`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "artists",
+            "onDelete": "SET NULL",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "artist_id"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "genres",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_genres_name",
+            "unique": true,
+            "columnNames": [
+              "name"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_genres_name` ON `${TABLE_NAME}` (`name`)"
+          }
+        ]
+      },
+      {
+        "tableName": "album_genre_cross_ref",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`albumId` TEXT NOT NULL, `genreId` INTEGER NOT NULL, PRIMARY KEY(`albumId`, `genreId`), FOREIGN KEY(`albumId`) REFERENCES `albums`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`genreId`) REFERENCES `genres`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "albumId",
+            "columnName": "albumId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "genreId",
+            "columnName": "genreId",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "albumId",
+            "genreId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_album_genre_cross_ref_genreId",
+            "unique": false,
+            "columnNames": [
+              "genreId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_album_genre_cross_ref_genreId` ON `${TABLE_NAME}` (`genreId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "albums",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "albumId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "genres",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "genreId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "artists",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `display_name` TEXT NOT NULL, `sort_name` TEXT NOT NULL, `name_normalized` TEXT NOT NULL, `artist_type` TEXT)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "displayName",
+            "columnName": "display_name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sortName",
+            "columnName": "sort_name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nameNormalized",
+            "columnName": "name_normalized",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "artistType",
+            "columnName": "artist_type",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_artists_name_normalized",
+            "unique": true,
+            "columnNames": [
+              "name_normalized"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_artists_name_normalized` ON `${TABLE_NAME}` (`name_normalized`)"
+          }
+        ]
+      },
+      {
+        "tableName": "releases",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `title` TEXT NOT NULL, `release_year` INTEGER, `genre` TEXT, `label` TEXT, `catalog_no` TEXT, `barcode` TEXT, `country` TEXT, `release_type` TEXT, `format` TEXT, `discogs_release_id` INTEGER, `master_id` INTEGER, `artwork_provider` TEXT, `artwork_provider_item_id` TEXT, `notes` TEXT, `rating` INTEGER, `added_at` INTEGER NOT NULL, `last_played_at` INTEGER, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "releaseYear",
+            "columnName": "release_year",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "genre",
+            "columnName": "genre",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "label",
+            "columnName": "label",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "catalogNo",
+            "columnName": "catalog_no",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "barcode",
+            "columnName": "barcode",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "country",
+            "columnName": "country",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "releaseType",
+            "columnName": "release_type",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "format",
+            "columnName": "format",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "discogsReleaseId",
+            "columnName": "discogs_release_id",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "masterId",
+            "columnName": "master_id",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "artworkProvider",
+            "columnName": "artwork_provider",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "artworkProviderItemId",
+            "columnName": "artwork_provider_item_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "notes",
+            "columnName": "notes",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "rating",
+            "columnName": "rating",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "addedAt",
+            "columnName": "added_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastPlayedAt",
+            "columnName": "last_played_at",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_releases_title",
+            "unique": false,
+            "columnNames": [
+              "title"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_releases_title` ON `${TABLE_NAME}` (`title`)"
+          },
+          {
+            "name": "index_releases_barcode",
+            "unique": false,
+            "columnNames": [
+              "barcode"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_releases_barcode` ON `${TABLE_NAME}` (`barcode`)"
+          },
+          {
+            "name": "index_releases_catalog_no",
+            "unique": false,
+            "columnNames": [
+              "catalog_no"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_releases_catalog_no` ON `${TABLE_NAME}` (`catalog_no`)"
+          },
+          {
+            "name": "index_releases_discogs_release_id",
+            "unique": false,
+            "columnNames": [
+              "discogs_release_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_releases_discogs_release_id` ON `${TABLE_NAME}` (`discogs_release_id`)"
+          }
+        ]
+      },
+      {
+        "tableName": "release_artist_credits",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `release_id` TEXT NOT NULL, `artist_id` INTEGER NOT NULL, `role` TEXT NOT NULL, `position` INTEGER NOT NULL, `display_hint` TEXT, FOREIGN KEY(`release_id`) REFERENCES `releases`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`artist_id`) REFERENCES `artists`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "releaseId",
+            "columnName": "release_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "artistId",
+            "columnName": "artist_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "role",
+            "columnName": "role",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "position",
+            "columnName": "position",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "displayHint",
+            "columnName": "display_hint",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_release_artist_credits_release_id",
+            "unique": false,
+            "columnNames": [
+              "release_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_release_artist_credits_release_id` ON `${TABLE_NAME}` (`release_id`)"
+          },
+          {
+            "name": "index_release_artist_credits_artist_id",
+            "unique": false,
+            "columnNames": [
+              "artist_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_release_artist_credits_artist_id` ON `${TABLE_NAME}` (`artist_id`)"
+          },
+          {
+            "name": "index_release_artist_credits_role",
+            "unique": false,
+            "columnNames": [
+              "role"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_release_artist_credits_role` ON `${TABLE_NAME}` (`role`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "releases",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "release_id"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "artists",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "artist_id"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "artworks",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `release_id` TEXT NOT NULL, `uri` TEXT NOT NULL, `kind` TEXT NOT NULL, `variant_key` TEXT, `source` TEXT NOT NULL, `is_primary` INTEGER NOT NULL, `width` INTEGER, `height` INTEGER, `created_at` INTEGER, FOREIGN KEY(`release_id`) REFERENCES `releases`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "releaseId",
+            "columnName": "release_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "uri",
+            "columnName": "uri",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kind",
+            "columnName": "kind",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "variantKey",
+            "columnName": "variant_key",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "source",
+            "columnName": "source",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isPrimary",
+            "columnName": "is_primary",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "width",
+            "columnName": "width",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "height",
+            "columnName": "height",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_artworks_release_id",
+            "unique": false,
+            "columnNames": [
+              "release_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_artworks_release_id` ON `${TABLE_NAME}` (`release_id`)"
+          },
+          {
+            "name": "index_artworks_kind",
+            "unique": false,
+            "columnNames": [
+              "kind"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_artworks_kind` ON `${TABLE_NAME}` (`kind`)"
+          },
+          {
+            "name": "index_artworks_is_primary",
+            "unique": false,
+            "columnNames": [
+              "is_primary"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_artworks_is_primary` ON `${TABLE_NAME}` (`is_primary`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "releases",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "release_id"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "inbox_items",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `source_type` TEXT NOT NULL, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, `barcode` TEXT, `raw_title` TEXT, `raw_artist` TEXT, `raw_row_json` TEXT, `photo_uris_json` TEXT NOT NULL, `ocr_status` TEXT NOT NULL, `lookup_status` TEXT NOT NULL, `error_code` TEXT NOT NULL, `retry_count` INTEGER NOT NULL, `next_ocr_at` INTEGER, `next_lookup_at` INTEGER, `last_tried_at` INTEGER, `extracted_title` TEXT, `extracted_artist` TEXT, `extracted_label` TEXT, `extracted_catno` TEXT, `confidence` INTEGER, `reasons_json` TEXT, `was_undone` INTEGER NOT NULL, `committed_provider_item_id` TEXT, `is_unknown` INTEGER NOT NULL, `deleted_at` INTEGER, `reference_photo_uri` TEXT, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sourceType",
+            "columnName": "source_type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "barcode",
+            "columnName": "barcode",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "rawTitle",
+            "columnName": "raw_title",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "rawArtist",
+            "columnName": "raw_artist",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "rawRowJson",
+            "columnName": "raw_row_json",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "photoUris",
+            "columnName": "photo_uris_json",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ocrStatus",
+            "columnName": "ocr_status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lookupStatus",
+            "columnName": "lookup_status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "errorCode",
+            "columnName": "error_code",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "retryCount",
+            "columnName": "retry_count",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nextOcrAt",
+            "columnName": "next_ocr_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "nextLookupAt",
+            "columnName": "next_lookup_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lastTriedAt",
+            "columnName": "last_tried_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "extractedTitle",
+            "columnName": "extracted_title",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "extractedArtist",
+            "columnName": "extracted_artist",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "extractedLabel",
+            "columnName": "extracted_label",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "extractedCatalogNo",
+            "columnName": "extracted_catno",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "confidenceScore",
+            "columnName": "confidence",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "confidenceReasonsJson",
+            "columnName": "reasons_json",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "wasUndone",
+            "columnName": "was_undone",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "committedProviderItemId",
+            "columnName": "committed_provider_item_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isUnknown",
+            "columnName": "is_unknown",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deletedAt",
+            "columnName": "deleted_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "referencePhotoUri",
+            "columnName": "reference_photo_uri",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "provider_snapshots",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `inbox_item_id` TEXT NOT NULL, `provider` TEXT NOT NULL, `provider_item_id` TEXT NOT NULL, `title` TEXT NOT NULL, `artist` TEXT NOT NULL, `label` TEXT, `catalog_no` TEXT, `barcode` TEXT, `raw_json` TEXT NOT NULL, `confidence` INTEGER NOT NULL, `reasons_json` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "inboxItemId",
+            "columnName": "inbox_item_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "provider",
+            "columnName": "provider",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "providerItemId",
+            "columnName": "provider_item_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "artist",
+            "columnName": "artist",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "label",
+            "columnName": "label",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "catalogNo",
+            "columnName": "catalog_no",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "barcode",
+            "columnName": "barcode",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "rawJson",
+            "columnName": "raw_json",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "confidence",
+            "columnName": "confidence",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reasonsJson",
+            "columnName": "reasons_json",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "import_batches",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `created_at` INTEGER NOT NULL, `mapping_json` TEXT NOT NULL, `total_count` INTEGER NOT NULL, `success_count` INTEGER NOT NULL, `failure_count` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mappingJson",
+            "columnName": "mapping_json",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalCount",
+            "columnName": "total_count",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "successCount",
+            "columnName": "success_count",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "failureCount",
+            "columnName": "failure_count",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '59bad54b85d7a8803e8d8bfb9b429cbd')"
+    ]
+  }
+}
