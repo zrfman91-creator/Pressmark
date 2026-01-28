@@ -13,6 +13,15 @@ import com.zak.pressmark.data.local.db.v2.DbSchemaV2
         Index(value = [DbSchemaV2.Work.TITLE_NORMALIZED]),
         Index(value = [DbSchemaV2.Work.ARTIST_NORMALIZED]),
         Index(value = [DbSchemaV2.Work.YEAR]),
+        Index(
+            value = [
+                DbSchemaV2.Work.ARTIST_NORMALIZED,
+                DbSchemaV2.Work.TITLE_NORMALIZED,
+                DbSchemaV2.Work.YEAR,
+            ],
+        ),
+        Index(value = [DbSchemaV2.Work.TITLE_SORT]),
+        Index(value = [DbSchemaV2.Work.ARTIST_SORT]),
         Index(value = [DbSchemaV2.Work.UPDATED_AT]),
         Index(value = [DbSchemaV2.Work.DISCOGS_MASTER_ID]),
         Index(value = [DbSchemaV2.Work.MUSICBRAINZ_RELEASE_GROUP_ID]),
@@ -24,9 +33,11 @@ data class WorkEntityV2(
 
     @ColumnInfo(name = DbSchemaV2.Work.TITLE) val title: String,
     @ColumnInfo(name = DbSchemaV2.Work.TITLE_NORMALIZED) val titleNormalized: String,
+    @ColumnInfo(name = DbSchemaV2.Work.TITLE_SORT) val titleSort: String,
 
     @ColumnInfo(name = DbSchemaV2.Work.ARTIST_LINE) val artistLine: String,
     @ColumnInfo(name = DbSchemaV2.Work.ARTIST_NORMALIZED) val artistNormalized: String,
+    @ColumnInfo(name = DbSchemaV2.Work.ARTIST_SORT) val artistSort: String,
 
     @ColumnInfo(name = DbSchemaV2.Work.YEAR) val year: Int? = null,
 
