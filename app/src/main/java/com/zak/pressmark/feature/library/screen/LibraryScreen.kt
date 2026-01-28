@@ -34,7 +34,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -44,6 +43,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,9 +58,11 @@ import com.zak.pressmark.data.prefs.LibrarySortKey
 import com.zak.pressmark.data.prefs.LibrarySortSpec
 import com.zak.pressmark.data.prefs.SortDirection
 import com.zak.pressmark.feature.library.ui.LibraryActionRow
+import com.zak.pressmark.feature.library.ui.LibrarySearchBar
 import com.zak.pressmark.feature.library.vm.LibraryItemUi
 import com.zak.pressmark.feature.library.vm.LibraryListItem
 import com.zak.pressmark.feature.library.vm.LibraryUiState
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,7 +80,9 @@ fun LibraryScreen(
     onDismissDelete: () -> Unit,
     onConfirmDelete: (LibraryItemUi) -> Unit,
 ) {
-    var searchQuery by remember { mutableStateOf("") }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var isSearchExpanded by rememberSaveable { mutableStateOf(false) }
+
 
     val filteredItems = remember(searchQuery, state.items) {
         filterLibraryItemsForSearch(state.items, searchQuery)
@@ -105,35 +109,33 @@ fun LibraryScreen(
             )
         },
     ) { padding ->
-        Column(
+        val scaffoldBottom = padding.calculateBottomPadding()
+
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding() // IMPORTANT: includes bottomBar padding if you added it
         ) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                placeholder = { Text("Search title or artist") },
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                LibraryControlsRow(
+                    sortSpec = state.sortSpec,
+                    groupKey = state.groupKey,
+                    onSortChanged = onSortChanged,
+                    onGroupChanged = onGroupChanged,
+                )
 
-            LibraryControlsRow(
-                sortSpec = state.sortSpec,
-                groupKey = state.groupKey,
-                onSortChanged = onSortChanged,
-                onGroupChanged = onGroupChanged,
-            )
-
-            if (filteredItems.isEmpty()) {
-                EmptyState(isSearching = searchQuery.isNotBlank())
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
+                if (filteredItems.isEmpty()) {
+                    EmptyState(isSearching = searchQuery.isNotBlank())
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
                     items(
                         items = filteredItems,
                         key = {
@@ -169,6 +171,18 @@ fun LibraryScreen(
                     item { Spacer(modifier = Modifier.height(24.dp)) }
                 }
             }
+        }
+            LibrarySearchBar(
+                modifier = Modifier.fillMaxSize(),
+                query = searchQuery,
+                onQueryChange = { searchQuery = it }, // updates filter live
+                onClear = { searchQuery = "" },       // the ONLY thing that clears search
+                expanded = isSearchExpanded,
+                onExpandedChange = { isSearchExpanded = it },
+                placeholder = "Search library…",
+                scaffoldBottomPadding = scaffoldBottom, // <--
+                keyboardGap = 6.dp,
+            )
         }
     }
 
