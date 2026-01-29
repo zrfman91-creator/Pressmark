@@ -27,6 +27,7 @@ fun LibraryRoute(
         onSortChanged = vm::updateSort,
         onGroupChanged = vm::updateGroup,
         onToggleGroup = vm::toggleGroupExpanded,
+        onToggleAllSections = vm::toggleAllSections,
         deleteTarget = deleteTarget,
         onRequestDelete = { setDeleteTarget(it) },
         onDismissDelete = { setDeleteTarget(null) },
