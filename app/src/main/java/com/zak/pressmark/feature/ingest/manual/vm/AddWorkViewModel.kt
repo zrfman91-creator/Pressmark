@@ -7,9 +7,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zak.pressmark.BuildConfig
 import com.zak.pressmark.core.analytics.UxEventLogger
+import com.zak.pressmark.core.util.completion.CompletionRules
 import com.zak.pressmark.core.util.ocr.OcrHint
 import com.zak.pressmark.core.util.ocr.OcrService
 import com.zak.pressmark.data.remote.discogs.DiscogsClient
+import com.zak.pressmark.data.repository.v2.CanonicalWorkRepositoryV2
 import com.zak.pressmark.data.repository.v2.WorkRepositoryV2
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -49,6 +51,7 @@ data class AddWorkUiState(
 class AddWorkViewModel @Inject constructor(
     private val discogsClient: DiscogsClient,
     private val workRepositoryV2: WorkRepositoryV2,
+    private val canonicalWorkRepositoryV2: CanonicalWorkRepositoryV2,
     private val ocrService: OcrService,
     private val uxEventLogger: UxEventLogger,
 ) : ViewModel() {
@@ -214,6 +217,8 @@ class AddWorkViewModel @Inject constructor(
     ) {
         val (artist, title) = parseArtistTitle(candidate.displayTitle)
         val year = candidate.year
+        val releaseType = CompletionRules.inferReleaseType(candidate.styles, candidate.genres)
+        val formatType = CompletionRules.inferFormatType(title, candidate.styles, candidate.genres)
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null, infoMessage = null)
@@ -248,6 +253,18 @@ class AddWorkViewModel @Inject constructor(
                     is WorkRepositoryV2.UpsertResult.Created -> result.workId
                     is WorkRepositoryV2.UpsertResult.UpdatedExisting -> result.workId
                     is WorkRepositoryV2.UpsertResult.PossibleDuplicate -> result.existingWorkId.orEmpty()
+                }
+
+                if (workId.isNotBlank()) {
+                    val canonicalWorkId = canonicalWorkRepositoryV2.upsertCanonicalWorkFromDiscogs(
+                        artistName = artist,
+                        discogsMasterId = candidate.masterId,
+                        title = title,
+                        year = year,
+                        formatType = formatType,
+                        releaseType = releaseType,
+                    )
+                    workRepositoryV2.updateCanonicalWorkId(workId, canonicalWorkId)
                 }
 
                 _uiState.value = _uiState.value.copy(isLoading = false, infoMessage = info)

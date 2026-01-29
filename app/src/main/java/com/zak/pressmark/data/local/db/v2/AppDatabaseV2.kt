@@ -7,6 +7,10 @@ import com.zak.pressmark.data.local.dao.v2.ReleaseDaoV2
 import com.zak.pressmark.data.local.dao.v2.VariantDaoV2
 import com.zak.pressmark.data.local.dao.v2.WorkGenreStyleDaoV2
 import com.zak.pressmark.data.local.dao.v2.WorkDaoV2
+import com.zak.pressmark.data.local.dao.v2.ArtistDaoV2
+import com.zak.pressmark.data.local.dao.v2.CanonicalWorkDaoV2
+import com.zak.pressmark.data.local.entity.v2.ArtistEntityV2
+import com.zak.pressmark.data.local.entity.v2.CanonicalWorkEntityV2
 import com.zak.pressmark.data.local.entity.v2.GenreEntityV2
 import com.zak.pressmark.data.local.entity.v2.PressingEntityV2
 import com.zak.pressmark.data.local.entity.v2.ReleaseEntityV2
@@ -18,6 +22,8 @@ import com.zak.pressmark.data.local.entity.v2.WorkEntityV2
 
 @Database(
     entities = [
+        ArtistEntityV2::class,
+        CanonicalWorkEntityV2::class,
         WorkEntityV2::class,
         ReleaseEntityV2::class,
         PressingEntityV2::class,
@@ -27,11 +33,13 @@ import com.zak.pressmark.data.local.entity.v2.WorkEntityV2
         WorkGenreCrossRefEntityV2::class,
         WorkStyleCrossRefEntityV2::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 // @TypeConverters(RoomConvertersV2::class)
 abstract class AppDatabaseV2 : RoomDatabase() {
+    abstract fun artistDaoV2(): ArtistDaoV2
+    abstract fun canonicalWorkDaoV2(): CanonicalWorkDaoV2
     abstract fun workDaoV2(): WorkDaoV2
     abstract fun releaseDaoV2(): ReleaseDaoV2
     abstract fun pressingDaoV2(): PressingDaoV2

@@ -42,6 +42,7 @@ import com.zak.pressmark.feature.workdetails.vm.WorkDetailsViewModel
 @Composable
 fun WorkDetailsRoute(
     onBack: () -> Unit,
+    onOpenArtist: (String) -> Unit,
     vm: WorkDetailsViewModel = hiltViewModel(),
 ) {
     val state by vm.uiState.collectAsState()
@@ -101,6 +102,9 @@ fun WorkDetailsRoute(
 
             Text(text = state.title, style = MaterialTheme.typography.titleLarge)
             Text(text = state.artistLine, style = MaterialTheme.typography.bodyLarge)
+            TextButton(onClick = { onOpenArtist(state.artistLine) }) {
+                Text("View artist")
+            }
             state.year?.let { Text(text = it.toString(), style = MaterialTheme.typography.bodyMedium) }
 
             Spacer(modifier = Modifier.height(12.dp))

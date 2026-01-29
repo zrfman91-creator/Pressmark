@@ -6,8 +6,10 @@ import androidx.lifecycle.viewModelScope
 import android.util.Log
 import com.zak.pressmark.BuildConfig
 import com.zak.pressmark.core.analytics.UxEventLogger
+import com.zak.pressmark.core.util.completion.CompletionRules
 import com.zak.pressmark.data.remote.discogs.DiscogsApiService
 import com.zak.pressmark.data.prefs.ScannerPreferences
+import com.zak.pressmark.data.repository.v2.CanonicalWorkRepositoryV2
 import com.zak.pressmark.data.repository.v2.WorkRepositoryV2
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -53,6 +55,7 @@ data class AddBarcodeUiState(
 class AddBarcodeViewModel @Inject constructor(
     private val discogsApi: DiscogsApiService,
     private val workRepositoryV2: WorkRepositoryV2,
+    private val canonicalWorkRepositoryV2: CanonicalWorkRepositoryV2,
     private val scannerPreferences: ScannerPreferences,
     private val uxEventLogger: UxEventLogger,
 ) : ViewModel() {
@@ -210,6 +213,7 @@ class AddBarcodeViewModel @Inject constructor(
                     "pm_discogs_lookup_result",
                     mapOf("result" to "success", "http_code" to 200),
                 )
+
             } catch (t: Throwable) {
                 logDiscogsLookupFailure(t)
                 _uiState.value = _uiState.value.copy(
@@ -246,6 +250,8 @@ class AddBarcodeViewModel @Inject constructor(
 
                 val title = master.title.ifBlank { candidate.releaseTitle }
                 val year = master.year ?: candidate.year
+                val releaseType = CompletionRules.inferReleaseType(master.styles, master.genres)
+                val formatType = CompletionRules.inferFormatType(title, master.styles, master.genres)
 
                 val result = workRepositoryV2.upsertDiscogsMasterWork(
                     discogsMasterId = master.id,
@@ -285,6 +291,15 @@ class AddBarcodeViewModel @Inject constructor(
                     is WorkRepositoryV2.UpsertResult.PossibleDuplicate -> result.existingWorkId.orEmpty()
                 }
                 if (workId.isNotBlank()) {
+                    val canonicalWorkId = canonicalWorkRepositoryV2.upsertCanonicalWorkFromDiscogs(
+                        artistName = candidate.artistLine,
+                        discogsMasterId = master.id,
+                        title = title,
+                        year = year,
+                        formatType = formatType,
+                        releaseType = releaseType,
+                    )
+                    workRepositoryV2.updateCanonicalWorkId(workId, canonicalWorkId)
                     onAdded(workId, autoReopen)
                 }
             } catch (t: Throwable) {

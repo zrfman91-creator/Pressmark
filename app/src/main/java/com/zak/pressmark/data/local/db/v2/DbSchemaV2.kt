@@ -32,10 +32,38 @@ object DbSchemaV2 {
 
         const val PRIMARY_ARTWORK_URI = "primary_artwork_uri"
 
+        const val CANONICAL_WORK_ID = "canonical_work_id"
+
         // Common external anchors (keep small + pragmatic for now).
         const val DISCOGS_MASTER_ID = "discogs_master_id"
         const val MUSICBRAINZ_RELEASE_GROUP_ID = "musicbrainz_release_group_id"
 
+        const val CREATED_AT = "created_at"
+        const val UPDATED_AT = "updated_at"
+    }
+
+    object Artist {
+        const val TABLE = "v2_artists"
+
+        const val ID = "id"
+        const val NAME = "name"
+        const val NAME_NORMALIZED = "name_normalized"
+        const val DISCOGS_ARTIST_ID = "discogs_artist_id"
+        const val CREATED_AT = "created_at"
+        const val UPDATED_AT = "updated_at"
+    }
+
+    object CanonicalWork {
+        const val TABLE = "v2_canonical_works"
+
+        const val ID = "id"
+        const val ARTIST_ID = "artist_id"
+        const val TITLE = "title"
+        const val TITLE_NORMALIZED = "title_normalized"
+        const val YEAR = "year"
+        const val FORMAT_TYPE = "format_type"
+        const val RELEASE_TYPE = "release_type"
+        const val DISCOGS_MASTER_ID = "discogs_master_id"
         const val CREATED_AT = "created_at"
         const val UPDATED_AT = "updated_at"
     }

@@ -34,6 +34,15 @@ interface WorkDaoV2 {
 
     @Query(
         """
+        UPDATE ${DbSchemaV2.Work.TABLE}
+        SET ${DbSchemaV2.Work.CANONICAL_WORK_ID} = :canonicalWorkId
+        WHERE ${DbSchemaV2.Work.ID} = :workId
+        """
+    )
+    suspend fun updateCanonicalWorkId(workId: String, canonicalWorkId: String)
+
+    @Query(
+        """
         SELECT * FROM ${DbSchemaV2.Work.TABLE}
         WHERE ${DbSchemaV2.Work.ARTIST_NORMALIZED} = :artistNorm
           AND ${DbSchemaV2.Work.TITLE_NORMALIZED} = :titleNorm

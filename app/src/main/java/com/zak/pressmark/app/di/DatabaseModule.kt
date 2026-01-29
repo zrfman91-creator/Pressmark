@@ -6,6 +6,8 @@ import androidx.room.Room
 import com.zak.pressmark.data.local.dao.v2.PressingDaoV2
 import com.zak.pressmark.data.local.dao.v2.ReleaseDaoV2
 import com.zak.pressmark.data.local.dao.v2.VariantDaoV2
+import com.zak.pressmark.data.local.dao.v2.ArtistDaoV2
+import com.zak.pressmark.data.local.dao.v2.CanonicalWorkDaoV2
 import com.zak.pressmark.data.local.dao.v2.WorkGenreStyleDaoV2
 import com.zak.pressmark.data.local.dao.v2.WorkDaoV2
 import com.zak.pressmark.data.local.db.v2.AppDatabaseV2
@@ -35,10 +37,19 @@ object DatabaseModule {
     ): AppDatabaseV2 {
         return Room.databaseBuilder(context, AppDatabaseV2::class.java, DB_NAME)
             .addMigrations(MigrationsV2.MIGRATION_1_2)
+            .addMigrations(MigrationsV2.MIGRATION_2_3)
             // Dev-friendly. Remove/replace with proper migrations when schema stabilizes.
             .fallbackToDestructiveMigration()
             .build()
     }
+
+    @Provides
+    @Singleton
+    fun provideArtistDaoV2(db: AppDatabaseV2): ArtistDaoV2 = db.artistDaoV2()
+
+    @Provides
+    @Singleton
+    fun provideCanonicalWorkDaoV2(db: AppDatabaseV2): CanonicalWorkDaoV2 = db.canonicalWorkDaoV2()
 
     @Provides
     @Singleton

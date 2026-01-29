@@ -25,6 +25,7 @@ import com.zak.pressmark.data.local.db.v2.DbSchemaV2
         Index(value = [DbSchemaV2.Work.UPDATED_AT]),
         Index(value = [DbSchemaV2.Work.DISCOGS_MASTER_ID]),
         Index(value = [DbSchemaV2.Work.MUSICBRAINZ_RELEASE_GROUP_ID]),
+        Index(value = [DbSchemaV2.Work.CANONICAL_WORK_ID]),
     ],
 )
 data class WorkEntityV2(
@@ -46,6 +47,8 @@ data class WorkEntityV2(
     @ColumnInfo(name = DbSchemaV2.Work.STYLES_JSON) val stylesJson: String = "[]",
 
     @ColumnInfo(name = DbSchemaV2.Work.PRIMARY_ARTWORK_URI) val primaryArtworkUri: String? = null,
+
+    @ColumnInfo(name = DbSchemaV2.Work.CANONICAL_WORK_ID) val canonicalWorkId: String? = null,
 
     // External anchors (nullable, provider-specific)
     @ColumnInfo(name = DbSchemaV2.Work.DISCOGS_MASTER_ID) val discogsMasterId: Long? = null,

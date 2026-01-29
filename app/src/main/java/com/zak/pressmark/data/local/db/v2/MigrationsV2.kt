@@ -19,6 +19,114 @@ object MigrationsV2 {
         }
     }
 
+    val MIGRATION_2_3 = object : Migration(2, 3) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            addCanonicalWorkIdColumn(db)
+            createArtistTable(db)
+            createCanonicalWorkTable(db)
+        }
+    }
+
+    private fun addCanonicalWorkIdColumn(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            ALTER TABLE ${DbSchemaV2.Work.TABLE}
+            ADD COLUMN ${DbSchemaV2.Work.CANONICAL_WORK_ID} TEXT
+            """
+                .trimIndent()
+        )
+        db.execSQL(
+            """
+            CREATE INDEX IF NOT EXISTS index_${DbSchemaV2.Work.TABLE}_${DbSchemaV2.Work.CANONICAL_WORK_ID}
+            ON ${DbSchemaV2.Work.TABLE} (${DbSchemaV2.Work.CANONICAL_WORK_ID})
+            """
+                .trimIndent()
+        )
+    }
+
+    private fun createArtistTable(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS ${DbSchemaV2.Artist.TABLE} (
+              ${DbSchemaV2.Artist.ID} TEXT NOT NULL,
+              ${DbSchemaV2.Artist.NAME} TEXT NOT NULL,
+              ${DbSchemaV2.Artist.NAME_NORMALIZED} TEXT NOT NULL,
+              ${DbSchemaV2.Artist.DISCOGS_ARTIST_ID} INTEGER,
+              ${DbSchemaV2.Artist.CREATED_AT} INTEGER NOT NULL,
+              ${DbSchemaV2.Artist.UPDATED_AT} INTEGER NOT NULL,
+              PRIMARY KEY (${DbSchemaV2.Artist.ID})
+            )
+            """
+                .trimIndent()
+        )
+        db.execSQL(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS index_${DbSchemaV2.Artist.TABLE}_${DbSchemaV2.Artist.NAME_NORMALIZED}
+            ON ${DbSchemaV2.Artist.TABLE} (${DbSchemaV2.Artist.NAME_NORMALIZED})
+            """
+                .trimIndent()
+        )
+        db.execSQL(
+            """
+            CREATE INDEX IF NOT EXISTS index_${DbSchemaV2.Artist.TABLE}_${DbSchemaV2.Artist.DISCOGS_ARTIST_ID}
+            ON ${DbSchemaV2.Artist.TABLE} (${DbSchemaV2.Artist.DISCOGS_ARTIST_ID})
+            """
+                .trimIndent()
+        )
+    }
+
+    private fun createCanonicalWorkTable(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS ${DbSchemaV2.CanonicalWork.TABLE} (
+              ${DbSchemaV2.CanonicalWork.ID} TEXT NOT NULL,
+              ${DbSchemaV2.CanonicalWork.ARTIST_ID} TEXT NOT NULL,
+              ${DbSchemaV2.CanonicalWork.TITLE} TEXT NOT NULL,
+              ${DbSchemaV2.CanonicalWork.TITLE_NORMALIZED} TEXT NOT NULL,
+              ${DbSchemaV2.CanonicalWork.YEAR} INTEGER,
+              ${DbSchemaV2.CanonicalWork.FORMAT_TYPE} TEXT,
+              ${DbSchemaV2.CanonicalWork.RELEASE_TYPE} TEXT,
+              ${DbSchemaV2.CanonicalWork.DISCOGS_MASTER_ID} INTEGER,
+              ${DbSchemaV2.CanonicalWork.CREATED_AT} INTEGER NOT NULL,
+              ${DbSchemaV2.CanonicalWork.UPDATED_AT} INTEGER NOT NULL,
+              PRIMARY KEY (${DbSchemaV2.CanonicalWork.ID}),
+              FOREIGN KEY (${DbSchemaV2.CanonicalWork.ARTIST_ID})
+                REFERENCES ${DbSchemaV2.Artist.TABLE} (${DbSchemaV2.Artist.ID})
+                ON DELETE CASCADE
+            )
+            """
+                .trimIndent()
+        )
+        db.execSQL(
+            """
+            CREATE INDEX IF NOT EXISTS index_${DbSchemaV2.CanonicalWork.TABLE}_${DbSchemaV2.CanonicalWork.ARTIST_ID}
+            ON ${DbSchemaV2.CanonicalWork.TABLE} (${DbSchemaV2.CanonicalWork.ARTIST_ID})
+            """
+                .trimIndent()
+        )
+        db.execSQL(
+            """
+            CREATE INDEX IF NOT EXISTS index_${DbSchemaV2.CanonicalWork.TABLE}_${DbSchemaV2.CanonicalWork.TITLE_NORMALIZED}
+            ON ${DbSchemaV2.CanonicalWork.TABLE} (${DbSchemaV2.CanonicalWork.TITLE_NORMALIZED})
+            """
+                .trimIndent()
+        )
+        db.execSQL(
+            """
+            CREATE INDEX IF NOT EXISTS index_${DbSchemaV2.CanonicalWork.TABLE}_${DbSchemaV2.CanonicalWork.YEAR}
+            ON ${DbSchemaV2.CanonicalWork.TABLE} (${DbSchemaV2.CanonicalWork.YEAR})
+            """
+                .trimIndent()
+        )
+        db.execSQL(
+            """
+            CREATE INDEX IF NOT EXISTS index_${DbSchemaV2.CanonicalWork.TABLE}_${DbSchemaV2.CanonicalWork.DISCOGS_MASTER_ID}
+            ON ${DbSchemaV2.CanonicalWork.TABLE} (${DbSchemaV2.CanonicalWork.DISCOGS_MASTER_ID})
+            """
+                .trimIndent()
+        )
+    }
+
     private fun addSortColumns(db: SupportSQLiteDatabase) {
         db.execSQL(
             """

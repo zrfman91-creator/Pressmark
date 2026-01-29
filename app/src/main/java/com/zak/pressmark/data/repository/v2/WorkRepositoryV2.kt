@@ -67,6 +67,7 @@ class WorkRepositoryV2 @Inject constructor(
                     genresJson = "[]",
                     stylesJson = "[]",
                     primaryArtworkUri = primaryArtworkUri,
+                    canonicalWorkId = null,
                     discogsMasterId = null,
                     musicBrainzReleaseGroupId = null,
                     createdAt = now,
@@ -104,6 +105,7 @@ class WorkRepositoryV2 @Inject constructor(
             genresJson = toJsonArray(genres),
             stylesJson = toJsonArray(styles),
             primaryArtworkUri = primaryArtworkUri,
+            canonicalWorkId = existing?.canonicalWorkId,
             discogsMasterId = discogsMasterId,
             musicBrainzReleaseGroupId = existing?.musicBrainzReleaseGroupId,
             createdAt = existing?.createdAt ?: now,
@@ -148,6 +150,7 @@ class WorkRepositoryV2 @Inject constructor(
                 artistSort = normalizeForSort(artistLine, stripLeadingThe = true),
                 year = year,
                 primaryArtworkUri = primaryArtworkUri ?: existingExact.primaryArtworkUri,
+                canonicalWorkId = existingExact.canonicalWorkId,
                 updatedAt = now,
             )
 
@@ -178,6 +181,7 @@ class WorkRepositoryV2 @Inject constructor(
             genresJson = "[]",
             stylesJson = "[]",
             primaryArtworkUri = primaryArtworkUri,
+            canonicalWorkId = null,
             discogsMasterId = null,
             musicBrainzReleaseGroupId = null,
             createdAt = now,
@@ -420,6 +424,10 @@ class WorkRepositoryV2 @Inject constructor(
     }
 
     suspend fun getWork(workId: String) = workDao.getById(workId)
+
+    suspend fun updateCanonicalWorkId(workId: String, canonicalWorkId: String) {
+        workDao.updateCanonicalWorkId(workId, canonicalWorkId)
+    }
 
     suspend fun deleteWork(workId: String) {
         db.withTransaction {

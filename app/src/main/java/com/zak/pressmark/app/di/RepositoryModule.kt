@@ -4,9 +4,13 @@ package com.zak.pressmark.app.di
 import com.zak.pressmark.data.local.dao.v2.PressingDaoV2
 import com.zak.pressmark.data.local.dao.v2.ReleaseDaoV2
 import com.zak.pressmark.data.local.dao.v2.VariantDaoV2
+import com.zak.pressmark.data.local.dao.v2.ArtistDaoV2
+import com.zak.pressmark.data.local.dao.v2.CanonicalWorkDaoV2
 import com.zak.pressmark.data.local.dao.v2.WorkGenreStyleDaoV2
 import com.zak.pressmark.data.local.dao.v2.WorkDaoV2
 import com.zak.pressmark.data.local.db.v2.AppDatabaseV2
+import com.zak.pressmark.data.repository.v2.ArtistCompletionRepository
+import com.zak.pressmark.data.repository.v2.CanonicalWorkRepositoryV2
 import com.zak.pressmark.data.repository.v2.WorkRepositoryV2
 import dagger.Module
 import dagger.Provides
@@ -36,5 +40,25 @@ object RepositoryModule {
             variantDao = variantDao,
             workGenreStyleDao = workGenreStyleDao,
         )
+    }
+
+    @Provides
+    @Singleton
+    fun provideCanonicalWorkRepositoryV2(
+        artistDao: ArtistDaoV2,
+        canonicalWorkDao: CanonicalWorkDaoV2,
+    ): CanonicalWorkRepositoryV2 {
+        return CanonicalWorkRepositoryV2(
+            artistDao = artistDao,
+            canonicalWorkDao = canonicalWorkDao,
+        )
+    }
+
+    @Provides
+    @Singleton
+    fun provideArtistCompletionRepository(
+        canonicalWorkDao: CanonicalWorkDaoV2,
+    ): ArtistCompletionRepository {
+        return ArtistCompletionRepository(canonicalWorkDao = canonicalWorkDao)
     }
 }

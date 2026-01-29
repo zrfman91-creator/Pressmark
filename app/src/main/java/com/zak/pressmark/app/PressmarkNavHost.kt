@@ -2,6 +2,7 @@ package com.zak.pressmark.app
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import android.net.Uri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
@@ -14,6 +15,7 @@ import com.zak.pressmark.feature.ingest.barcode.route.AddBarcodeRoute
 import com.zak.pressmark.feature.ingest.barcode.scan.BarcodeScannerRoute
 import com.zak.pressmark.feature.ingest.barcode.vm.AddBarcodeViewModel
 import com.zak.pressmark.feature.ingest.manual.route.AddWorkRoute
+import com.zak.pressmark.feature.artistdetails.route.ArtistDetailsRoute
 import com.zak.pressmark.feature.library.route.LibraryRoute
 import com.zak.pressmark.feature.library.vm.LibraryViewModel
 import com.zak.pressmark.feature.workdetails.route.WorkDetailsRoute
@@ -111,7 +113,17 @@ fun PressmarkNavHost(
         ) {
             WorkDetailsRoute(
                 onBack = { navController.popBackStack() },
+                onOpenArtist = { artistName ->
+                    navController.navigate(PressmarkRoutes.artistDetails(Uri.encode(artistName)))
+                },
             )
+        }
+
+        composable(
+            route = PressmarkRoutes.ARTIST_DETAILS_PATTERN,
+            arguments = listOf(navArgument(PressmarkRoutes.ARG_ARTIST_NAME) { type = NavType.StringType }),
+        ) {
+            ArtistDetailsRoute(onBack = { navController.popBackStack() })
         }
     }
 }
