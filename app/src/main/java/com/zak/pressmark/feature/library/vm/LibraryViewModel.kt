@@ -112,7 +112,7 @@ class LibraryViewModel @Inject constructor(
 
         // Build UI state.
         viewModelScope.launch {
-            combine(
+            val baseStateFlow = combine(
                 sortSpecFlow,
                 groupKeyFlow,
                 _outerGroupCollapsedIds.asStateFlow(),
@@ -134,6 +134,10 @@ class LibraryViewModel @Inject constructor(
                     groupKey = groupKey,
                     showOnboarding = !onboardingSeen,
                 )
+            }
+
+            combine(baseStateFlow, onboardingFlow) { baseState, onboardingSeen ->
+                baseState.copy(showOnboarding = !onboardingSeen)
             }.collect { state ->
                 _uiState.value = state
             }
