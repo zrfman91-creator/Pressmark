@@ -4,26 +4,29 @@ import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -44,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
+import com.zak.pressmark.core.ui.InlineStatusCard
 import com.zak.pressmark.feature.ingest.manual.vm.AddWorkViewModel
 import com.zak.pressmark.feature.ingest.manual.vm.DiscogsCandidateUi
 import com.zak.pressmark.feature.ingest.manual.vm.OcrCaptureSource
@@ -53,6 +57,7 @@ import java.io.File
 @Composable
 fun AddWorkRoute(
     onDone: () -> Unit,
+    onAdded: (String) -> Unit,
     vm: AddWorkViewModel = hiltViewModel(),
 ) {
     val state by vm.uiState.collectAsState()
@@ -60,6 +65,11 @@ fun AddWorkRoute(
     var showOcrSheet by remember { mutableStateOf(false) }
     var pendingCaptureUri by remember { mutableStateOf<Uri?>(null) }
     var pendingSource by remember { mutableStateOf(OcrCaptureSource.COVER) }
+    val manualEntryEnabled = !state.isLoading && state.artist.isNotBlank() && state.title.isNotBlank()
+
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        vm.logIngestStart()
+    }
 
     val takePictureLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture(),
@@ -75,140 +85,171 @@ fun AddWorkRoute(
             TopAppBar(
                 title = { Text("Add album") },
                 navigationIcon = {
-                    Text(
-                        text = "Back",
-                        modifier = Modifier
-                            .padding(horizontal = 16.dp)
-                            .clickable { onDone() },
-                    )
+                    IconButton(onClick = onDone) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                        )
+                    }
                 },
             )
         },
     ) { padding ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp),
+                .imePadding()
+                .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.Top,
         ) {
-            OutlinedButton(
-                onClick = { showOcrSheet = true },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("No barcode? Capture cover/label")
+            item {
+                OutlinedButton(
+                    onClick = { showOcrSheet = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("No barcode? Capture cover/label")
+                }
             }
 
             if (state.isOcrProcessing) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                ) {
-                    CircularProgressIndicator()
+                item {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        CircularProgressIndicator()
+                    }
                 }
             }
 
             state.ocrMessage?.let { message ->
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(text = message)
+                item {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(text = message)
+                }
             }
 
-            OcrSuggestionRow(
-                title = "Suggested titles",
-                suggestions = state.ocrTitleCandidates,
-                onSelect = vm::applyTitleCandidate,
-            )
-            OcrSuggestionRow(
-                title = "Suggested artists",
-                suggestions = state.ocrArtistCandidates,
-                onSelect = vm::applyArtistCandidate,
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            OutlinedTextField(
-                value = state.artist,
-                onValueChange = vm::onArtistChanged,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Artist") },
-                singleLine = true,
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            OutlinedTextField(
-                value = state.title,
-                onValueChange = vm::onTitleChanged,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Title") },
-                singleLine = true,
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            OutlinedTextField(
-                value = state.year,
-                onValueChange = vm::onYearChanged,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Year (optional)") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick = { vm.searchDiscogs() },
-                enabled = !state.isLoading && state.artist.isNotBlank() && state.title.isNotBlank(),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("Search Discogs")
+            item {
+                OcrSuggestionRow(
+                    title = "Suggested titles",
+                    suggestions = state.ocrTitleCandidates,
+                    onSelect = vm::applyTitleCandidate,
+                )
+            }
+            item {
+                OcrSuggestionRow(
+                    title = "Suggested artists",
+                    suggestions = state.ocrArtistCandidates,
+                    onSelect = vm::applyArtistCandidate,
+                )
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            item { Spacer(modifier = Modifier.height(12.dp)) }
 
-            Button(
-                onClick = { vm.addManualWork() },
-                enabled = !state.isLoading && state.artist.isNotBlank() && state.title.isNotBlank(),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("Add without Discogs")
+            item {
+                OutlinedTextField(
+                    value = state.artist,
+                    onValueChange = vm::onArtistChanged,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Artist") },
+                    singleLine = true,
+                )
+            }
+            item { Spacer(modifier = Modifier.height(12.dp)) }
+            item {
+                OutlinedTextField(
+                    value = state.title,
+                    onValueChange = vm::onTitleChanged,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Title") },
+                    singleLine = true,
+                )
+            }
+            item { Spacer(modifier = Modifier.height(12.dp)) }
+            item {
+                OutlinedTextField(
+                    value = state.year,
+                    onValueChange = vm::onYearChanged,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Year (optional)") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                )
+            }
+
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+
+            item {
+                Button(
+                    onClick = { vm.searchDiscogs() },
+                    enabled = manualEntryEnabled,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Search Discogs")
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(10.dp)) }
+
+            item {
+                Button(
+                    onClick = { vm.addManualWork(onAdded) },
+                    enabled = manualEntryEnabled,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Add without Discogs")
+                }
             }
 
             if (state.isLoading) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                ) {
-                    CircularProgressIndicator()
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        CircularProgressIndicator()
+                    }
                 }
             }
 
             state.errorMessage?.let { msg ->
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(text = msg)
+                item {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    InlineStatusCard(
+                        message = msg,
+                        actionLabel = if (manualEntryEnabled) "Retry" else null,
+                        onAction = if (manualEntryEnabled) vm::searchDiscogs else null,
+                    )
+                }
             }
 
             state.infoMessage?.let { msg ->
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(text = msg)
+                item {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    InlineStatusCard(message = msg)
+                }
             }
 
             if (state.results.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Matches")
-                Spacer(modifier = Modifier.height(8.dp))
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Matches")
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
 
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    items(state.results) { item ->
-                        CandidateRow(
-                            item = item,
-                            onClick = { vm.addToLibrary(item) },
-                        )
-                        Spacer(modifier = Modifier.height(10.dp))
-                    }
+                items(state.results, key = { it.masterId }) { item ->
+                    CandidateRow(
+                        item = item,
+                        onClick = { vm.addToLibrary(item, onAdded) },
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
                 }
             }
+
+            item { Spacer(modifier = Modifier.height(16.dp)) }
         }
     }
 

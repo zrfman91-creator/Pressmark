@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.dp
 private val buttonShape = RoundedCornerShape(4.dp)
 private val buttonBorderWidth = 1.dp
 private val buttonElevation = 4.dp
-private val buttonMinHeight = 40.dp
+private val buttonMinHeight = 48.dp
 
 @Composable
 fun PressmarkPillButton(
