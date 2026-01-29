@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zak.pressmark.app.PressmarkRoutes
+import com.zak.pressmark.core.analytics.UxEventLogger
 import com.zak.pressmark.data.repository.v2.WorkRepositoryV2
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -27,6 +28,7 @@ data class WorkDetailsUiState(
 class WorkDetailsViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val workRepositoryV2: WorkRepositoryV2,
+    private val uxEventLogger: UxEventLogger,
 ) : ViewModel() {
 
     private val workId: String = checkNotNull(savedStateHandle[PressmarkRoutes.ARG_WORK_ID])
@@ -60,6 +62,7 @@ class WorkDetailsViewModel @Inject constructor(
     fun deleteWork() {
         viewModelScope.launch {
             workRepositoryV2.deleteWork(workId)
+            uxEventLogger.logEvent("pm_work_deleted", mapOf("source" to "details"))
         }
     }
 

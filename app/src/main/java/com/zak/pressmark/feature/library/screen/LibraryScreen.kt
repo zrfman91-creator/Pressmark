@@ -16,14 +16,20 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import com.zak.pressmark.data.prefs.LibraryGroupKey
 import com.zak.pressmark.data.prefs.LibrarySortSpec
 import com.zak.pressmark.feature.library.vm.LibraryItemUi
@@ -40,13 +46,31 @@ fun LibraryScreen(
     onGroupChanged: (LibraryGroupKey) -> Unit,
     onToggleGroup: (groupId: String) -> Unit,
     onToggleAllSections: (expand: Boolean) -> Unit,
+    onSearchResultsUpdated: (query: String, resultsCount: Int) -> Unit,
+    onDismissOnboarding: (source: String) -> Unit,
     deleteTarget: LibraryItemUi?,
     onRequestDelete: (LibraryItemUi) -> Unit,
     onDismissDelete: () -> Unit,
     onConfirmDelete: (LibraryItemUi) -> Unit,
+    addedWorkId: String?,
+    onConsumeAddedWorkId: () -> Unit,
 ) {
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var isSearchExpanded by rememberSaveable { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(addedWorkId) {
+        if (!addedWorkId.isNullOrBlank()) {
+            val result = snackbarHostState.showSnackbar(
+                message = "Added to Library",
+                actionLabel = "View",
+            )
+            if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
+                onOpenWork(addedWorkId)
+            }
+            onConsumeAddedWorkId()
+        }
+    }
 
     Scaffold(
         // Keep bottom insets OUT of content; we apply nav-bar padding precisely to the list.
@@ -64,6 +88,7 @@ fun LibraryScreen(
                 },
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { innerPadding ->
         val navBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
@@ -76,12 +101,15 @@ fun LibraryScreen(
                 state = state,
                 searchQuery = searchQuery,
                 bottomContentPadding = navBarBottom,
+                onAddManual = onAddManual,
+                onAddBarcode = onAddBarcode,
                 onOpenWork = onOpenWork,
                 onSortChanged = onSortChanged,
                 onGroupChanged = onGroupChanged,
                 onToggleGroup = onToggleGroup,
                 onToggleAllSections = onToggleAllSections,
                 onRequestDelete = onRequestDelete,
+                onSearchResultsUpdated = onSearchResultsUpdated,
                 modifier = Modifier.fillMaxSize(),
             )
 
@@ -98,6 +126,44 @@ fun LibraryScreen(
                 onDismissDelete = onDismissDelete,
                 onConfirmDelete = onConfirmDelete,
             )
+
+            if (state.showOnboarding) {
+                androidx.compose.material3.AlertDialog(
+                    onDismissRequest = { onDismissOnboarding("dismiss") },
+                    title = {
+                        Text(
+                            text = "Welcome to Pressmark",
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    },
+                    text = {
+                        androidx.compose.foundation.layout.Column(
+                            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+                        ) {
+                            Text("• Scan barcode to add fast")
+                            Text("• Manual add works anytime")
+                            Text("• Sort + Group keep it tidy")
+                        }
+                    },
+                    confirmButton = {
+                        androidx.compose.material3.Button(
+                            onClick = {
+                                onDismissOnboarding("scan")
+                                onAddBarcode()
+                            },
+                        ) {
+                            Text("Scan my first record")
+                        }
+                    },
+                    dismissButton = {
+                        androidx.compose.material3.TextButton(
+                            onClick = { onDismissOnboarding("dismiss") },
+                        ) {
+                            Text("Not now")
+                        }
+                    },
+                )
+            }
         }
     }
 }
