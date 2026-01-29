@@ -38,7 +38,8 @@ fun LibraryScreen(
     onAddBarcode: () -> Unit,
     onSortChanged: (LibrarySortSpec) -> Unit,
     onGroupChanged: (LibraryGroupKey) -> Unit,
-    onToggleGroup: (groupId: String, isExpanded: Boolean) -> Unit,
+    onToggleGroup: (groupId: String) -> Unit,
+    onToggleAllSections: (expand: Boolean) -> Unit,
     deleteTarget: LibraryItemUi?,
     onRequestDelete: (LibraryItemUi) -> Unit,
     onDismissDelete: () -> Unit,
@@ -48,7 +49,7 @@ fun LibraryScreen(
     var isSearchExpanded by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
-        // Keep bottom insets OUT of the content; overlays own IME/nav spacing.
+        // Keep bottom insets OUT of content; we apply nav-bar padding precisely to the list.
         contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top),
         topBar = {
             TopAppBar(
@@ -74,10 +75,12 @@ fun LibraryScreen(
             LibraryContent(
                 state = state,
                 searchQuery = searchQuery,
+                bottomContentPadding = navBarBottom,
                 onOpenWork = onOpenWork,
                 onSortChanged = onSortChanged,
                 onGroupChanged = onGroupChanged,
                 onToggleGroup = onToggleGroup,
+                onToggleAllSections = onToggleAllSections,
                 onRequestDelete = onRequestDelete,
                 modifier = Modifier.fillMaxSize(),
             )
@@ -90,10 +93,10 @@ fun LibraryScreen(
                 expanded = isSearchExpanded,
                 onExpandedChange = { isSearchExpanded = it },
                 scaffoldBottomPadding = navBarBottom,
+                expandedKeyboardGap = LibraryLayoutTokens.SearchExpandedKeyboardGap,
                 deleteTarget = deleteTarget,
                 onDismissDelete = onDismissDelete,
                 onConfirmDelete = onConfirmDelete,
-                expandedKeyboardGap = LibraryLayoutTokens.SearchExpandedKeyboardGap,
             )
         }
     }

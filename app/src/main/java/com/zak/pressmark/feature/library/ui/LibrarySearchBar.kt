@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
@@ -62,7 +63,7 @@ fun LibrarySearchBar(
     placeholder: String = "Search library…",
     fabSize: Dp = 56.dp,
     height: Dp = 56.dp,
-    horizontalPadding: Dp = 10.dp,
+    horizontalPadding: Dp = 8.dp,
     bottomPadding: Dp = 48.dp,
     scaffoldBottomPadding: Dp = 16.dp,
     expandedKeyboardGap: Dp = 0.dp,
@@ -98,25 +99,27 @@ fun LibrarySearchBar(
         // Key line: imePadding() is applied ONLY while expanded so the bar sits above the keyboard.
         val anchorModifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = horizontalPadding)
+            .padding(start = 0.dp , end = 8.dp)
+
             // When expanded: sit above IME + small gap (ignore scaffold bottom bar padding)
             .then(
                 if (expanded) {
                     Modifier
                         .windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars))
                         .padding(bottom = expandedKeyboardGap)
+                        .offset(x = (48).dp)
                 } else {
                     Modifier.padding(bottom = scaffoldBottomPadding + bottomPadding)
                 }
             )
-
+        val fabOffset = (-48).dp
         Box(
             modifier = anchorModifier,
             contentAlignment = Alignment.BottomEnd
         ) {
             Surface(
                 modifier = Modifier
-                    .padding(end = 24.dp)
+                    .offset(x = fabOffset)
                     .width(animatedWidth)
                     .height(height)
                     // Consume clicks so outside layer doesn't collapse while interacting inside.
@@ -136,7 +139,9 @@ fun LibrarySearchBar(
                     val elevation = FloatingActionButtonDefaults.elevation(4.dp)
 
 
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Box(Modifier
+                        .fillMaxSize()
+                        , contentAlignment = Alignment.Center) {
                         FloatingActionButton(
                             onClick = { onExpandedChange(true) },
                             containerColor = containerColor,

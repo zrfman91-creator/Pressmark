@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,6 +40,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.zak.pressmark.data.prefs.LibraryGroupKey
@@ -50,31 +52,24 @@ import com.zak.pressmark.feature.library.vm.LibraryItemUi
 import com.zak.pressmark.feature.library.vm.LibraryListItem
 import com.zak.pressmark.feature.library.vm.LibraryUiState
 
-/**
- * Content layer for the Library screen.
- *
- * Responsibilities:
- * - Renders the controls row + main list/empty state.
- * - Owns list shape (headers/rows) and search filtering behavior.
- *
- * Non-responsibilities:
- * - IME / navigation bar insets.
- * - Floating overlays (search bar, dialogs, sheets).
- */
 @Composable
 fun LibraryContent(
     state: LibraryUiState,
     searchQuery: String,
+    bottomContentPadding: Dp,
     onOpenWork: (String) -> Unit,
     onSortChanged: (LibrarySortSpec) -> Unit,
     onGroupChanged: (LibraryGroupKey) -> Unit,
-    onToggleGroup: (groupId: String, isExpanded: Boolean) -> Unit,
+    onToggleGroup: (groupId: String) -> Unit,
+    onToggleAllSections: (expand: Boolean) -> Unit,
     onRequestDelete: (LibraryItemUi) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val filteredItems = remember(searchQuery, state.items) {
         filterLibraryItemsForSearch(state.items, searchQuery)
     }
+
+    val sectionsMenuEnabled = searchQuery.isBlank() && state.groupKey != LibraryGroupKey.NONE
 
     Column(
         modifier = modifier
@@ -87,6 +82,8 @@ fun LibraryContent(
             groupKey = state.groupKey,
             onSortChanged = onSortChanged,
             onGroupChanged = onGroupChanged,
+            onToggleAllSections = onToggleAllSections,
+            sectionsMenuEnabled = sectionsMenuEnabled,
         )
 
         if (filteredItems.isEmpty()) {
@@ -97,6 +94,8 @@ fun LibraryContent(
                     .fillMaxWidth()
                     .weight(1f),
                 verticalArrangement = Arrangement.spacedBy(LibraryLayoutTokens.ListItemSpacing),
+                // This makes the list END above the system nav bar (instead of drawing behind it).
+                contentPadding = PaddingValues(bottom = bottomContentPadding),
             ) {
                 items(
                     items = filteredItems,
@@ -116,7 +115,7 @@ fun LibraryContent(
                             modifier = Modifier.fillMaxWidth(),
                             onToggle = {
                                 if (searchQuery.isBlank()) {
-                                    onToggleGroup(listItem.id, listItem.isExpanded)
+                                    onToggleGroup(listItem.id)
                                 }
                             },
                         )
@@ -140,6 +139,8 @@ private fun LibraryControlsRow(
     groupKey: LibraryGroupKey,
     onSortChanged: (LibrarySortSpec) -> Unit,
     onGroupChanged: (LibraryGroupKey) -> Unit,
+    onToggleAllSections: (expand: Boolean) -> Unit,
+    sectionsMenuEnabled: Boolean,
 ) {
     LibraryActionRow(
         sort = sortSpec,
@@ -150,6 +151,8 @@ private fun LibraryControlsRow(
         groupLabel = ::groupLabel,
         onSortSelected = onSortChanged,
         onGroupSelected = onGroupChanged,
+        onToggleAllSections = onToggleAllSections,
+        sectionsMenuEnabled = sectionsMenuEnabled,
         modifier = Modifier.fillMaxWidth(),
     )
 }
@@ -161,7 +164,7 @@ private fun EmptyState(isSearching: Boolean) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp)),
-        tonalElevation = 1.dp,
+       shadowElevation = 1.dp,
     ) {
         Column(
             modifier = Modifier.padding(18.dp),
@@ -213,7 +216,6 @@ private fun filterLibraryItemsForSearch(
     val q = query.trim()
     if (q.isBlank()) return items
 
-    // Search mode: show only matching rows (ignore headers).
     return items
         .filterIsInstance<LibraryListItem.Row>()
         .filter { row ->
@@ -244,7 +246,7 @@ private fun LibraryGroupHeader(
             .clip(RoundedCornerShape(14.dp))
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
             .clickable(onClick = onToggle),
-        tonalElevation = if (level == 0) 2.dp else 1.dp,
+        shadowElevation = if (level == 0) 2.dp else 1.dp,
         shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surface,
     ) {
@@ -309,16 +311,21 @@ private fun WorkRow(
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     val indent = LibraryLayoutTokens.NestIndentStep * level
+    val edgeRadius = RoundedCornerShape(4.dp)
+    val borderColor = MaterialTheme.colorScheme.outline
+    val artSize = 64.dp
+
 
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = indent)
-            .clip(RoundedCornerShape(16.dp))
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
+            .clip(edgeRadius)
+            .border(1.dp, borderColor,edgeRadius)
             .clickable(onClick = onClick),
-        tonalElevation = 1.dp,
-        shape = RoundedCornerShape(16.dp),
+        shadowElevation = 1.dp,
+        shape = edgeRadius,
+        color = MaterialTheme.colorScheme.surface,
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
@@ -330,14 +337,14 @@ private fun WorkRow(
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
-                        .size(54.dp)
-                        .clip(RoundedCornerShape(10.dp)),
+                        .size(artSize)
+                        .clip(edgeRadius),
                 )
             } else {
                 Box(
                     modifier = Modifier
-                        .size(54.dp)
-                        .clip(RoundedCornerShape(10.dp))
+                        .size(artSize)
+                        .clip(edgeRadius)
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                 )
             }
@@ -356,7 +363,7 @@ private fun WorkRow(
                 )
                 Text(
                     text = item.artistLine,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

@@ -22,10 +22,10 @@ fun <T> PressmarkDropdownMenu(
     modifier: Modifier = Modifier,
     isSelected: ((T) -> Boolean)? = null,
 ) {
-    val dropdownContainerColor = MaterialTheme.colorScheme.surfaceVariant
+    val dropdownContainerColor = MaterialTheme.colorScheme.surface
     val dropdownBorderColor = MaterialTheme.colorScheme.outline
     val dropdownBorderWidth = 1.dp
-    val dropdownContainerShape = RoundedCornerShape(2.dp)
+    val dropdownContainerShape = RoundedCornerShape(4.dp)
 
     DropdownMenu(
         expanded = expanded,
@@ -35,7 +35,7 @@ fun <T> PressmarkDropdownMenu(
         containerColor = dropdownContainerColor,
         border = BorderStroke(dropdownBorderWidth, dropdownBorderColor),
         tonalElevation = 0.dp,
-        shadowElevation = 0.dp
+        shadowElevation = 2.dp
 
     ){
         items.forEach { item ->
