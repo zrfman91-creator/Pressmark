@@ -348,7 +348,6 @@ interface AnalyticsEntryPoint {
     fun uxEventLogger(): UxEventLogger
 }
 
-@Composable
 private fun rememberAnalyticsLogger(context: android.content.Context): UxEventLogger {
     return remember(context) {
         EntryPointAccessors.fromApplication(context, AnalyticsEntryPoint::class.java).uxEventLogger()

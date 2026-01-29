@@ -118,7 +118,8 @@ class LibraryViewModel @Inject constructor(
                 _outerGroupCollapsedIds.asStateFlow(),
                 _nestedArtistCollapsedIds.asStateFlow(),
                 worksFlow,
-            ) { sortSpec, groupKey, collapsedOuterIds, collapsedNestedIds, works ->
+                onboardingFlow,
+            ) { sortSpec, groupKey, collapsedOuterIds, collapsedNestedIds, works, onboardingSeen ->
                 val items = buildLibraryItems(
                     works = works,
                     groupKey = groupKey,
@@ -131,7 +132,7 @@ class LibraryViewModel @Inject constructor(
                     items = items,
                     sortSpec = sortSpec,
                     groupKey = groupKey,
-                    showOnboarding = false,
+                    showOnboarding = !onboardingSeen,
                 )
             }
 
