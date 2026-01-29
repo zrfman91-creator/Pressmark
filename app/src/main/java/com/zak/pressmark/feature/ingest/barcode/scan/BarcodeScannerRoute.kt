@@ -43,16 +43,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import com.zak.pressmark.core.analytics.UxEventLogger
@@ -102,7 +103,7 @@ fun BarcodeScannerRoute(
     }
 
     val lastDetected = remember { mutableStateOf<String?>(null) }
-    val lastDetectedAt = remember { mutableStateOf(0L) }
+    val lastDetectedAt = remember { mutableLongStateOf(0L) }
 
     Scaffold(
         topBar = {
@@ -169,10 +170,10 @@ fun BarcodeScannerRoute(
                     onBarcodeDetected = { barcode ->
                         val now = System.currentTimeMillis()
                         val lastCode = lastDetected.value
-                        val lastTime = lastDetectedAt.value
+                        val lastTime = lastDetectedAt.longValue
                         if (lastCode == barcode && now - lastTime < DEBOUNCE_MS) return@BarcodeScannerCamera
                         lastDetected.value = barcode
-                        lastDetectedAt.value = now
+                        lastDetectedAt.longValue = now
                         analytics.logEvent(
                             "pm_barcode_scan_success",
                             mapOf(
@@ -251,7 +252,7 @@ private fun BarcodeScannerCamera(
         val cameraProvider = cameraProviderFuture.get()
 
         val preview = Preview.Builder().build().also {
-            it.setSurfaceProvider(view.surfaceProvider)
+            it.surfaceProvider = view.surfaceProvider
         }
 
         val barcodeScanner = BarcodeScanning.getClient()
@@ -348,6 +349,7 @@ interface AnalyticsEntryPoint {
     fun uxEventLogger(): UxEventLogger
 }
 
+@Composable
 private fun rememberAnalyticsLogger(context: android.content.Context): UxEventLogger {
     return remember(context) {
         EntryPointAccessors.fromApplication(context, AnalyticsEntryPoint::class.java).uxEventLogger()

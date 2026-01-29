@@ -112,14 +112,26 @@ class LibraryViewModel @Inject constructor(
 
         // Build UI state.
         viewModelScope.launch {
-            val baseStateFlow = combine(
+            val prefsFlow = combine(
                 sortSpecFlow,
                 groupKeyFlow,
+                onboardingFlow,
+            ) { sortSpec, groupKey, onboardingSeen ->
+                Triple(sortSpec, groupKey, onboardingSeen)
+            }
+
+            val collapseFlow = combine(
                 _outerGroupCollapsedIds.asStateFlow(),
                 _nestedArtistCollapsedIds.asStateFlow(),
+            ) { collapsedOuterIds, collapsedNestedIds ->
+                collapsedOuterIds to collapsedNestedIds
+            }
+
+            val baseStateFlow = combine(
+                prefsFlow,
+                collapseFlow,
                 worksFlow,
-                onboardingFlow,
-            ) { sortSpec, groupKey, collapsedOuterIds, collapsedNestedIds, works, onboardingSeen ->
+            ) { (sortSpec, groupKey, onboardingSeen), (collapsedOuterIds, collapsedNestedIds), works ->
                 val items = buildLibraryItems(
                     works = works,
                     groupKey = groupKey,
@@ -135,7 +147,6 @@ class LibraryViewModel @Inject constructor(
                     showOnboarding = !onboardingSeen,
                 )
             }
-
             combine(baseStateFlow, onboardingFlow) { baseState, onboardingSeen ->
                 baseState.copy(showOnboarding = !onboardingSeen)
             }.collect { state ->

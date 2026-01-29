@@ -22,11 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -55,8 +51,6 @@ fun LibraryScreen(
     addedWorkId: String?,
     onConsumeAddedWorkId: () -> Unit,
 ) {
-    var searchQuery by rememberSaveable { mutableStateOf("") }
-    var isSearchExpanded by rememberSaveable { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(addedWorkId) {
@@ -95,11 +89,13 @@ fun LibraryScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(innerPadding),
         ) {
+            // Search is now provided by the app shell (NavigationSuiteScaffold).
+            // LibraryContent still supports filtering by searchQuery; for now it is empty.
             LibraryContent(
                 state = state,
-                searchQuery = searchQuery,
+                searchQuery = "",
                 bottomContentPadding = navBarBottom,
                 onAddManual = onAddManual,
                 onAddBarcode = onAddBarcode,
@@ -114,14 +110,6 @@ fun LibraryScreen(
             )
 
             LibraryOverlays(
-                modifier = Modifier.fillMaxSize(),
-                query = searchQuery,
-                onQueryChange = { searchQuery = it },
-                onClear = { searchQuery = "" },
-                expanded = isSearchExpanded,
-                onExpandedChange = { isSearchExpanded = it },
-                scaffoldBottomPadding = navBarBottom,
-                expandedKeyboardGap = LibraryLayoutTokens.SearchExpandedKeyboardGap,
                 deleteTarget = deleteTarget,
                 onDismissDelete = onDismissDelete,
                 onConfirmDelete = onConfirmDelete,
@@ -151,16 +139,12 @@ fun LibraryScreen(
                                 onDismissOnboarding("scan")
                                 onAddBarcode()
                             },
-                        ) {
-                            Text("Scan my first record")
-                        }
+                        ) { Text("Scan my first record") }
                     },
                     dismissButton = {
                         androidx.compose.material3.TextButton(
                             onClick = { onDismissOnboarding("dismiss") },
-                        ) {
-                            Text("Not now")
-                        }
+                        ) { Text("Not now") }
                     },
                 )
             }
