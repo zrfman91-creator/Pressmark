@@ -5,11 +5,14 @@ package com.zak.pressmark.feature.library.vm
 import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.zak.pressmark.BuildConfig
+import com.zak.pressmark.core.analytics.UxEventLogger
 import com.zak.pressmark.data.local.entity.v2.WorkEntityV2
 import com.zak.pressmark.data.prefs.LibraryGroupKey
 import com.zak.pressmark.data.prefs.LibraryPreferences
 import com.zak.pressmark.data.prefs.LibrarySortKey
 import com.zak.pressmark.data.prefs.LibrarySortSpec
+import com.zak.pressmark.data.prefs.OnboardingPreferences
 import com.zak.pressmark.data.prefs.SortDirection
 import com.zak.pressmark.data.repository.v2.WorkRepositoryV2
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -50,12 +53,15 @@ data class LibraryUiState(
     val items: List<LibraryListItem> = emptyList(),
     val sortSpec: LibrarySortSpec = LibrarySortSpec(LibrarySortKey.RECENTLY_ADDED, SortDirection.DESC),
     val groupKey: LibraryGroupKey = LibraryGroupKey.NONE,
+    val showOnboarding: Boolean = false,
 )
 
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     private val workRepositoryV2: WorkRepositoryV2,
     private val libraryPreferences: LibraryPreferences,
+    private val onboardingPreferences: OnboardingPreferences,
+    private val uxEventLogger: UxEventLogger,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LibraryUiState())
@@ -72,14 +78,28 @@ class LibraryViewModel @Inject constructor(
     private var lastNestedMode: LibraryGroupKey? = null
     private var lastOuterMode: LibraryGroupKey? = null
     private var lastWorksSnapshot: List<WorkEntityV2> = emptyList()
+    private var hasLoggedFirstOpen = false
 
     init {
         val sortSpecFlow = libraryPreferences.sortSpecFlow
         val groupKeyFlow = libraryPreferences.groupKeyFlow
+        val onboardingFlow = onboardingPreferences.onboardingSeenFlow
         val worksFlow: Flow<List<WorkEntityV2>> =
             sortSpecFlow.flatMapLatest { spec ->
                 workRepositoryV2.observeAllWorksSorted(spec)
             }
+
+        viewModelScope.launch {
+            onboardingFlow.collect { seen ->
+                if (!seen && !hasLoggedFirstOpen) {
+                    uxEventLogger.logEvent(
+                        "pm_first_open",
+                        mapOf("build" to BuildConfig.VERSION_NAME),
+                    )
+                    hasLoggedFirstOpen = true
+                }
+            }
+        }
 
         // Keep a works snapshot and keep nested state synced (in-memory only).
         viewModelScope.launch {
@@ -92,7 +112,7 @@ class LibraryViewModel @Inject constructor(
 
         // Build UI state.
         viewModelScope.launch {
-            combine(
+            val baseStateFlow = combine(
                 sortSpecFlow,
                 groupKeyFlow,
                 _outerGroupCollapsedIds.asStateFlow(),
@@ -111,7 +131,12 @@ class LibraryViewModel @Inject constructor(
                     items = items,
                     sortSpec = sortSpec,
                     groupKey = groupKey,
+                    showOnboarding = false,
                 )
+            }
+
+            combine(baseStateFlow, onboardingFlow) { baseState, onboardingSeen ->
+                baseState.copy(showOnboarding = !onboardingSeen)
             }.collect { state ->
                 _uiState.value = state
             }
@@ -119,11 +144,23 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun updateSort(sortSpec: LibrarySortSpec) {
-        viewModelScope.launch { libraryPreferences.setSortSpec(sortSpec) }
+        viewModelScope.launch {
+            libraryPreferences.setSortSpec(sortSpec)
+            uxEventLogger.logEvent(
+                "pm_library_sort_changed",
+                mapOf("sort_key" to sortSpec.key.name.lowercase(), "direction" to sortSpec.direction.name.lowercase()),
+            )
+        }
     }
 
     fun updateGroup(groupKey: LibraryGroupKey) {
-        viewModelScope.launch { libraryPreferences.setGroupKey(groupKey) }
+        viewModelScope.launch {
+            libraryPreferences.setGroupKey(groupKey)
+            uxEventLogger.logEvent(
+                "pm_library_group_changed",
+                mapOf("group_key" to groupKey.name.lowercase()),
+            )
+        }
     }
 
     /**
@@ -167,7 +204,24 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun deleteWork(workId: String) {
-        viewModelScope.launch { workRepositoryV2.deleteWork(workId) }
+        viewModelScope.launch {
+            workRepositoryV2.deleteWork(workId)
+            uxEventLogger.logEvent("pm_work_deleted", mapOf("source" to "library"))
+        }
+    }
+
+    fun dismissOnboarding(source: String) {
+        viewModelScope.launch {
+            onboardingPreferences.setOnboardingSeen(true)
+            uxEventLogger.logEvent("pm_onboarding_dismissed", mapOf("source" to source))
+        }
+    }
+
+    fun logSearchUsed(queryLen: Int, resultsCount: Int) {
+        uxEventLogger.logEvent(
+            "pm_library_search_used",
+            mapOf("query_len" to queryLen, "results_count" to resultsCount),
+        )
     }
 
 

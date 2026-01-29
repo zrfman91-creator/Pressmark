@@ -3,7 +3,11 @@ package com.zak.pressmark.feature.ingest.barcode.scan
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.SystemClock
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
@@ -12,7 +16,6 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,9 +25,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.FlashOff
+import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -43,6 +55,12 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
+import com.zak.pressmark.core.analytics.UxEventLogger
+import com.zak.pressmark.core.ui.InlineStatusCard
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -51,6 +69,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 fun BarcodeScannerRoute(
     onBarcodeDetected: (String) -> Unit,
     onCancel: () -> Unit,
+    onManualEntry: () -> Unit,
 ) {
     val context = LocalContext.current
     var hasCameraPermission by remember {
@@ -58,11 +77,22 @@ fun BarcodeScannerRoute(
             ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED,
         )
     }
+    var torchEnabled by remember { mutableStateOf(false) }
+    var torchAvailable by remember { mutableStateOf(false) }
+    val startTimeMs = remember { SystemClock.elapsedRealtime() }
+    val analytics = rememberAnalyticsLogger(context)
+    val handleCancel = {
+        analytics.logEvent("pm_barcode_scan_fail", mapOf("reason" to "user_cancel"))
+        onCancel()
+    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
     ) { granted ->
         hasCameraPermission = granted
+        if (!granted) {
+            analytics.logEvent("pm_barcode_scan_fail", mapOf("reason" to "permission_denied"))
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -79,12 +109,12 @@ fun BarcodeScannerRoute(
             TopAppBar(
                 title = { Text("Scan barcode") },
                 navigationIcon = {
-                    Text(
-                        text = "Back",
-                        modifier = Modifier
-                            .padding(horizontal = 16.dp)
-                            .clickable { onCancel() },
-                    )
+                    IconButton(onClick = handleCancel) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                        )
+                    }
                 },
             )
         },
@@ -98,10 +128,33 @@ fun BarcodeScannerRoute(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text("Camera permission is required to scan barcodes.")
+                InlineStatusCard(message = "Camera access lets Pressmark scan barcodes.")
                 Spacer(modifier = Modifier.height(12.dp))
-                Button(onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) }) {
-                    Text("Grant permission")
+                Button(
+                    onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Grant camera access")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = {
+                        val intent = Intent(
+                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.fromParts("package", context.packageName, null),
+                        )
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Open settings")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = onManualEntry,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Enter barcode manually")
                 }
             }
         } else {
@@ -111,6 +164,8 @@ fun BarcodeScannerRoute(
                     .padding(padding),
             ) {
                 BarcodeScannerCamera(
+                    torchEnabled = torchEnabled,
+                    onTorchAvailable = { torchAvailable = it },
                     onBarcodeDetected = { barcode ->
                         val now = System.currentTimeMillis()
                         val lastCode = lastDetected.value
@@ -118,9 +173,37 @@ fun BarcodeScannerRoute(
                         if (lastCode == barcode && now - lastTime < DEBOUNCE_MS) return@BarcodeScannerCamera
                         lastDetected.value = barcode
                         lastDetectedAt.value = now
+                        analytics.logEvent(
+                            "pm_barcode_scan_success",
+                            mapOf(
+                                "format" to barcodeFormatLabel(barcode),
+                                "duration_ms" to (SystemClock.elapsedRealtime() - startTimeMs),
+                            ),
+                        )
                         onBarcodeDetected(barcode)
                     },
                 )
+
+                if (torchAvailable) {
+                    Surface(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(16.dp),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                        shadowElevation = 2.dp,
+                        tonalElevation = 2.dp,
+                    ) {
+                        IconButton(
+                            onClick = { torchEnabled = !torchEnabled },
+                            modifier = Modifier.size(48.dp),
+                        ) {
+                            Icon(
+                                imageVector = if (torchEnabled) Icons.Default.FlashOn else Icons.Default.FlashOff,
+                                contentDescription = if (torchEnabled) "Turn torch off" else "Turn torch on",
+                            )
+                        }
+                    }
+                }
 
                 Row(
                     modifier = Modifier
@@ -141,6 +224,8 @@ private const val DEBOUNCE_MS = 2000L
 @SuppressLint("UnsafeOptInUsageError")
 @Composable
 private fun BarcodeScannerCamera(
+    torchEnabled: Boolean,
+    onTorchAvailable: (Boolean) -> Unit,
     onBarcodeDetected: (String) -> Unit,
 ) {
     val context = LocalContext.current
@@ -151,6 +236,7 @@ private fun BarcodeScannerCamera(
     val analysisExecutor = remember { Executors.newSingleThreadExecutor() }
 
     val hasDetected = remember { AtomicBoolean(false) }
+    var camera by remember { mutableStateOf<androidx.camera.core.Camera?>(null) }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -185,7 +271,7 @@ private fun BarcodeScannerCamera(
 
         val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
-        runCatching {
+        val boundCamera = runCatching {
             cameraProvider.unbindAll()
             cameraProvider.bindToLifecycle(
                 lifecycleOwner,
@@ -193,6 +279,16 @@ private fun BarcodeScannerCamera(
                 preview,
                 imageAnalysis,
             )
+        }.getOrNull()
+
+        camera = boundCamera
+        onTorchAvailable(boundCamera?.cameraInfo?.hasFlashUnit() == true)
+    }
+
+    LaunchedEffect(torchEnabled, camera) {
+        val currentCamera = camera ?: return@LaunchedEffect
+        if (currentCamera.cameraInfo.hasFlashUnit()) {
+            currentCamera.cameraControl.enableTorch(torchEnabled)
         }
     }
 }
@@ -234,4 +330,27 @@ private fun analyzeImageProxy(
         .addOnCompleteListener {
             imageProxy.close()
         }
+}
+
+private fun barcodeFormatLabel(barcode: String): String {
+    val digitsOnly = barcode.filter(Char::isDigit)
+    return when (digitsOnly.length) {
+        8 -> "EAN-8"
+        12 -> "UPC-A"
+        13 -> "EAN-13"
+        else -> "unknown"
+    }
+}
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface AnalyticsEntryPoint {
+    fun uxEventLogger(): UxEventLogger
+}
+
+@Composable
+private fun rememberAnalyticsLogger(context: android.content.Context): UxEventLogger {
+    return remember(context) {
+        EntryPointAccessors.fromApplication(context, AnalyticsEntryPoint::class.java).uxEventLogger()
+    }
 }

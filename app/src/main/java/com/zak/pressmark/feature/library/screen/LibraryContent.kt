@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -30,6 +31,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,16 +59,25 @@ fun LibraryContent(
     state: LibraryUiState,
     searchQuery: String,
     bottomContentPadding: Dp,
+    onAddManual: () -> Unit,
+    onAddBarcode: () -> Unit,
     onOpenWork: (String) -> Unit,
     onSortChanged: (LibrarySortSpec) -> Unit,
     onGroupChanged: (LibraryGroupKey) -> Unit,
     onToggleGroup: (groupId: String) -> Unit,
     onToggleAllSections: (expand: Boolean) -> Unit,
     onRequestDelete: (LibraryItemUi) -> Unit,
+    onSearchResultsUpdated: (query: String, resultsCount: Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val filteredItems = remember(searchQuery, state.items) {
         filterLibraryItemsForSearch(state.items, searchQuery)
+    }
+    LaunchedEffect(searchQuery, filteredItems) {
+        if (searchQuery.isNotBlank()) {
+            val resultCount = filteredItems.count { it is LibraryListItem.Row }
+            onSearchResultsUpdated(searchQuery, resultCount)
+        }
     }
 
     val sectionsMenuEnabled = searchQuery.isBlank() && state.groupKey != LibraryGroupKey.NONE
@@ -87,7 +98,11 @@ fun LibraryContent(
         )
 
         if (filteredItems.isEmpty()) {
-            EmptyState(isSearching = searchQuery.isNotBlank())
+            EmptyState(
+                isSearching = searchQuery.isNotBlank(),
+                onAddBarcode = onAddBarcode,
+                onAddManual = onAddManual,
+            )
         } else {
             LazyColumn(
                 modifier = Modifier
@@ -158,7 +173,11 @@ private fun LibraryControlsRow(
 }
 
 @Composable
-private fun EmptyState(isSearching: Boolean) {
+private fun EmptyState(
+    isSearching: Boolean,
+    onAddBarcode: () -> Unit,
+    onAddManual: () -> Unit,
+) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -179,6 +198,21 @@ private fun EmptyState(isSearching: Boolean) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            if (!isSearching) {
+                Spacer(modifier = Modifier.height(8.dp))
+                androidx.compose.material3.Button(
+                    onClick = onAddBarcode,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Scan barcode")
+                }
+                androidx.compose.material3.OutlinedButton(
+                    onClick = onAddManual,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Add manually")
+                }
+            }
         }
     }
 }

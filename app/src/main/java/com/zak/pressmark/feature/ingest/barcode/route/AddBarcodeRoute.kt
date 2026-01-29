@@ -1,7 +1,6 @@
 // FILE: app/src/main/java/com/zak/pressmark/feature/ingest/barcode/route/AddBarcodeRoute.kt
 package com.zak.pressmark.feature.ingest.barcode.route
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,16 +13,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -31,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.zak.pressmark.core.ui.InlineStatusCard
 import com.zak.pressmark.feature.ingest.barcode.vm.AddBarcodeViewModel
 import com.zak.pressmark.feature.ingest.barcode.vm.BarcodeMasterCandidateUi
 
@@ -43,18 +49,23 @@ fun AddBarcodeRoute(
     onAdded: (String, Boolean) -> Unit,
 ) {
     val state by vm.uiState.collectAsState()
+    val canRetry = !state.isLoading && state.barcode.isNotBlank()
+
+    LaunchedEffect(Unit) {
+        vm.logIngestStart()
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Add by barcode") },
                 navigationIcon = {
-                    Text(
-                        text = "Back",
-                        modifier = Modifier
-                            .padding(horizontal = 16.dp)
-                            .clickable { onDone() },
-                    )
+                    IconButton(onClick = onDone) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                        )
+                    }
                 },
             )
         },
@@ -126,12 +137,16 @@ fun AddBarcodeRoute(
 
             state.errorMessage?.let { msg ->
                 Spacer(modifier = Modifier.height(12.dp))
-                Text(text = msg)
+                InlineStatusCard(
+                    message = msg,
+                    actionLabel = if (canRetry) "Retry" else null,
+                    onAction = if (canRetry) vm::searchByBarcode else null,
+                )
             }
 
             state.infoMessage?.let { msg ->
                 Spacer(modifier = Modifier.height(12.dp))
-                Text(text = msg)
+                InlineStatusCard(message = msg)
             }
 
             state.masterCandidate?.let { candidate ->

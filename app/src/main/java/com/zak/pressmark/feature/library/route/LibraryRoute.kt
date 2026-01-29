@@ -15,6 +15,8 @@ fun LibraryRoute(
     onOpenWork: (String) -> Unit,
     onAddManual: () -> Unit,
     onAddBarcode: () -> Unit,
+    addedWorkId: String?,
+    onConsumeAddedWorkId: () -> Unit,
 ) {
     val state by vm.uiState.collectAsStateWithLifecycle()
     val (deleteTarget, setDeleteTarget) = remember { mutableStateOf<LibraryItemUi?>(null) }
@@ -28,6 +30,10 @@ fun LibraryRoute(
         onGroupChanged = vm::updateGroup,
         onToggleGroup = vm::toggleGroupExpanded,
         onToggleAllSections = vm::toggleAllSections,
+        onSearchResultsUpdated = { query, resultsCount ->
+            vm.logSearchUsed(query.length, resultsCount)
+        },
+        onDismissOnboarding = vm::dismissOnboarding,
         deleteTarget = deleteTarget,
         onRequestDelete = { setDeleteTarget(it) },
         onDismissDelete = { setDeleteTarget(null) },
@@ -35,5 +41,7 @@ fun LibraryRoute(
             vm.deleteWork(target.workId)
             setDeleteTarget(null)
         },
+        addedWorkId = addedWorkId,
+        onConsumeAddedWorkId = onConsumeAddedWorkId,
     )
 }

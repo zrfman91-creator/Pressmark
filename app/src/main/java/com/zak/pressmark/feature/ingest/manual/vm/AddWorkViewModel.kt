@@ -2,9 +2,11 @@
 package com.zak.pressmark.feature.ingest.manual.vm
 
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zak.pressmark.BuildConfig
+import com.zak.pressmark.core.analytics.UxEventLogger
 import com.zak.pressmark.core.util.ocr.OcrHint
 import com.zak.pressmark.core.util.ocr.OcrService
 import com.zak.pressmark.data.remote.discogs.DiscogsClient
@@ -15,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import java.io.IOException
 
 data class DiscogsCandidateUi(
     val masterId: Long,
@@ -47,6 +50,7 @@ class AddWorkViewModel @Inject constructor(
     private val discogsClient: DiscogsClient,
     private val workRepositoryV2: WorkRepositoryV2,
     private val ocrService: OcrService,
+    private val uxEventLogger: UxEventLogger,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddWorkUiState())
@@ -128,8 +132,9 @@ class AddWorkViewModel @Inject constructor(
 
     fun searchDiscogs() {
         if (BuildConfig.DISCOGS_TOKEN.isBlank()) {
+            Log.w("AddWorkViewModel", "Discogs token missing; returning user-safe error.")
             _uiState.value = _uiState.value.copy(
-                errorMessage = "Missing Discogs token. Add DISCOGS_TOKEN to local.properties and rebuild.",
+                errorMessage = "Service error. Try again.",
                 results = emptyList(),
             )
             return
@@ -155,6 +160,19 @@ class AddWorkViewModel @Inject constructor(
                     limit = 10,
                 )
 
+                if (candidates.isEmpty()) {
+                    uxEventLogger.logEvent(
+                        "pm_discogs_lookup_result",
+                        mapOf("result" to "empty", "http_code" to 200),
+                    )
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = "No match found. Try manual entry.",
+                        results = emptyList(),
+                    )
+                    return@launch
+                }
+
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     results = candidates.map { c ->
@@ -170,10 +188,15 @@ class AddWorkViewModel @Inject constructor(
                         )
                     },
                 )
+                uxEventLogger.logEvent(
+                    "pm_discogs_lookup_result",
+                    mapOf("result" to "success", "http_code" to 200),
+                )
             } catch (t: Throwable) {
+                logDiscogsLookupFailure(t)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    errorMessage = t.message ?: "Discogs request failed",
+                    errorMessage = mapUserSafeError(t),
                     results = emptyList(),
                 )
             }
@@ -187,6 +210,7 @@ class AddWorkViewModel @Inject constructor(
      */
     fun addToLibrary(
         candidate: DiscogsCandidateUi,
+        onAdded: (String) -> Unit,
     ) {
         val (artist, title) = parseArtistTitle(candidate.displayTitle)
         val year = candidate.year
@@ -210,17 +234,37 @@ class AddWorkViewModel @Inject constructor(
                     is WorkRepositoryV2.UpsertResult.PossibleDuplicate -> "Possible duplicate — added anyway."
                 }
 
+                val dedupe = when (result) {
+                    is WorkRepositoryV2.UpsertResult.Created -> "created"
+                    is WorkRepositoryV2.UpsertResult.UpdatedExisting -> "updated"
+                    is WorkRepositoryV2.UpsertResult.PossibleDuplicate -> "duplicate"
+                }
+                uxEventLogger.logEvent(
+                    "pm_work_add_success",
+                    mapOf("method" to "discogs", "dedupe" to dedupe),
+                )
+
+                val workId = when (result) {
+                    is WorkRepositoryV2.UpsertResult.Created -> result.workId
+                    is WorkRepositoryV2.UpsertResult.UpdatedExisting -> result.workId
+                    is WorkRepositoryV2.UpsertResult.PossibleDuplicate -> result.existingWorkId.orEmpty()
+                }
+
                 _uiState.value = _uiState.value.copy(isLoading = false, infoMessage = info)
+                if (workId.isNotBlank()) {
+                    onAdded(workId)
+                }
             } catch (t: Throwable) {
+                Log.e("AddWorkViewModel", "Failed to add Discogs work.", t)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    errorMessage = t.message ?: "Failed to add to library",
+                    errorMessage = mapUserSafeError(t),
                 )
             }
         }
     }
 
-    fun addManualWork() {
+    fun addManualWork(onAdded: (String) -> Unit) {
         val artist = _uiState.value.artist.trim()
         val title = _uiState.value.title.trim()
         val year = _uiState.value.year.toIntOrNull()
@@ -248,15 +292,35 @@ class AddWorkViewModel @Inject constructor(
                     is WorkRepositoryV2.UpsertResult.PossibleDuplicate -> result.reason
                 }
 
+                val dedupe = when (result) {
+                    is WorkRepositoryV2.UpsertResult.Created -> "created"
+                    is WorkRepositoryV2.UpsertResult.UpdatedExisting -> "updated"
+                    is WorkRepositoryV2.UpsertResult.PossibleDuplicate -> "duplicate"
+                }
+                uxEventLogger.logEvent(
+                    "pm_work_add_success",
+                    mapOf("method" to "manual", "dedupe" to dedupe),
+                )
+
+                val workId = when (result) {
+                    is WorkRepositoryV2.UpsertResult.Created -> result.workId
+                    is WorkRepositoryV2.UpsertResult.UpdatedExisting -> result.workId
+                    is WorkRepositoryV2.UpsertResult.PossibleDuplicate -> result.existingWorkId.orEmpty()
+                }
+
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     infoMessage = info,
                     results = emptyList(),
                 )
+                if (workId.isNotBlank()) {
+                    onAdded(workId)
+                }
             } catch (t: Throwable) {
+                Log.e("AddWorkViewModel", "Failed to add manual work.", t)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    errorMessage = t.message ?: "Failed to add to library",
+                    errorMessage = mapUserSafeError(t),
                 )
             }
         }
@@ -268,6 +332,41 @@ class AddWorkViewModel @Inject constructor(
             parts[0].trim() to parts[1].trim()
         } else {
             _uiState.value.artist.trim() to _uiState.value.title.trim()
+        }
+    }
+
+    fun logIngestStart() {
+        uxEventLogger.logEvent("pm_ingest_start", mapOf("method" to "manual"))
+    }
+
+    private fun mapUserSafeError(t: Throwable): String {
+        return when (t) {
+            is IOException -> "No connection. Try again."
+            is retrofit2.HttpException -> "Service error. Try again."
+            else -> "Service error. Try again."
+        }
+    }
+
+    private fun logDiscogsLookupFailure(t: Throwable) {
+        when (t) {
+            is retrofit2.HttpException -> {
+                uxEventLogger.logEvent(
+                    "pm_discogs_lookup_result",
+                    mapOf("result" to "http_error", "http_code" to t.code()),
+                )
+            }
+            is IOException -> {
+                uxEventLogger.logEvent(
+                    "pm_discogs_lookup_result",
+                    mapOf("result" to "network_error", "http_code" to null),
+                )
+            }
+            else -> {
+                uxEventLogger.logEvent(
+                    "pm_discogs_lookup_result",
+                    mapOf("result" to "unknown_error", "http_code" to null),
+                )
+            }
         }
     }
 }

@@ -3,7 +3,9 @@ package com.zak.pressmark.feature.ingest.barcode.vm
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.util.Log
 import com.zak.pressmark.BuildConfig
+import com.zak.pressmark.core.analytics.UxEventLogger
 import com.zak.pressmark.data.remote.discogs.DiscogsApiService
 import com.zak.pressmark.data.prefs.ScannerPreferences
 import com.zak.pressmark.data.repository.v2.WorkRepositoryV2
@@ -13,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
+import java.io.IOException
 
 /**
  * MASTER-ONLY barcode ingest.
@@ -51,6 +54,7 @@ class AddBarcodeViewModel @Inject constructor(
     private val discogsApi: DiscogsApiService,
     private val workRepositoryV2: WorkRepositoryV2,
     private val scannerPreferences: ScannerPreferences,
+    private val uxEventLogger: UxEventLogger,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddBarcodeUiState())
@@ -82,8 +86,9 @@ class AddBarcodeViewModel @Inject constructor(
      */
     fun searchByBarcode() {
         if (BuildConfig.DISCOGS_TOKEN.isBlank()) {
+            Log.w("AddBarcodeViewModel", "Discogs token missing; returning user-safe error.")
             _uiState.value = _uiState.value.copy(
-                errorMessage = "Missing Discogs token. Add DISCOGS_TOKEN to local.properties and rebuild.",
+                errorMessage = "Service error. Try again.",
                 masterCandidate = null,
             )
             return
@@ -116,7 +121,16 @@ class AddBarcodeViewModel @Inject constructor(
 
                 val candidates = releaseSearch.results
                 if (candidates.isEmpty()) {
-                    throw IllegalStateException("No Discogs releases found for this barcode.")
+                    uxEventLogger.logEvent(
+                        "pm_discogs_lookup_result",
+                        mapOf("result" to "empty", "http_code" to 200),
+                    )
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = "No match found. Try manual entry.",
+                        masterCandidate = null,
+                    )
+                    return@launch
                 }
 
                 // Try candidates until we can fetch a valid release (handles Discogs 404s for stale IDs).
@@ -167,7 +181,18 @@ class AddBarcodeViewModel @Inject constructor(
                 )
 
                 val bestMaster = masterSearch.results.firstOrNull()
-                    ?: throw IllegalStateException("No Discogs master found for '$artistLine — $releaseTitle'.")
+                    ?: run {
+                        uxEventLogger.logEvent(
+                            "pm_discogs_lookup_result",
+                            mapOf("result" to "empty", "http_code" to 200),
+                        )
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            errorMessage = "No match found. Try manual entry.",
+                            masterCandidate = null,
+                        )
+                        return@launch
+                    }
 
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -181,10 +206,15 @@ class AddBarcodeViewModel @Inject constructor(
                         releaseTitle = releaseTitle,
                     ),
                 )
+                uxEventLogger.logEvent(
+                    "pm_discogs_lookup_result",
+                    mapOf("result" to "success", "http_code" to 200),
+                )
             } catch (t: Throwable) {
+                logDiscogsLookupFailure(t)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    errorMessage = t.message ?: "Discogs request failed",
+                    errorMessage = mapUserSafeError(t),
                     masterCandidate = null,
                 )
             }
@@ -233,7 +263,21 @@ class AddBarcodeViewModel @Inject constructor(
                     is WorkRepositoryV2.UpsertResult.UpdatedExisting -> "Already in library — updated details."
                     is WorkRepositoryV2.UpsertResult.PossibleDuplicate -> "Possible duplicate — added anyway."
                 }
-                _uiState.value = AddBarcodeUiState(infoMessage = info)
+                val autoReopen = _uiState.value.autoReopenScanner
+                _uiState.value = AddBarcodeUiState(
+                    infoMessage = info,
+                    autoReopenScanner = autoReopen,
+                )
+
+                val dedupe = when (result) {
+                    is WorkRepositoryV2.UpsertResult.Created -> "created"
+                    is WorkRepositoryV2.UpsertResult.UpdatedExisting -> "updated"
+                    is WorkRepositoryV2.UpsertResult.PossibleDuplicate -> "duplicate"
+                }
+                uxEventLogger.logEvent(
+                    "pm_work_add_success",
+                    mapOf("method" to "barcode", "dedupe" to dedupe),
+                )
 
                 val workId = when (result) {
                     is WorkRepositoryV2.UpsertResult.Created -> result.workId
@@ -241,12 +285,13 @@ class AddBarcodeViewModel @Inject constructor(
                     is WorkRepositoryV2.UpsertResult.PossibleDuplicate -> result.existingWorkId.orEmpty()
                 }
                 if (workId.isNotBlank()) {
-                    onAdded(workId, _uiState.value.autoReopenScanner)
+                    onAdded(workId, autoReopen)
                 }
             } catch (t: Throwable) {
+                Log.e("AddBarcodeViewModel", "Failed to add master to library.", t)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    errorMessage = t.message ?: "Failed to add to library",
+                    errorMessage = mapUserSafeError(t),
                 )
             }
         }
@@ -265,6 +310,41 @@ class AddBarcodeViewModel @Inject constructor(
     fun setAutoReopen(enabled: Boolean) {
         viewModelScope.launch {
             scannerPreferences.setAutoReopenScanner(enabled)
+        }
+    }
+
+    fun logIngestStart() {
+        uxEventLogger.logEvent("pm_ingest_start", mapOf("method" to "barcode"))
+    }
+
+    private fun mapUserSafeError(t: Throwable): String {
+        return when (t) {
+            is IOException -> "No connection. Try again."
+            is HttpException -> "Service error. Try again."
+            else -> "Service error. Try again."
+        }
+    }
+
+    private fun logDiscogsLookupFailure(t: Throwable) {
+        when (t) {
+            is HttpException -> {
+                uxEventLogger.logEvent(
+                    "pm_discogs_lookup_result",
+                    mapOf("result" to "http_error", "http_code" to t.code()),
+                )
+            }
+            is IOException -> {
+                uxEventLogger.logEvent(
+                    "pm_discogs_lookup_result",
+                    mapOf("result" to "network_error", "http_code" to null),
+                )
+            }
+            else -> {
+                uxEventLogger.logEvent(
+                    "pm_discogs_lookup_result",
+                    mapOf("result" to "unknown_error", "http_code" to null),
+                )
+            }
         }
     }
 }

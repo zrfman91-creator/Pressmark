@@ -3,6 +3,7 @@ package com.zak.pressmark.app
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -28,6 +29,13 @@ fun PressmarkNavHost(
     ) {
         composable(PressmarkRoutes.LIBRARY) {
             val vm: LibraryViewModel = hiltViewModel()
+            val entry = navController.currentBackStackEntry
+            val addedWorkIdState = entry
+                ?.savedStateHandle
+                ?.getStateFlow<String?>(LIBRARY_ADDED_WORK_ID_KEY, null)
+                ?.collectAsStateWithLifecycle()
+            val addedWorkId = addedWorkIdState?.value
+
             LibraryRoute(
                 vm = vm,
                 onOpenWork = { workId ->
@@ -35,6 +43,10 @@ fun PressmarkNavHost(
                 },
                 onAddManual = { navController.navigate(PressmarkRoutes.ADD_WORK) },
                 onAddBarcode = { navController.navigate(PressmarkRoutes.ADD_BARCODE) },
+                addedWorkId = addedWorkId,
+                onConsumeAddedWorkId = {
+                    entry?.savedStateHandle?.set(LIBRARY_ADDED_WORK_ID_KEY, null)
+                },
             )
         }
 
@@ -42,6 +54,10 @@ fun PressmarkNavHost(
             // Manual add now self-contains its flow and returns via onDone().
             AddWorkRoute(
                 onDone = { navController.popBackStack() },
+                onAdded = { workId ->
+                    navController.getBackStackEntry(PressmarkRoutes.LIBRARY)
+                        .savedStateHandle[LIBRARY_ADDED_WORK_ID_KEY] = workId
+                },
             )
         }
 
@@ -66,7 +82,9 @@ fun PressmarkNavHost(
                 onDone = { navController.popBackStack() },
                 onScan = { navController.navigate(PressmarkRoutes.BARCODE_SCANNER) },
                 // Stay on the "Add by barcode" screen after add.
-                onAdded = { _, autoReopen ->
+                onAdded = { workId, autoReopen ->
+                    navController.getBackStackEntry(PressmarkRoutes.LIBRARY)
+                        .savedStateHandle[LIBRARY_ADDED_WORK_ID_KEY] = workId
                     if (autoReopen) {
                         navController.navigate(PressmarkRoutes.BARCODE_SCANNER)
                     }
@@ -83,6 +101,7 @@ fun PressmarkNavHost(
                     navController.popBackStack()
                 },
                 onCancel = { navController.popBackStack() },
+                onManualEntry = { navController.popBackStack() },
             )
         }
 
@@ -98,3 +117,4 @@ fun PressmarkNavHost(
 }
 
 private const val SCANNED_BARCODE_KEY = "scannedBarcode"
+private const val LIBRARY_ADDED_WORK_ID_KEY = "libraryAddedWorkId"
