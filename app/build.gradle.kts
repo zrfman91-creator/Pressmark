@@ -122,6 +122,7 @@ dependencies {
     implementation(libs.androidx.hilt.work)
     implementation(libs.androidx.compose.ui.text)
     implementation(libs.androidx.compose.foundation.layout)
+    implementation(libs.androidx.material3.adaptive.navigation.suite)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 
@@ -130,6 +131,8 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
+
+    implementation(libs.androidx.compose.material3.adaptive.navigation.suite)
 
     // Room + KSP
     implementation(libs.room.runtime)
