@@ -102,6 +102,10 @@ fun PressmarkNavSuiteScaffold(
         BarcodeScannerIngestHandler.manualEntryExpanded = manualBarcodeExpanded
     }
 
+    LaunchedEffect(manualBarcodeExpanded) {
+        BarcodeScannerIngestHandler.manualEntryExpanded = manualBarcodeExpanded
+    }
+
     val destinations: List<TopLevelDestination> = remember(searchExpanded, manualBarcodeExpanded, isScannerDestination) {
         listOf(
             TopLevelDestination.Vector(
