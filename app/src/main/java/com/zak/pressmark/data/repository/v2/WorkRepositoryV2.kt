@@ -21,6 +21,7 @@ import com.zak.pressmark.data.local.entity.v2.WorkStyleCrossRefEntityV2
 import com.zak.pressmark.data.prefs.LibrarySortKey
 import com.zak.pressmark.data.prefs.LibrarySortSpec
 import com.zak.pressmark.data.prefs.SortDirection
+import com.zak.pressmark.core.util.ArtistNameFormatter
 import androidx.sqlite.db.SimpleSQLiteQuery
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -62,7 +63,7 @@ class WorkRepositoryV2 @Inject constructor(
                     titleSort = normalizeForSort(title, stripLeadingThe = true),
                     artistLine = artistLine,
                     artistNormalized = normalize(artistLine),
-                    artistSort = normalizeForSort(artistLine, stripLeadingThe = true),
+                    artistSort = ArtistNameFormatter.sortKeyForList(artistLine),
                     year = year,
                     genresJson = "[]",
                     stylesJson = "[]",
@@ -99,7 +100,7 @@ class WorkRepositoryV2 @Inject constructor(
             titleSort = normalizeForSort(title, stripLeadingThe = true),
             artistLine = artistLine,
             artistNormalized = normalize(artistLine),
-            artistSort = normalizeForSort(artistLine, stripLeadingThe = true),
+            artistSort = ArtistNameFormatter.sortKeyForList(artistLine),
             year = year,
             genresJson = toJsonArray(genres),
             stylesJson = toJsonArray(styles),
@@ -145,7 +146,7 @@ class WorkRepositoryV2 @Inject constructor(
                 titleSort = normalizeForSort(title, stripLeadingThe = true),
                 artistLine = artistLine,
                 artistNormalized = artistNormalized,
-                artistSort = normalizeForSort(artistLine, stripLeadingThe = true),
+                artistSort = ArtistNameFormatter.sortKeyForList(artistLine),
                 year = year,
                 primaryArtworkUri = primaryArtworkUri ?: existingExact.primaryArtworkUri,
                 updatedAt = now,
@@ -173,7 +174,7 @@ class WorkRepositoryV2 @Inject constructor(
             titleSort = normalizeForSort(title, stripLeadingThe = true),
             artistLine = artistLine,
             artistNormalized = artistNormalized,
-            artistSort = normalizeForSort(artistLine, stripLeadingThe = true),
+            artistSort = ArtistNameFormatter.sortKeyForList(artistLine),
             year = year,
             genresJson = "[]",
             stylesJson = "[]",
