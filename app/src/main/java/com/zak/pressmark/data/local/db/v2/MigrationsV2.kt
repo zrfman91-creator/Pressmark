@@ -4,6 +4,7 @@ package com.zak.pressmark.data.local.db.v2
 import android.content.ContentValues
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.zak.pressmark.core.util.ArtistNameFormatter
 import org.json.JSONArray
 
 object MigrationsV2 {
@@ -450,7 +451,7 @@ object MigrationsV2 {
                 val stylesJson = cursor.getString(stylesIndex).orEmpty()
 
                 val titleSort = normalizeForSort(title, stripLeadingThe = true)
-                val artistSort = normalizeForSort(artistLine, stripLeadingThe = true)
+                val artistSort = ArtistNameFormatter.sortKeyForList(artistLine)
 
                 val updateValues = ContentValues().apply {
                     put(DbSchemaV2.Work.TITLE_SORT, titleSort)
