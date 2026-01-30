@@ -64,7 +64,7 @@ private sealed interface TopLevelDestination {
 
     data class Action(
         override val label: String,
-        val icon: androidx.compose.ui.graphics.vector.ImageVector,
+        val icon: @Composable () -> Unit,
         val onClick: () -> Unit,
         val selected: () -> Boolean = { false },
     ) : TopLevelDestination
@@ -102,7 +102,11 @@ fun PressmarkNavSuiteScaffold(
         BarcodeScannerIngestHandler.manualEntryExpanded = manualBarcodeExpanded
     }
 
-    val destinations: List<TopLevelDestination> = remember(searchExpanded) {
+    LaunchedEffect(manualBarcodeExpanded) {
+        BarcodeScannerIngestHandler.manualEntryExpanded = manualBarcodeExpanded
+    }
+
+    val destinations: List<TopLevelDestination> = remember(searchExpanded, manualBarcodeExpanded, isScannerDestination) {
         listOf(
             TopLevelDestination.Vector(
                 route = PressmarkRoutes.LIBRARY,
@@ -116,9 +120,29 @@ fun PressmarkNavSuiteScaffold(
             ),
             TopLevelDestination.Action(
                 label = "Search",
-                icon = Icons.Outlined.Search,
-                selected = { searchExpanded },
-                onClick = { searchExpanded = !searchExpanded },
+                icon = {
+                    if (isScannerDestination) {
+                        Icon(
+                            painter = painterResource(R.drawable.barcode_scanner),
+                            contentDescription = "Manual barcode",
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Outlined.Search,
+                            contentDescription = "Search",
+                        )
+                    }
+                },
+                selected = { if (isScannerDestination) manualBarcodeExpanded else searchExpanded },
+                onClick = {
+                    if (isScannerDestination) {
+                        ingestMode = IngestMode.MANUAL
+                        ingestSheetOpen = false
+                        manualBarcodeExpanded = true
+                    } else {
+                        searchExpanded = !searchExpanded
+                    }
+                },
             ),
         )
     }
@@ -176,7 +200,7 @@ fun PressmarkNavSuiteScaffold(
 
                     is TopLevelDestination.Action -> {
                         item(
-                            icon = { Icon(destination.icon, contentDescription = destination.label) },
+                            icon = destination.icon,
                             label = { Text(destination.label) },
                             selected = destination.selected(),
                             onClick = destination.onClick,
