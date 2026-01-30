@@ -143,7 +143,7 @@ fun PressmarkNavSuiteScaffold(
     }
 
     NavigationSuiteScaffold(
-        navigationSuiteItems = {
+        {
             destinations.forEach { destination ->
                 when (destination) {
                     is TopLevelDestination.Vector -> {
