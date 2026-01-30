@@ -18,6 +18,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.ExperimentalMaterial3AdaptiveNavigationSuiteApi
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteColors
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -74,6 +75,7 @@ private sealed interface TopLevelDestination {
 @Composable
 fun PressmarkNavSuiteScaffold(
     navController: NavHostController,
+    colors: NavigationSuiteColors = PressmarkNavigationSuiteColors(),
     content: @Composable () -> Unit,
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -209,6 +211,7 @@ fun PressmarkNavSuiteScaffold(
                 }
             }
         },
+        colors = colors,
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             content()
