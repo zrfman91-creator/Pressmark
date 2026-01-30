@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zak.pressmark.BuildConfig
 import com.zak.pressmark.core.analytics.UxEventLogger
+import com.zak.pressmark.core.util.ArtistNameFormatter
 import com.zak.pressmark.data.local.entity.v2.WorkEntityV2
 import com.zak.pressmark.data.prefs.LibraryGroupKey
 import com.zak.pressmark.data.prefs.LibraryPreferences
@@ -329,8 +330,8 @@ internal fun buildLibraryItems(
         val grouped = mutableMapOf<GroupKey, MutableList<WorkEntityV2>>()
 
         works.forEach { work ->
-            val artistLabel = work.artistLabel()
-            grouped.getOrPut(GroupKey.artist(artistLabel)) { mutableListOf() }.add(work)
+            val artistDisplay = work.artistDisplay()
+            grouped.getOrPut(GroupKey.artist(artistDisplay.label, artistDisplay.sortSource)) { mutableListOf() }.add(work)
         }
 
         val out = mutableListOf<LibraryListItem>()
@@ -361,8 +362,12 @@ internal fun buildLibraryItems(
     val outerMap = mutableMapOf<GroupKey, MutableMap<GroupKey, MutableList<WorkEntityV2>>>()
 
     fun addToOuter(outerKey: GroupKey, work: WorkEntityV2) {
-        val artistLabel = work.artistLabel()
-        val innerArtistKey = GroupKey.nestedArtist(parentId = outerKey.id, artistLabel = artistLabel)
+        val artistDisplay = work.artistDisplay()
+        val innerArtistKey = GroupKey.nestedArtist(
+            parentId = outerKey.id,
+            artistLabel = artistDisplay.label,
+            sortSource = artistDisplay.sortSource,
+        )
         val innerMap = outerMap.getOrPut(outerKey) { mutableMapOf() }
         innerMap.getOrPut(innerArtistKey) { mutableListOf() }.add(work)
     }
@@ -497,7 +502,10 @@ private fun computeOuterGroupIdsForWorks(groupKey: LibraryGroupKey, works: List<
 
     works.forEach { work ->
         when (groupKey) {
-            LibraryGroupKey.ARTIST -> ids.add(GroupKey.artist(work.artistLabel()).id)
+            LibraryGroupKey.ARTIST -> {
+                val artistDisplay = work.artistDisplay()
+                ids.add(GroupKey.artist(artistDisplay.label, artistDisplay.sortSource).id)
+            }
             LibraryGroupKey.YEAR -> ids.add(GroupKey.year(work.yearLabel()).id)
             LibraryGroupKey.DECADE -> ids.add(GroupKey.decade(work.decadeLabel(), work.decadeIdValue()).id)
             LibraryGroupKey.GENRE -> {
@@ -525,10 +533,16 @@ private fun computeNestedArtistHeaderIdsForWorks(groupKey: LibraryGroupKey, work
     val ids = LinkedHashSet<String>()
 
     works.forEach { work ->
-        val artistLabel = work.artistLabel()
+        val artistDisplay = work.artistDisplay()
 
         fun addOuter(outerKey: GroupKey) {
-            ids.add(GroupKey.nestedArtist(parentId = outerKey.id, artistLabel = artistLabel).id)
+            ids.add(
+                GroupKey.nestedArtist(
+                    parentId = outerKey.id,
+                    artistLabel = artistDisplay.label,
+                    sortSource = artistDisplay.sortSource,
+                ).id,
+            )
         }
 
         when (groupKey) {
@@ -556,8 +570,16 @@ private fun computeNestedArtistHeaderIdsForWorks(groupKey: LibraryGroupKey, work
 private fun isNestedMode(groupKey: LibraryGroupKey): Boolean =
     groupKey != LibraryGroupKey.NONE && groupKey != LibraryGroupKey.ARTIST
 
-private fun WorkEntityV2.artistLabel(): String =
-    artistLine.takeIf { it.isNotBlank() } ?: "Unknown artist"
+private data class ArtistDisplay(
+    val label: String,
+    val sortSource: String,
+)
+
+private fun WorkEntityV2.artistDisplay(): ArtistDisplay {
+    val raw = artistLine.takeIf { it.isNotBlank() } ?: "Unknown artist"
+    val label = if (raw == "Unknown artist") raw else ArtistNameFormatter.displayForList(raw)
+    return ArtistDisplay(label = label, sortSource = raw)
+}
 
 private fun WorkEntityV2.yearLabel(): String =
     year?.toString() ?: "Unknown year"
@@ -572,7 +594,7 @@ private fun WorkEntityV2.toUi(): LibraryItemUi =
     LibraryItemUi(
         workId = id,
         title = title,
-        artistLine = artistLine,
+        artistLine = artistDisplay().label,
         year = year,
         artworkUri = primaryArtworkUri,
     )
@@ -608,10 +630,10 @@ private data class GroupKey(
     val sortValue: Int? = null,
 ) {
     companion object {
-        fun artist(label: String) = GroupKey(
+        fun artist(label: String, sortSource: String = label) = GroupKey(
             id = "group:artist:${normalizeKey(label)}",
             label = label,
-            sortKey = normalizeForSort(label, stripLeadingThe = true),
+            sortKey = ArtistNameFormatter.sortKeyForList(sortSource),
         )
 
         fun year(label: String) = GroupKey(
@@ -640,10 +662,10 @@ private data class GroupKey(
             sortKey = normalizeForSort(label),
         )
 
-        fun nestedArtist(parentId: String, artistLabel: String) = GroupKey(
+        fun nestedArtist(parentId: String, artistLabel: String, sortSource: String = artistLabel) = GroupKey(
             id = "${parentId}|artist:${normalizeKey(artistLabel)}",
             label = artistLabel,
-            sortKey = normalizeForSort(artistLabel, stripLeadingThe = true),
+            sortKey = ArtistNameFormatter.sortKeyForList(sortSource),
         )
 
         private fun normalizeKey(raw: String): String =

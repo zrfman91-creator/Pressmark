@@ -33,7 +33,7 @@ object ArtistNameFormatter {
         val normalized = normalizeWhitespace(input)
         val split = splitLeadingArticle(normalized)
         val rest = split?.second?.takeIf { it.isNotBlank() } ?: normalized
-        return rest.lowercase(Locale.ROOT)
+        return lastNameSortKey(rest).lowercase(Locale.ROOT)
     }
 
     private fun splitLeadingArticle(normalized: String): Pair<String, String>? {
@@ -43,5 +43,14 @@ object ArtistNameFormatter {
         if (first.lowercase(Locale.ROOT) !in articles) return null
         val rest = if (parts.size > 1) parts[1] else ""
         return first to rest
+    }
+
+    private fun lastNameSortKey(input: String): String {
+        val normalized = normalizeWhitespace(input)
+        val parts = normalized.split(" ").filter { it.isNotBlank() }
+        if (parts.size <= 1) return normalized
+        val last = parts.last()
+        val remaining = parts.dropLast(1).joinToString(" ").trim()
+        return if (remaining.isBlank()) last else "$last $remaining"
     }
 }
