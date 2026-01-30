@@ -27,7 +27,7 @@ import com.zak.pressmark.data.local.entity.v2.WorkEntityV2
         WorkGenreCrossRefEntityV2::class,
         WorkStyleCrossRefEntityV2::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 // @TypeConverters(RoomConvertersV2::class)

@@ -1,6 +1,5 @@
 package com.zak.pressmark.feature.library.screen
 
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -276,7 +275,6 @@ private fun LibraryGroupHeader(
     Surface(
         modifier = modifier
             .padding(start = indent)
-            .animateContentSize()
             .clip(RoundedCornerShape(14.dp))
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
             .clickable(onClick = onToggle),
