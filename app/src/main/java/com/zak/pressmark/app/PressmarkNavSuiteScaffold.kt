@@ -36,7 +36,6 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.zak.pressmark.R
-import com.zak.pressmark.core.ui.theme.PressmarkNavigationSuiteColors
 import com.zak.pressmark.feature.ingest.barcode.scan.BarcodeScannerIngestHandler
 import com.zak.pressmark.feature.ingest.barcode.ui.ManualBarcodeOverlay
 import com.zak.pressmark.feature.library.ui.LibrarySearchBar
@@ -99,6 +98,10 @@ fun PressmarkNavSuiteScaffold(
         } else if (ingestMode == IngestMode.MANUAL) {
             manualBarcodeExpanded = true
         }
+    }
+
+    LaunchedEffect(manualBarcodeExpanded) {
+        BarcodeScannerIngestHandler.manualEntryExpanded = manualBarcodeExpanded
     }
 
     LaunchedEffect(manualBarcodeExpanded) {
