@@ -105,6 +105,15 @@ fun BarcodeScannerRoute(
     val lastDetected = remember { mutableStateOf<String?>(null) }
     val lastDetectedAt = remember { mutableLongStateOf(0L) }
 
+    DisposableEffect(onBarcodeDetected) {
+        BarcodeScannerIngestHandler.onBarcodeDetected = onBarcodeDetected
+        onDispose {
+            if (BarcodeScannerIngestHandler.onBarcodeDetected == onBarcodeDetected) {
+                BarcodeScannerIngestHandler.onBarcodeDetected = null
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -168,6 +177,7 @@ fun BarcodeScannerRoute(
                     torchEnabled = torchEnabled,
                     onTorchAvailable = { torchAvailable = it },
                     onBarcodeDetected = { barcode ->
+                        if (BarcodeScannerIngestHandler.manualEntryExpanded) return@BarcodeScannerCamera
                         val now = System.currentTimeMillis()
                         val lastCode = lastDetected.value
                         val lastTime = lastDetectedAt.longValue
@@ -221,6 +231,14 @@ fun BarcodeScannerRoute(
 }
 
 private const val DEBOUNCE_MS = 2000L
+
+object BarcodeScannerIngestHandler {
+    @Volatile
+    var onBarcodeDetected: ((String) -> Unit)? = null
+
+    @Volatile
+    var manualEntryExpanded: Boolean = false
+}
 
 @SuppressLint("UnsafeOptInUsageError")
 @Composable
