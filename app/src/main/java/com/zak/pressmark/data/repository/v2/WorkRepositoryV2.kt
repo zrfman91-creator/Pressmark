@@ -513,7 +513,10 @@ class WorkRepositoryV2 @Inject constructor(
         sortSpec: LibrarySortSpec,
     ): SimpleSQLiteQuery {
         val orderBy = when (sortSpec.key) {
-            LibrarySortKey.ARTIST -> "${DbSchemaV2.Work.TITLE_SORT} ASC, ${DbSchemaV2.Work.ID} ASC"
+            LibrarySortKey.ARTIST -> {
+                val direction = if (sortSpec.direction == SortDirection.ASC) "ASC" else "DESC"
+                "${DbSchemaV2.Work.ARTIST_SORT} $direction, ${DbSchemaV2.Work.TITLE_SORT} ASC, ${DbSchemaV2.Work.ID} ASC"
+            }
             LibrarySortKey.TITLE -> {
                 val direction = if (sortSpec.direction == SortDirection.ASC) "ASC" else "DESC"
                 "${DbSchemaV2.Work.TITLE_SORT} $direction, ${DbSchemaV2.Work.ID} ASC"
