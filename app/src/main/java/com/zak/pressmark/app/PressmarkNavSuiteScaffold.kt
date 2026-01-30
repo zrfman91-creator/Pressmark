@@ -68,6 +68,7 @@ private sealed interface TopLevelDestination {
 @Composable
 fun PressmarkNavSuiteScaffold(
     navController: NavHostController,
+    colors: NavigationSuiteColors = PressmarkNavigationSuiteColors(),
     content: @Composable () -> Unit,
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -203,6 +204,7 @@ fun PressmarkNavSuiteScaffold(
                 }
             }
         },
+        colors = colors,
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             content()
