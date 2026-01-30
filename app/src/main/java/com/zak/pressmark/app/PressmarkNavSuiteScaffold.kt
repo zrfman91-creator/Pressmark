@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.zak.pressmark.app
 
 import androidx.compose.foundation.clickable
@@ -10,14 +12,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.KeyboardAlt
 import androidx.compose.material.icons.outlined.LibraryMusic
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.adaptive.navigationsuite.ExperimentalMaterial3AdaptiveNavigationSuiteApi
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -39,14 +42,6 @@ import com.zak.pressmark.feature.ingest.barcode.scan.BarcodeScannerIngestHandler
 import com.zak.pressmark.feature.ingest.barcode.ui.ManualBarcodeOverlay
 import com.zak.pressmark.feature.library.ui.LibrarySearchBar
 
-/**
- * Pressmark adaptive navigation shell + a global "Search" action.
- *
- * Key detail:
- * - We REUSE your existing FAB-style LibrarySearchBar so the IME/padding behavior matches exactly.
- * - Because NavigationSuiteScaffold already owns the bottom navigation/rail layout, we pass
- *   scaffoldBottomPadding = 0.dp so you don't double-account for system nav bars.
- */
 private sealed interface TopLevelDestination {
     val label: String
 
@@ -70,7 +65,6 @@ private sealed interface TopLevelDestination {
     ) : TopLevelDestination
 }
 
-@OptIn(ExperimentalMaterial3AdaptiveNavigationSuiteApi::class)
 @Composable
 fun PressmarkNavSuiteScaffold(
     navController: NavHostController,
@@ -123,7 +117,7 @@ fun PressmarkNavSuiteScaffold(
                 icon = {
                     if (isScannerDestination) {
                         Icon(
-                            painter = painterResource(R.drawable.barcode_scanner),
+                           imageVector = Icons.Outlined.KeyboardAlt,
                             contentDescription = "Manual barcode",
                         )
                     } else {
