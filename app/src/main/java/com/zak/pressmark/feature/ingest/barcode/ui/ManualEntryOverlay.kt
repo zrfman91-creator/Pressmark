@@ -239,8 +239,9 @@ fun ManualEntryOverlay(
                 }
             }
         }
+    }
 
-            LaunchedEffect(Unit) {
-                focusRequester.requestFocus()
-            }
-        }
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+}

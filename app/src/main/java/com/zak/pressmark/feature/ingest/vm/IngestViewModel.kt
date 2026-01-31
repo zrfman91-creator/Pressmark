@@ -12,6 +12,7 @@ import com.zak.pressmark.data.prefs.ScannerPreferences
 import com.zak.pressmark.data.remote.discogs.DiscogsApiService
 import com.zak.pressmark.data.remote.discogs.DiscogsClient
 import com.zak.pressmark.data.repository.v2.WorkRepositoryV2
+import com.zak.pressmark.feature.ingest.barcode.ui.ManualIngestInputs
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -84,6 +85,9 @@ data class IngestUiState(
 
     // Preferences
     val autoReopenScanner: Boolean = false,
+
+    // Scanner overlay
+    val manualEntryExpanded: Boolean = false,
 )
 
 enum class IngestMethod { BARCODE, DISCOGS_TEXT, MANUAL }
@@ -152,6 +156,48 @@ class IngestViewModel @Inject constructor(
 
     fun applyArtistCandidate(value: String) {
         _uiState.update { it.copy(artist = value) }
+    }
+
+    fun setManualEntryExpanded(expanded: Boolean) {
+        _uiState.update { it.copy(manualEntryExpanded = expanded) }
+    }
+
+    fun clearManualInputs() {
+        _uiState.update {
+            it.copy(
+                barcode = "",
+                artist = "",
+                title = "",
+            )
+        }
+    }
+
+    fun submitManualInputs(inputs: ManualIngestInputs) {
+        val barcode = inputs.barcode.trim()
+        val artist = inputs.artist.trim()
+        val title = inputs.title.trim()
+
+        if (barcode.isNotBlank()) {
+            logIngestStart(IngestMethod.BARCODE)
+            onBarcodeChanged(barcode)
+            searchByBarcode()
+            return
+        }
+
+        if (artist.isNotBlank() || title.isNotBlank()) {
+            logIngestStart(IngestMethod.DISCOGS_TEXT)
+            onArtistChanged(artist)
+            onTitleChanged(title)
+            searchDiscogs()
+            return
+        }
+
+        _uiState.update {
+            it.copy(
+                errorMessage = "Enter a barcode or artist/title.",
+                infoMessage = null,
+            )
+        }
     }
 
     // ----------------------------
