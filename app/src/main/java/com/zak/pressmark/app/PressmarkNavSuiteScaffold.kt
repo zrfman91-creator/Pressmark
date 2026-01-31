@@ -102,6 +102,14 @@ fun PressmarkNavSuiteScaffold(
     var ingestSheetOpen by rememberSaveable { mutableStateOf(false) }
     var ingestMode by rememberSaveable { mutableStateOf(IngestMode.CAMERA) }
 
+    var manualBarcodeExpanded by rememberSaveable { mutableStateOf(false) }
+    var manualBarcode by rememberSaveable { mutableStateOf("") }
+
+    var manualArtist by rememberSaveable { mutableStateOf("") }
+    var manualTitle by rememberSaveable { mutableStateOf("") }
+    var manualYear by rememberSaveable { mutableStateOf("") }
+
+
     val isScannerDestination = currentDestination?.hierarchy?.any { it.route == PressmarkRoutes.BARCODE_SCANNER } == true
     val scanIconInteraction = remember { MutableInteractionSource() }
 
@@ -131,9 +139,7 @@ fun PressmarkNavSuiteScaffold(
         if (isScannerDestination) {
             ingestMode = IngestMode.MANUAL
             ingestSheetOpen = false
-            if (ingestVm != null) {
-                ingestVm.setManualEntryExpanded(true)
-            }
+            ingestVm?.setManualEntryExpanded(true)
         } else {
             searchExpanded = !searchExpanded
         }
@@ -218,9 +224,7 @@ fun PressmarkNavSuiteScaffold(
                         val handleScanClick = {
                             ingestSheetOpen = false
                             ingestMode = IngestMode.CAMERA
-                            if (ingestVm != null) {
-                                ingestVm.setManualEntryExpanded(false)
-                            }
+                            ingestVm?.setManualEntryExpanded(false)
                             navController.navigate(PressmarkRoutes.BARCODE_SCANNER) {
                                 popUpTo(navController.graph.startDestinationId) { saveState = true }
                                 launchSingleTop = true
@@ -292,6 +296,9 @@ fun PressmarkNavSuiteScaffold(
                 title = ingestState.title,
                 onTitleChange = { ingestVm?.onTitleChanged(it) },
 
+                year = manualYear,
+                onYearChange = { manualYear = it },
+
                 onDismiss = {
                     if (ingestVm != null) {
                         ingestVm.setManualEntryExpanded(false)
@@ -299,10 +306,8 @@ fun PressmarkNavSuiteScaffold(
                 },
 
                 onSubmit = { inputs ->
-                    if (ingestVm != null) {
-                        ingestVm.submitManualInputs(inputs)
-                        ingestVm.setManualEntryExpanded(false)
-                    }
+                    ingestVm?.submitManualInputs(inputs)
+                    ingestVm?.setManualEntryExpanded(false)
                 },
 
             )
@@ -322,9 +327,7 @@ fun PressmarkNavSuiteScaffold(
                             modifier = Modifier.clickable {
                                 ingestMode = IngestMode.CAMERA
                                 ingestSheetOpen = false
-                                if (ingestVm != null) {
-                                    ingestVm.setManualEntryExpanded(false)
-                                }
+                                ingestVm?.setManualEntryExpanded(false)
                                 navController.navigate(PressmarkRoutes.BARCODE_SCANNER) {
                                     popUpTo(navController.graph.startDestinationId) { saveState = true }
                                     launchSingleTop = true
@@ -337,9 +340,7 @@ fun PressmarkNavSuiteScaffold(
                             modifier = Modifier.clickable {
                                 ingestMode = IngestMode.MANUAL
                                 ingestSheetOpen = false
-                                if (ingestVm != null) {
-                                    ingestVm.setManualEntryExpanded(true)
-                                }
+                                ingestVm?.setManualEntryExpanded(true)
                                 navController.navigate(PressmarkRoutes.BARCODE_SCANNER) {
                                     popUpTo(navController.graph.startDestinationId) { saveState = true }
                                     launchSingleTop = true

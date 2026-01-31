@@ -55,6 +55,8 @@ fun ManualEntryOverlay(
     onArtistChange: (String) -> Unit,
     title: String,
     onTitleChange: (String) -> Unit,
+    year: String,
+    onYearChange: (String) -> Unit,
     onDismiss: () -> Unit,
     onSubmit: (ManualIngestInputs) -> Unit,
     modifier: Modifier = Modifier,
@@ -197,6 +199,23 @@ fun ManualEntryOverlay(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        OutlinedTextField(
+                            value = year,
+                            onValueChange = onYearChange,
+                            modifier = Modifier.weight(1f),
+                            placeholder = { Text("Year") },
+                            singleLine = true,
+                            colors = fieldColors,
+                        )
+                    }
+
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp),
                         horizontalArrangement = Arrangement.End,
                     ) {
                         Button(
@@ -215,6 +234,7 @@ fun ManualEntryOverlay(
                             },
                             content = { Text("Lookup Release") },
                         )
+                        }
                     }
                 }
             }
