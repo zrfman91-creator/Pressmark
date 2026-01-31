@@ -39,14 +39,18 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.zak.pressmark.feature.ingest.vm.IngestUiState
 import com.zak.pressmark.R
-import com.zak.pressmark.feature.ingest.barcode.scan.BarcodeScannerIngestHandler
 import com.zak.pressmark.feature.ingest.barcode.ui.ManualEntryOverlay
+import com.zak.pressmark.feature.ingest.vm.IngestViewModel
 import com.zak.pressmark.feature.library.ui.LibrarySearchBar
+import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
  * Pressmark adaptive navigation shell + a global "Search" action.
@@ -98,41 +102,42 @@ fun PressmarkNavSuiteScaffold(
     var ingestSheetOpen by rememberSaveable { mutableStateOf(false) }
     var ingestMode by rememberSaveable { mutableStateOf(IngestMode.CAMERA) }
 
-    var manualBarcodeExpanded by rememberSaveable { mutableStateOf(false) }
-    var manualBarcode by rememberSaveable { mutableStateOf("") }
-
-    var manualArtist by rememberSaveable { mutableStateOf("") }
-    var manualTitle by rememberSaveable { mutableStateOf("") }
-
     val isScannerDestination = currentDestination?.hierarchy?.any { it.route == PressmarkRoutes.BARCODE_SCANNER } == true
     val scanIconInteraction = remember { MutableInteractionSource() }
 
+    val ingestVm = if (isScannerDestination && backStackEntry != null) {
+        hiltViewModel<IngestViewModel>(backStackEntry!!)
+    } else {
+        null
+    }
+    val fallbackStateFlow = remember { MutableStateFlow(IngestUiState()) }
+    val ingestState by (ingestVm?.uiState ?: fallbackStateFlow).collectAsStateWithLifecycle()
+    val manualEntryExpanded = isScannerDestination && ingestState.manualEntryExpanded
+
     LaunchedEffect(isScannerDestination, ingestMode) {
         if (!isScannerDestination) {
-            manualBarcodeExpanded = false
             ingestSheetOpen = false
-            manualBarcode = ""
-            manualArtist = ""
-            manualTitle = ""
         } else if (ingestMode == IngestMode.MANUAL) {
-            manualBarcodeExpanded = true
+            ingestVm?.setManualEntryExpanded(true)
+        } else if (ingestMode == IngestMode.CAMERA) {
+            ingestVm?.setManualEntryExpanded(false)
         }
-    }
-    LaunchedEffect(manualBarcodeExpanded) {
-        BarcodeScannerIngestHandler.manualEntryExpanded = manualBarcodeExpanded
     }
 
     val actionLabel = if (isScannerDestination) "Manual Entry" else "Search"   // Library search & manual barcode entry icon/logic swap on destination change.
-    val actionSelected = { if (isScannerDestination) manualBarcodeExpanded else searchExpanded }
+    val actionSelected = { if (isScannerDestination) manualEntryExpanded else searchExpanded }
     val actionIcon = if (isScannerDestination) Icons.Outlined.KeyboardAlt else Icons.Outlined.Search
     val onActionClick = {
         if (isScannerDestination) {
             ingestMode = IngestMode.MANUAL
             ingestSheetOpen = false
-            manualBarcodeExpanded = true
+            if (ingestVm != null) {
+                ingestVm.setManualEntryExpanded(true)
+            }
         } else {
             searchExpanded = !searchExpanded
         }
+        Unit
     }
 
     val itemColors = NavigationSuiteDefaults.itemColors(
@@ -161,7 +166,7 @@ fun PressmarkNavSuiteScaffold(
 
     val navContainer = MaterialTheme.colorScheme.primary
 
-    val destinations: List<TopLevelDestination> = remember(searchExpanded, manualBarcodeExpanded, isScannerDestination) {
+    val destinations: List<TopLevelDestination> = remember(searchExpanded, manualEntryExpanded, isScannerDestination) {
         listOf(
             TopLevelDestination.Vector(
                 route = PressmarkRoutes.LIBRARY,
@@ -212,8 +217,10 @@ fun PressmarkNavSuiteScaffold(
                         val selected = currentDestination.isTopLevelSelected(destination.route)
                         val handleScanClick = {
                             ingestSheetOpen = false
-                            manualBarcodeExpanded = false
                             ingestMode = IngestMode.CAMERA
+                            if (ingestVm != null) {
+                                ingestVm.setManualEntryExpanded(false)
+                            }
                             navController.navigate(PressmarkRoutes.BARCODE_SCANNER) {
                                 popUpTo(navController.graph.startDestinationId) { saveState = true }
                                 launchSingleTop = true
@@ -274,23 +281,28 @@ fun PressmarkNavSuiteScaffold(
 
             ManualEntryOverlay(
                 modifier = Modifier.fillMaxSize(),
-                expanded = manualBarcodeExpanded && isScannerDestination,
+                expanded = manualEntryExpanded && isScannerDestination,
 
-                barcode = manualBarcode,
-                onBarcodeChange = { manualBarcode = it },
+                barcode = ingestState.barcode,
+                onBarcodeChange = { ingestVm?.onBarcodeChanged(it) },
 
-                artist = manualArtist,
-                onArtistChange = { manualArtist = it },
+                artist = ingestState.artist,
+                onArtistChange = { ingestVm?.onArtistChanged(it) },
 
-                title = manualTitle,
-                onTitleChange = { manualTitle = it },
+                title = ingestState.title,
+                onTitleChange = { ingestVm?.onTitleChanged(it) },
 
-                onDismiss = { manualBarcodeExpanded = false },
+                onDismiss = {
+                    if (ingestVm != null) {
+                        ingestVm.setManualEntryExpanded(false)
+                    }
+                },
 
                 onSubmit = { inputs ->
-
-                    BarcodeScannerIngestHandler.onManualSubmit?.invoke(inputs)
-                    manualBarcodeExpanded = false
+                    if (ingestVm != null) {
+                        ingestVm.submitManualInputs(inputs)
+                        ingestVm.setManualEntryExpanded(false)
+                    }
                 },
 
             )
@@ -310,7 +322,9 @@ fun PressmarkNavSuiteScaffold(
                             modifier = Modifier.clickable {
                                 ingestMode = IngestMode.CAMERA
                                 ingestSheetOpen = false
-                                manualBarcodeExpanded = false
+                                if (ingestVm != null) {
+                                    ingestVm.setManualEntryExpanded(false)
+                                }
                                 navController.navigate(PressmarkRoutes.BARCODE_SCANNER) {
                                     popUpTo(navController.graph.startDestinationId) { saveState = true }
                                     launchSingleTop = true
@@ -323,6 +337,9 @@ fun PressmarkNavSuiteScaffold(
                             modifier = Modifier.clickable {
                                 ingestMode = IngestMode.MANUAL
                                 ingestSheetOpen = false
+                                if (ingestVm != null) {
+                                    ingestVm.setManualEntryExpanded(true)
+                                }
                                 navController.navigate(PressmarkRoutes.BARCODE_SCANNER) {
                                     popUpTo(navController.graph.startDestinationId) { saveState = true }
                                     launchSingleTop = true

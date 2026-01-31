@@ -37,13 +37,14 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.zak.pressmark.core.ui.InlineStatusCard
-import com.zak.pressmark.feature.ingest.barcode.vm.AddBarcodeViewModel
-import com.zak.pressmark.feature.ingest.barcode.vm.BarcodeMasterCandidateUi
+import com.zak.pressmark.feature.ingest.vm.BarcodeMasterCandidateUi
+import com.zak.pressmark.feature.ingest.vm.IngestMethod
+import com.zak.pressmark.feature.ingest.vm.IngestViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddBarcodeRoute(
-    vm: AddBarcodeViewModel,
+    vm: IngestViewModel,
     onDone: () -> Unit,
     onScan: () -> Unit,
     onAdded: (String, Boolean) -> Unit,
@@ -52,7 +53,7 @@ fun AddBarcodeRoute(
     val canRetry = !state.isLoading && state.barcode.isNotBlank()
 
     LaunchedEffect(Unit) {
-        vm.logIngestStart()
+        vm.logIngestStart(IngestMethod.BARCODE)
     }
 
     Scaffold(

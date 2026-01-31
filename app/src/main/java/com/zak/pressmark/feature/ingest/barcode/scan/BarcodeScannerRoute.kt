@@ -55,7 +55,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import com.zak.pressmark.core.analytics.UxEventLogger
@@ -77,9 +76,9 @@ fun BarcodeScannerRoute(
     onCancel: () -> Unit,
     onManualEntry: () -> Unit,
     onManualSubmit: (ManualIngestInputs) -> Unit,
+    manualEntryExpanded: Boolean,
 ) {
     val vm: IngestViewModel = hiltViewModel()
-    val state = vm.uiState.collectAsStateWithLifecycle().value
 
     val context = LocalContext.current
     var hasCameraPermission by remember {
@@ -114,20 +113,10 @@ fun BarcodeScannerRoute(
     val lastDetected = remember { mutableStateOf<String?>(null) }
     val lastDetectedAt = remember { mutableLongStateOf(0L) }
 
-    DisposableEffect(onBarcodeDetected) {
-        BarcodeScannerIngestHandler.onBarcodeDetected = onBarcodeDetected
+    DisposableEffect(Unit) {
         onDispose {
-            if (BarcodeScannerIngestHandler.onBarcodeDetected == onBarcodeDetected) {
-                BarcodeScannerIngestHandler.onBarcodeDetected = null
-            }
-        }
-    }
-    DisposableEffect(onManualSubmit) {
-        BarcodeScannerIngestHandler.onManualSubmit = onManualSubmit
-        onDispose {
-            if (BarcodeScannerIngestHandler.onManualSubmit == onManualSubmit) {
-                BarcodeScannerIngestHandler.onManualSubmit = null
-            }
+            vm.setManualEntryExpanded(false)
+            vm.clearManualInputs()
         }
     }
 
@@ -194,7 +183,7 @@ fun BarcodeScannerRoute(
                     torchEnabled = torchEnabled,
                     onTorchAvailable = { torchAvailable = it },
                     onBarcodeDetected = { barcode ->
-                        if (BarcodeScannerIngestHandler.manualEntryExpanded) return@BarcodeScannerCamera
+                        if (manualEntryExpanded) return@BarcodeScannerCamera
                         val now = System.currentTimeMillis()
                         val lastCode = lastDetected.value
                         val lastTime = lastDetectedAt.longValue
@@ -248,16 +237,6 @@ fun BarcodeScannerRoute(
 }
 
 private const val DEBOUNCE_MS = 2000L
-
-object BarcodeScannerIngestHandler {
-    @Volatile
-    var onBarcodeDetected: ((String) -> Unit)? = null
-
-    @Volatile
-    var manualEntryExpanded: Boolean = false
-
-    var onManualSubmit: ((ManualIngestInputs) -> Unit)? = null
-}
 
 @SuppressLint("UnsafeOptInUsageError")
 @Composable

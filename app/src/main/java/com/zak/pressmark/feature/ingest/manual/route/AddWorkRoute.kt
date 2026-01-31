@@ -50,9 +50,10 @@ import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import com.zak.pressmark.core.ui.InlineStatusCard
-import com.zak.pressmark.feature.ingest.manual.vm.AddWorkViewModel
-import com.zak.pressmark.feature.ingest.manual.vm.DiscogsCandidateUi
-import com.zak.pressmark.feature.ingest.manual.vm.OcrCaptureSource
+import com.zak.pressmark.feature.ingest.vm.DiscogsCandidateUi
+import com.zak.pressmark.feature.ingest.vm.IngestMethod
+import com.zak.pressmark.feature.ingest.vm.IngestViewModel
+import com.zak.pressmark.feature.ingest.vm.OcrCaptureSource
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -60,7 +61,7 @@ import java.io.File
 fun AddWorkRoute(
     onDone: () -> Unit,
     onAdded: (String) -> Unit,
-    vm: AddWorkViewModel = hiltViewModel(),
+    vm: IngestViewModel = hiltViewModel(),
 ) {
     val state by vm.uiState.collectAsState()
     val context = LocalContext.current
@@ -70,7 +71,7 @@ fun AddWorkRoute(
     val manualEntryEnabled = !state.isLoading && state.artist.isNotBlank() && state.title.isNotBlank()
 
     androidx.compose.runtime.LaunchedEffect(Unit) {
-        vm.logIngestStart()
+        vm.logIngestStart(IngestMethod.MANUAL)
     }
 
     val takePictureLauncher = rememberLauncherForActivityResult(
