@@ -11,9 +11,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.zak.pressmark.feature.ingest.barcode.route.AddBarcodeRoute
-import com.zak.pressmark.feature.ingest.barcode.scan.BarcodeScannerIngestHandler
 import com.zak.pressmark.feature.ingest.barcode.scan.BarcodeScannerRoute
-import com.zak.pressmark.feature.ingest.barcode.vm.AddBarcodeViewModel
 import com.zak.pressmark.feature.ingest.manual.route.AddWorkRoute
 import com.zak.pressmark.feature.ingest.vm.IngestViewModel
 import com.zak.pressmark.feature.library.route.LibraryRoute
@@ -64,7 +62,7 @@ fun PressmarkNavHost(
         }
 
         composable(PressmarkRoutes.ADD_BARCODE) {
-            val vm: AddBarcodeViewModel = hiltViewModel()
+            val vm: IngestViewModel = hiltViewModel()
 
             // Listen for scan results returned from BarcodeScannerRoute via savedStateHandle.
             LaunchedEffect(Unit) {
@@ -97,7 +95,6 @@ fun PressmarkNavHost(
         composable(PressmarkRoutes.BARCODE_SCANNER) {
             val vm: IngestViewModel = hiltViewModel()
             val state = vm.uiState.collectAsStateWithLifecycle().value
-        }
             BarcodeScannerRoute(
                 onBarcodeDetected = { barcode ->
                     navController.previousBackStackEntry
@@ -106,9 +103,9 @@ fun PressmarkNavHost(
                     navController.popBackStack()
                 },
                 onCancel = { navController.popBackStack() },
-                onManualEntry = { BarcodeScannerIngestHandler.manualEntryExpanded = true },
-                onManualSubmit = { inputs ->
-                    BarcodeScannerIngestHandler.onManualSubmit?.invoke(inputs)
+                onManualEntry = { vm.setManualEntryExpanded(true) },
+                onManualSubmit = vm::submitManualInputs,
+                manualEntryExpanded = state.manualEntryExpanded,
             )
         }
 

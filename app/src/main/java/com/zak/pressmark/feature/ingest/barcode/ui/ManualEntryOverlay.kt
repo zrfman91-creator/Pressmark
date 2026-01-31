@@ -204,20 +204,24 @@ fun ManualEntryOverlay(
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp),
                             shape = RoundedCornerShape(4.dp),
-                            onClick = { onSubmit(ManualIngestInputs(
-                                barcode = barcode,
-                                artist = artist,
-                                title = title,
-                            )) },
-                            content = { Text("Lookup Release") }
-                )
-                        }
+                            onClick = {
+                                onSubmit(
+                                    ManualIngestInputs(
+                                        barcode = barcode,
+                                        artist = artist,
+                                        title = title,
+                                    ),
+                                )
+                            },
+                            content = { Text("Lookup Release") },
+                        )
                     }
                 }
             }
         }
+    }
 
-            LaunchedEffect(Unit) {
-                focusRequester.requestFocus()
-            }
-        }
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+}
