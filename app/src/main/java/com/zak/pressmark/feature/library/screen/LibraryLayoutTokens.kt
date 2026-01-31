@@ -16,7 +16,7 @@ object LibraryLayoutTokens {
     val ContentVerticalSpacing: Dp = 12.dp
 
     /** Vertical spacing between rows inside the LazyColumn. */
-    val ListItemSpacing: Dp = 10.dp
+    val ListItemSpacing: Dp = 6.dp
 
     /** Indent step per nesting level (headers/rows). */
     val NestIndentStep: Dp = 12.dp

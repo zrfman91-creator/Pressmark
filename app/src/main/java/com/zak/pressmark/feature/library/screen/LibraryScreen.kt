@@ -9,17 +9,14 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.outlined.QrCodeScanner
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -71,25 +68,23 @@ fun LibraryScreen(
         contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top),
         topBar = {
             TopAppBar(
-                title = { Text("Library") },
-                actions = {
-                    IconButton(onClick = onAddBarcode) {
-                        Icon(Icons.Outlined.QrCodeScanner, contentDescription = "Scan barcode")
-                    }
-                    IconButton(onClick = onAddManual) {
-                        Icon(Icons.Default.Add, contentDescription = "Add manually")
-                    }
-                },
+                title = { Text( text = "Library", style = MaterialTheme.typography.displayLarge) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                )
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { innerPadding ->
         val navBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding),
+                .padding(innerPadding)
+                .padding(top = 12.dp),
         ) {
             // Search is now provided by the app shell (NavigationSuiteScaffold).
             // LibraryContent still supports filtering by searchQuery; for now it is empty.

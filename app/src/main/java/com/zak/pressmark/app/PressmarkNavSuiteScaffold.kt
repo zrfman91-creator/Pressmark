@@ -40,14 +40,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.zak.pressmark.feature.ingest.vm.IngestUiState
 import com.zak.pressmark.R
 import com.zak.pressmark.feature.ingest.barcode.ui.ManualEntryOverlay
+import com.zak.pressmark.feature.ingest.vm.IngestUiState
 import com.zak.pressmark.feature.ingest.vm.IngestViewModel
 import com.zak.pressmark.feature.library.ui.LibrarySearchBar
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -140,11 +140,11 @@ fun PressmarkNavSuiteScaffold(
 
     val itemColors = NavigationSuiteDefaults.itemColors(
         navigationBarItemColors = NavigationBarItemDefaults.colors(
-            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-            selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            selectedTextColor = MaterialTheme.colorScheme.onPrimary,
-            unselectedIconColor = MaterialTheme.colorScheme.primaryContainer,
-            unselectedTextColor = MaterialTheme.colorScheme.primaryContainer,
+            indicatorColor = MaterialTheme.colorScheme.primary,
+            selectedIconColor = MaterialTheme.colorScheme.onPrimary,
+            selectedTextColor = MaterialTheme.colorScheme.onSurface,
+            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
         ),
         navigationRailItemColors = NavigationRailItemDefaults.colors(
             indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
@@ -162,7 +162,7 @@ fun PressmarkNavSuiteScaffold(
         ),
     )  // Navigation scaffold color selections
 
-    val navContainer = MaterialTheme.colorScheme.primary
+    val navContainer = MaterialTheme.colorScheme.surfaceVariant
 
     val destinations: List<TopLevelDestination> = remember(searchExpanded, manualEntryExpanded, isScannerDestination) {
         listOf(

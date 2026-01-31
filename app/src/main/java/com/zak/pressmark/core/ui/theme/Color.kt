@@ -15,7 +15,7 @@ import androidx.compose.ui.graphics.Color
  */
 object PressmarkColors {
     //Pressmark Classic
-    val primePC               = Color(0xFF2F6F6A) //Primary
+    val primePC               = Color(0xFF497070) //Primary
     val onPrimePC             = Color(0xFFFFFFFF) //OnPrimary
     val primeContainerPC      = Color(0xFFCFEAE6) //primeContainer
     val onPrimeContainerPC    = Color(0xFF0E2E2B) //onPrimeContainer
@@ -32,9 +32,9 @@ object PressmarkColors {
     val surfacePC             = Color(0xFFFBF7F0)
     val onSurfacePC           = Color(0xFF1E1A16)
     val surfaceVariantPC      = Color(0xFFE9E1D6)
-    val onSurfaceVariantPC    = Color(0xFF1A1715)
-    val outlinePC             = Color(0xFF3A332E)
-    val outlineVariantPC      = Color(0xFFF0D6D3)
+    val onSurfaceVariantPC    = Color(0xFF807A73)
+    val outlinePC             = Color(0xFF26211F)
+    val outlineVariantPC      = Color(0xFF806E66)
 
 
 

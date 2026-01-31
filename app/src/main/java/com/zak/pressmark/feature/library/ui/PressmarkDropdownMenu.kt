@@ -1,8 +1,8 @@
 package com.zak.pressmark.feature.library.ui
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -42,7 +42,7 @@ fun <T> PressmarkDropdownMenu(
             val selected = isSelected?.invoke(item) == true
             DropdownMenuItem(
                 modifier = Modifier
-                    .heightIn(min = 48.dp)
+                    .wrapContentHeight()
                     .padding(horizontal = 8.dp, vertical = 4.dp),
                 text = { Text(itemText(item)) },
                 onClick = { onItemSelected(item) },

@@ -10,8 +10,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -22,11 +22,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,8 +42,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.zak.pressmark.data.prefs.LibraryGroupKey
@@ -94,6 +98,15 @@ fun LibraryContent(
             onGroupChanged = onGroupChanged,
             onToggleAllSections = onToggleAllSections,
             sectionsMenuEnabled = sectionsMenuEnabled,
+        )
+
+        HorizontalDivider(
+            modifier = Modifier
+                .fillMaxWidth(),
+            color = MaterialTheme.colorScheme.outline,
+            thickness = 2.dp
+
+
         )
 
         if (filteredItems.isEmpty()) {
@@ -180,8 +193,8 @@ private fun EmptyState(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp)),
+            .clip(RoundedCornerShape(4.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(4.dp)),
        shadowElevation = 1.dp,
     ) {
         Column(
@@ -189,23 +202,29 @@ private fun EmptyState(
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text(
-                text = if (isSearching) "No matches" else "No works yet",
-                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.fillMaxWidth(),
+                text = if (isSearching) "No matches" else "Your library is empty",
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.titleLarge,
             )
             Text(
-                text = if (isSearching) "Try a different title or artist." else "Add an album to get started.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth(),
+                text = if (isSearching) "Try a different title or artist." else "Add your first album to begin cataloging.",
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
             )
             if (!isSearching) {
-                Spacer(modifier = Modifier.height(8.dp))
-                androidx.compose.material3.Button(
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    shape = RoundedCornerShape(4.dp),
                     onClick = onAddBarcode,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text("Scan barcode")
                 }
-                androidx.compose.material3.OutlinedButton(
+                OutlinedButton(
+                    shape = RoundedCornerShape(4.dp),
                     onClick = onAddManual,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -344,79 +363,103 @@ private fun WorkRow(
     var menuExpanded by remember { mutableStateOf(false) }
     val indent = LibraryLayoutTokens.NestIndentStep * level
     val edgeRadius = RoundedCornerShape(4.dp)
-    val borderColor = MaterialTheme.colorScheme.outline
+    val borderColor = MaterialTheme.colorScheme.outlineVariant
     val artSize = 64.dp
 
-
-    Surface(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = indent)
-            .clip(edgeRadius)
-            .border(1.dp, borderColor,edgeRadius)
-            .clickable(onClick = onClick),
-        shadowElevation = 1.dp,
-        shape = edgeRadius,
-        color = MaterialTheme.colorScheme.surface,
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = indent)
+                .clip(edgeRadius)
+                .border(1.dp, borderColor, edgeRadius)
+                .clickable(onClick = onClick),
+            shadowElevation = 1.dp,
+            shape = edgeRadius,
+            color = MaterialTheme.colorScheme.surface,
         ) {
-            if (!item.artworkUri.isNullOrBlank()) {
-                AsyncImage(
-                    model = item.artworkUri,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(artSize)
-                        .clip(edgeRadius),
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .size(artSize)
-                        .clip(edgeRadius)
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                )
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = item.title,
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = item.artistLine,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-
-            Box {
-                IconButton(onClick = { menuExpanded = true }) {
-                    Icon(Icons.Default.MoreVert, contentDescription = "More")
-                }
-                DropdownMenu(
-                    expanded = menuExpanded,
-                    onDismissRequest = { menuExpanded = false },
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Delete") },
-                        onClick = {
-                            menuExpanded = false
-                            onDelete()
-                        },
+                if (!item.artworkUri.isNullOrBlank()) {
+                    AsyncImage(
+                        model = item.artworkUri,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(artSize)
+                            .clip(edgeRadius),
                     )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(artSize)
+                            .clip(edgeRadius)
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Text(
+                        text = item.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = item.artistLine,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+
+                Box {
+                    IconButton(onClick = { menuExpanded = true }) {
+                        Icon(
+                            Icons.Default.MoreVert,
+                            contentDescription = "More",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false },
+                        offset = DpOffset((-64).dp, (-45).dp),
+                        modifier = Modifier
+                            .width(72.dp),       // pick a width you like
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f),
+                        shape = RoundedCornerShape(4.dp),
+                        tonalElevation = 0.dp,
+                        shadowElevation = 0.dp,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(24.dp)
+                                .clickable {
+                                    menuExpanded = false
+                                    onDelete()
+                                },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = "Remove",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                            )
+                        }
+                    }
                 }
             }
         }
