@@ -97,7 +97,6 @@ fun PressmarkNavHost(
         composable(PressmarkRoutes.BARCODE_SCANNER) {
             val vm: IngestViewModel = hiltViewModel()
             val state = vm.uiState.collectAsStateWithLifecycle().value
-        }
             BarcodeScannerRoute(
                 onBarcodeDetected = { barcode ->
                     navController.previousBackStackEntry
@@ -109,9 +108,9 @@ fun PressmarkNavHost(
                 onManualEntry = { BarcodeScannerIngestHandler.manualEntryExpanded = true },
                 onManualSubmit = { inputs ->
                     BarcodeScannerIngestHandler.onManualSubmit?.invoke(inputs)
+                },
             )
         }
-
         composable(
             route = PressmarkRoutes.WORK_DETAILS_PATTERN,
             arguments = listOf(navArgument(PressmarkRoutes.ARG_WORK_ID) { type = NavType.StringType }),

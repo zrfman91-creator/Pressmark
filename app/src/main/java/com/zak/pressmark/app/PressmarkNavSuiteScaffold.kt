@@ -103,6 +103,8 @@ fun PressmarkNavSuiteScaffold(
 
     var manualArtist by rememberSaveable { mutableStateOf("") }
     var manualTitle by rememberSaveable { mutableStateOf("") }
+    var manualYear by rememberSaveable { mutableStateOf("") }
+
 
     val isScannerDestination = currentDestination?.hierarchy?.any { it.route == PressmarkRoutes.BARCODE_SCANNER } == true
     val scanIconInteraction = remember { MutableInteractionSource() }
@@ -284,6 +286,9 @@ fun PressmarkNavSuiteScaffold(
 
                 title = manualTitle,
                 onTitleChange = { manualTitle = it },
+
+                year = manualYear,
+                onYearChange = { manualYear = it },
 
                 onDismiss = { manualBarcodeExpanded = false },
 
