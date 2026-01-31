@@ -103,10 +103,9 @@ fun PressmarkNavHost(
                     navController.popBackStack()
                 },
                 onCancel = { navController.popBackStack() },
-                onManualEntry = { BarcodeScannerIngestHandler.manualEntryExpanded = true },
-                onManualSubmit = { inputs ->
-                    BarcodeScannerIngestHandler.onManualSubmit?.invoke(inputs)
-                },
+                onManualEntry = { vm.setManualEntryExpanded(true) },
+                onManualSubmit = { inputs -> vm.submitManualInputs(inputs) },
+                manualEntryExpanded = state.manualEntryExpanded,
             )
         }
         composable(

@@ -102,14 +102,6 @@ fun PressmarkNavSuiteScaffold(
     var ingestSheetOpen by rememberSaveable { mutableStateOf(false) }
     var ingestMode by rememberSaveable { mutableStateOf(IngestMode.CAMERA) }
 
-    var manualBarcodeExpanded by rememberSaveable { mutableStateOf(false) }
-    var manualBarcode by rememberSaveable { mutableStateOf("") }
-
-    var manualArtist by rememberSaveable { mutableStateOf("") }
-    var manualTitle by rememberSaveable { mutableStateOf("") }
-    var manualYear by rememberSaveable { mutableStateOf("") }
-
-
     val isScannerDestination = currentDestination?.hierarchy?.any { it.route == PressmarkRoutes.BARCODE_SCANNER } == true
     val scanIconInteraction = remember { MutableInteractionSource() }
 
@@ -135,7 +127,7 @@ fun PressmarkNavSuiteScaffold(
     val actionLabel = if (isScannerDestination) "Manual Entry" else "Search"   // Library search & manual barcode entry icon/logic swap on destination change.
     val actionSelected = { if (isScannerDestination) manualEntryExpanded else searchExpanded }
     val actionIcon = if (isScannerDestination) Icons.Outlined.KeyboardAlt else Icons.Outlined.Search
-    val onActionClick = {
+    val onActionClick: () -> Unit = {
         if (isScannerDestination) {
             ingestMode = IngestMode.MANUAL
             ingestSheetOpen = false
@@ -296,8 +288,8 @@ fun PressmarkNavSuiteScaffold(
                 title = ingestState.title,
                 onTitleChange = { ingestVm?.onTitleChanged(it) },
 
-                year = manualYear,
-                onYearChange = { manualYear = it },
+                year = ingestState.year,
+                onYearChange = { ingestVm?.onYearChanged(it) },
 
                 onDismiss = {
                     if (ingestVm != null) {

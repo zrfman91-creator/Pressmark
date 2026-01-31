@@ -70,6 +70,12 @@ fun ManualEntryOverlay(
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
 
+    LaunchedEffect(expanded) {
+        if (expanded) {
+            focusRequester.requestFocus()
+        }
+    }
+
     val imeBottom = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
     val barsBottom = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
     val keyboardLift = (imeBottom - barsBottom).coerceAtLeast(0.dp)
@@ -234,14 +240,9 @@ fun ManualEntryOverlay(
                             },
                             content = { Text("Lookup Release") },
                         )
-                        }
                     }
                 }
             }
         }
-    }
-
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
     }
 }
