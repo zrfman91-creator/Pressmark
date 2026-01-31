@@ -143,6 +143,7 @@ fun PressmarkNavSuiteScaffold(
         } else {
             searchExpanded = !searchExpanded
         }
+        Unit
     }
 
     val itemColors = NavigationSuiteDefaults.itemColors(
@@ -298,7 +299,11 @@ fun PressmarkNavSuiteScaffold(
                 year = manualYear,
                 onYearChange = { manualYear = it },
 
-                onDismiss = { manualBarcodeExpanded = false },
+                onDismiss = {
+                    if (ingestVm != null) {
+                        ingestVm.setManualEntryExpanded(false)
+                    }
+                },
 
                 onSubmit = { inputs ->
                     ingestVm?.submitManualInputs(inputs)
