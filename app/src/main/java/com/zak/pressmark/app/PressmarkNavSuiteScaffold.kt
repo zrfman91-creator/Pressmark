@@ -102,6 +102,14 @@ fun PressmarkNavSuiteScaffold(
     var ingestSheetOpen by rememberSaveable { mutableStateOf(false) }
     var ingestMode by rememberSaveable { mutableStateOf(IngestMode.CAMERA) }
 
+    var manualBarcodeExpanded by rememberSaveable { mutableStateOf(false) }
+    var manualBarcode by rememberSaveable { mutableStateOf("") }
+
+    var manualArtist by rememberSaveable { mutableStateOf("") }
+    var manualTitle by rememberSaveable { mutableStateOf("") }
+    var manualYear by rememberSaveable { mutableStateOf("") }
+
+
     val isScannerDestination = currentDestination?.hierarchy?.any { it.route == PressmarkRoutes.BARCODE_SCANNER } == true
     val scanIconInteraction = remember { MutableInteractionSource() }
 
@@ -287,7 +295,10 @@ fun PressmarkNavSuiteScaffold(
                 title = ingestState.title,
                 onTitleChange = { ingestVm?.onTitleChanged(it) },
 
-                onDismiss = { ingestVm?.setManualEntryExpanded(false) },
+                year = manualYear,
+                onYearChange = { manualYear = it },
+
+                onDismiss = { manualBarcodeExpanded = false },
 
                 onSubmit = { inputs ->
                     ingestVm?.submitManualInputs(inputs)

@@ -103,12 +103,12 @@ fun PressmarkNavHost(
                     navController.popBackStack()
                 },
                 onCancel = { navController.popBackStack() },
-                onManualEntry = { vm.setManualEntryExpanded(true) },
-                onManualSubmit = vm::submitManualInputs,
-                manualEntryExpanded = state.manualEntryExpanded,
+                onManualEntry = { BarcodeScannerIngestHandler.manualEntryExpanded = true },
+                onManualSubmit = { inputs ->
+                    BarcodeScannerIngestHandler.onManualSubmit?.invoke(inputs)
+                },
             )
         }
-
         composable(
             route = PressmarkRoutes.WORK_DETAILS_PATTERN,
             arguments = listOf(navArgument(PressmarkRoutes.ARG_WORK_ID) { type = NavType.StringType }),
