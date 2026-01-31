@@ -1,21 +1,21 @@
 // FILE: app/src/main/java/com/zak/pressmark/feature/ingest/barcode/vm/AddBarcodeViewModel.kt
 package com.zak.pressmark.feature.ingest.barcode.vm
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import android.util.Log
 import com.zak.pressmark.BuildConfig
 import com.zak.pressmark.core.analytics.UxEventLogger
-import com.zak.pressmark.data.remote.discogs.DiscogsApiService
 import com.zak.pressmark.data.prefs.ScannerPreferences
+import com.zak.pressmark.data.remote.discogs.DiscogsApiService
 import com.zak.pressmark.data.repository.v2.WorkRepositoryV2
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.io.IOException
+import javax.inject.Inject
 
 /**
  * MASTER-ONLY barcode ingest.
@@ -221,13 +221,7 @@ class AddBarcodeViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Commit ONLY the master-level Work.
-     *
-     * Behavior:
-     * - Dedupes by discogsMasterId (restores duplicate detection)
-     * - After add, resets UI back to the "Add by barcode" menu (no navigation)
-     */
+
     fun addMasterToLibrary(
         candidate: BarcodeMasterCandidateUi,
         onAdded: (String, Boolean) -> Unit,

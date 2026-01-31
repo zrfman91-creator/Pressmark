@@ -10,8 +10,6 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteColors
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
@@ -121,7 +119,3 @@ fun PressmarkTheme(
         content = content
     )
 }
-
-@Composable
-fun PressmarkNavigationSuiteColors(): NavigationSuiteColors =
-    NavigationSuiteDefaults.colors()

@@ -132,8 +132,6 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
 
-    implementation(libs.androidx.compose.material3.adaptive.navigation.suite)
-
     // Room + KSP
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)

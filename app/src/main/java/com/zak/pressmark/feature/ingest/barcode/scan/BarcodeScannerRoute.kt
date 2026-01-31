@@ -53,11 +53,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import com.zak.pressmark.core.analytics.UxEventLogger
 import com.zak.pressmark.core.ui.InlineStatusCard
+import com.zak.pressmark.feature.ingest.barcode.ui.ManualIngestInputs
+import com.zak.pressmark.feature.ingest.vm.IngestViewModel
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -65,13 +69,18 @@ import dagger.hilt.components.SingletonComponent
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BarcodeScannerRoute(
     onBarcodeDetected: (String) -> Unit,
     onCancel: () -> Unit,
     onManualEntry: () -> Unit,
+    onManualSubmit: (ManualIngestInputs) -> Unit,
 ) {
+    val vm: IngestViewModel = hiltViewModel()
+    val state = vm.uiState.collectAsStateWithLifecycle().value
+
     val context = LocalContext.current
     var hasCameraPermission by remember {
         mutableStateOf(
@@ -110,6 +119,14 @@ fun BarcodeScannerRoute(
         onDispose {
             if (BarcodeScannerIngestHandler.onBarcodeDetected == onBarcodeDetected) {
                 BarcodeScannerIngestHandler.onBarcodeDetected = null
+            }
+        }
+    }
+    DisposableEffect(onManualSubmit) {
+        BarcodeScannerIngestHandler.onManualSubmit = onManualSubmit
+        onDispose {
+            if (BarcodeScannerIngestHandler.onManualSubmit == onManualSubmit) {
+                BarcodeScannerIngestHandler.onManualSubmit = null
             }
         }
     }
@@ -238,6 +255,8 @@ object BarcodeScannerIngestHandler {
 
     @Volatile
     var manualEntryExpanded: Boolean = false
+
+    var onManualSubmit: ((ManualIngestInputs) -> Unit)? = null
 }
 
 @SuppressLint("UnsafeOptInUsageError")

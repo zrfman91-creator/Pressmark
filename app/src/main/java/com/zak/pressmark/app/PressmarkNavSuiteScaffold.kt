@@ -20,7 +20,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.NavigationDrawerItemDefaults
+import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.adaptive.navigationsuite.ExperimentalMaterial3AdaptiveNavigationSuiteApi
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -31,6 +36,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination
@@ -39,8 +45,17 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.zak.pressmark.R
 import com.zak.pressmark.feature.ingest.barcode.scan.BarcodeScannerIngestHandler
-import com.zak.pressmark.feature.ingest.barcode.ui.ManualBarcodeOverlay
+import com.zak.pressmark.feature.ingest.barcode.ui.ManualEntryOverlay
 import com.zak.pressmark.feature.library.ui.LibrarySearchBar
+
+/**
+ * Pressmark adaptive navigation shell + a global "Search" action.
+ *
+ * Key detail:
+ * - We REUSE your existing FAB-style LibrarySearchBar so the IME/padding behavior matches exactly.
+ * - Because NavigationSuiteScaffold already owns the bottom navigation/rail layout, we pass
+ *   scaffoldBottomPadding = 0.dp so you don't double-account for system nav bars.
+ */
 
 private sealed interface TopLevelDestination {
     val label: String
@@ -48,7 +63,7 @@ private sealed interface TopLevelDestination {
     data class Vector(
         val route: String,
         override val label: String,
-        val icon: androidx.compose.ui.graphics.vector.ImageVector,
+        val icon: ImageVector,
     ) : TopLevelDestination
 
     data class Drawable(
@@ -59,16 +74,19 @@ private sealed interface TopLevelDestination {
 
     data class Action(
         override val label: String,
-        val icon: @Composable () -> Unit,
+        val icon: ImageVector,
         val onClick: () -> Unit,
         val selected: () -> Boolean = { false },
     ) : TopLevelDestination
 }
 
+
+
+
+@OptIn(ExperimentalMaterial3AdaptiveNavigationSuiteApi::class)
 @Composable
 fun PressmarkNavSuiteScaffold(
     navController: NavHostController,
-    colors: NavigationSuiteColors = PressmarkNavigationSuiteColors(),
     content: @Composable () -> Unit,
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -76,10 +94,15 @@ fun PressmarkNavSuiteScaffold(
 
     var searchExpanded by rememberSaveable { mutableStateOf(false) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
-    var manualBarcodeExpanded by rememberSaveable { mutableStateOf(false) }
-    var manualBarcode by rememberSaveable { mutableStateOf("") }
+
     var ingestSheetOpen by rememberSaveable { mutableStateOf(false) }
     var ingestMode by rememberSaveable { mutableStateOf(IngestMode.CAMERA) }
+
+    var manualBarcodeExpanded by rememberSaveable { mutableStateOf(false) }
+    var manualBarcode by rememberSaveable { mutableStateOf("") }
+
+    var manualArtist by rememberSaveable { mutableStateOf("") }
+    var manualTitle by rememberSaveable { mutableStateOf("") }
 
     val isScannerDestination = currentDestination?.hierarchy?.any { it.route == PressmarkRoutes.BARCODE_SCANNER } == true
     val scanIconInteraction = remember { MutableInteractionSource() }
@@ -88,18 +111,55 @@ fun PressmarkNavSuiteScaffold(
         if (!isScannerDestination) {
             manualBarcodeExpanded = false
             ingestSheetOpen = false
+            manualBarcode = ""
+            manualArtist = ""
+            manualTitle = ""
         } else if (ingestMode == IngestMode.MANUAL) {
             manualBarcodeExpanded = true
         }
     }
-
     LaunchedEffect(manualBarcodeExpanded) {
         BarcodeScannerIngestHandler.manualEntryExpanded = manualBarcodeExpanded
     }
 
-    LaunchedEffect(manualBarcodeExpanded) {
-        BarcodeScannerIngestHandler.manualEntryExpanded = manualBarcodeExpanded
+    val actionLabel = if (isScannerDestination) "Manual Entry" else "Search"   // Library search & manual barcode entry icon/logic swap on destination change.
+    val actionSelected = { if (isScannerDestination) manualBarcodeExpanded else searchExpanded }
+    val actionIcon = if (isScannerDestination) Icons.Outlined.KeyboardAlt else Icons.Outlined.Search
+    val onActionClick = {
+        if (isScannerDestination) {
+            ingestMode = IngestMode.MANUAL
+            ingestSheetOpen = false
+            manualBarcodeExpanded = true
+        } else {
+            searchExpanded = !searchExpanded
+        }
     }
+
+    val itemColors = NavigationSuiteDefaults.itemColors(
+        navigationBarItemColors = NavigationBarItemDefaults.colors(
+            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+            selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            selectedTextColor = MaterialTheme.colorScheme.onPrimary,
+            unselectedIconColor = MaterialTheme.colorScheme.primaryContainer,
+            unselectedTextColor = MaterialTheme.colorScheme.primaryContainer,
+        ),
+        navigationRailItemColors = NavigationRailItemDefaults.colors(
+            indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
+            selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            selectedTextColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        ),
+        navigationDrawerItemColors = NavigationDrawerItemDefaults.colors(
+            selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+            selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            selectedTextColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        ),
+    )  // Navigation scaffold color selections
+
+    val navContainer = MaterialTheme.colorScheme.primary
 
     val destinations: List<TopLevelDestination> = remember(searchExpanded, manualBarcodeExpanded, isScannerDestination) {
         listOf(
@@ -107,43 +167,28 @@ fun PressmarkNavSuiteScaffold(
                 route = PressmarkRoutes.LIBRARY,
                 label = "Library",
                 icon = Icons.Outlined.LibraryMusic,
+
             ),
             TopLevelDestination.Drawable(
                 route = PressmarkRoutes.BARCODE_SCANNER,
-                label = "Scan",
+                label = "Add Albums",
                 resId = R.drawable.barcode_scanner,
             ),
             TopLevelDestination.Action(
-                label = "Search",
-                icon = {
-                    if (isScannerDestination) {
-                        Icon(
-                           imageVector = Icons.Outlined.KeyboardAlt,
-                            contentDescription = "Manual barcode",
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Outlined.Search,
-                            contentDescription = "Search",
-                        )
-                    }
-                },
-                selected = { if (isScannerDestination) manualBarcodeExpanded else searchExpanded },
-                onClick = {
-                    if (isScannerDestination) {
-                        ingestMode = IngestMode.MANUAL
-                        ingestSheetOpen = false
-                        manualBarcodeExpanded = true
-                    } else {
-                        searchExpanded = !searchExpanded
-                    }
-                },
+                label = actionLabel,
+                icon = actionIcon,
+                selected = actionSelected,
+                onClick = onActionClick,
             ),
         )
     }
 
     NavigationSuiteScaffold(
-        {
+        navigationSuiteColors = NavigationSuiteDefaults.colors(
+            navigationBarContainerColor = navContainer,          // <- bar BG
+            navigationBarContentColor = MaterialTheme.colorScheme.onSurface,         // <- default content tint
+        ),
+        navigationSuiteItems = {
             destinations.forEach { destination ->
                 when (destination) {
                     is TopLevelDestination.Vector -> {
@@ -159,6 +204,7 @@ fun PressmarkNavSuiteScaffold(
                                     restoreState = true
                                 }
                             },
+                            colors = itemColors,
                         )
                     }
 
@@ -190,28 +236,31 @@ fun PressmarkNavSuiteScaffold(
                             label = { Text(destination.label) },
                             selected = selected,
                             onClick = handleScanClick,
+                            colors = itemColors,
                         )
                     }
 
                     is TopLevelDestination.Action -> {
                         item(
-                            icon = destination.icon,
+                            icon = {
+                                Icon(
+                                    destination.icon,
+                                    contentDescription = destination.label
+                                )
+                            },
                             label = { Text(destination.label) },
                             selected = destination.selected(),
                             onClick = destination.onClick,
+                            colors = itemColors,
                         )
                     }
                 }
             }
         },
-        colors = colors,
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             content()
 
-            // ✅ This is your proven FAB search bar implementation, reused.
-            // IMPORTANT: scaffoldBottomPadding = 0.dp because NavigationSuiteScaffold
-            // already lays out content above its own bottom bar/rail.
             LibrarySearchBar(
                 modifier = Modifier.fillMaxSize(),
                 query = searchQuery,
@@ -219,20 +268,31 @@ fun PressmarkNavSuiteScaffold(
                 onClear = { searchQuery = "" },
                 expanded = searchExpanded,
                 onExpandedChange = { searchExpanded = it },
-                placeholder = "Search library…",
+                placeholder = "Search library\u2026",
                 expandedKeyboardGap = 2.dp,
             )
 
-            ManualBarcodeOverlay(
+            ManualEntryOverlay(
                 modifier = Modifier.fillMaxSize(),
                 expanded = manualBarcodeExpanded && isScannerDestination,
+
                 barcode = manualBarcode,
                 onBarcodeChange = { manualBarcode = it },
+
+                artist = manualArtist,
+                onArtistChange = { manualArtist = it },
+
+                title = manualTitle,
+                onTitleChange = { manualTitle = it },
+
                 onDismiss = { manualBarcodeExpanded = false },
-                onSubmit = { barcode ->
-                    BarcodeScannerIngestHandler.onBarcodeDetected?.invoke(barcode.trim())
+
+                onSubmit = { inputs ->
+
+                    BarcodeScannerIngestHandler.onManualSubmit?.invoke(inputs)
                     manualBarcodeExpanded = false
                 },
+
             )
 
             if (ingestSheetOpen) {
