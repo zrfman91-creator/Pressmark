@@ -11,7 +11,9 @@ import com.zak.pressmark.data.remote.discogs.DiscogsFormat
 import com.zak.pressmark.data.repository.v2.WorkRepositoryV2
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
@@ -48,6 +50,9 @@ class RefinePressingViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(RefinePressingUiState(workId = workId, isLoading = true))
     val uiState = _uiState.asStateFlow()
+
+    private val _events = MutableSharedFlow<RefinePressingEvent>()
+    val events = _events.asSharedFlow()
 
     init {
         refresh()
@@ -154,6 +159,7 @@ class RefinePressingViewModel @Inject constructor(
                     applyingReleaseId = null,
                     successMessage = "Pressing saved.",
                 )
+                _events.emit(RefinePressingEvent.Applied)
             } catch (t: Throwable) {
                 Log.e("RefinePressingViewModel", "Failed to apply Discogs pressing.", t)
                 _uiState.value = _uiState.value.copy(
@@ -183,4 +189,8 @@ class RefinePressingViewModel @Inject constructor(
             .joinToString(" · ")
             .takeIf { it.isNotBlank() }
     }
+}
+
+sealed interface RefinePressingEvent {
+    data object Applied : RefinePressingEvent
 }
