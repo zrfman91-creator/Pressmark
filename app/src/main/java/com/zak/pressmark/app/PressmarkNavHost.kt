@@ -14,6 +14,7 @@ import com.zak.pressmark.feature.ingest.route.IngestRoute
 import com.zak.pressmark.feature.ingest.screen.IngestMode
 import com.zak.pressmark.feature.library.route.LibraryRoute
 import com.zak.pressmark.feature.library.vm.LibraryViewModel
+import com.zak.pressmark.feature.refinepressing.route.RefinePressingRoute
 import com.zak.pressmark.feature.workdetails.route.WorkDetailsRoute
 
 @Composable
@@ -76,6 +77,20 @@ fun PressmarkNavHost(
             arguments = listOf(navArgument(PressmarkRoutes.ARG_WORK_ID) { type = NavType.StringType }),
         ) {
             WorkDetailsRoute(
+                onBack = { navController.popBackStack() },
+                onRefinePressing = { workId ->
+                    navController.navigate(PressmarkRoutes.refinePressing(workId))
+                },
+            )
+        }
+
+        composable(
+            route = PressmarkRoutes.REFINE_PRESSING_PATTERN,
+            arguments = listOf(navArgument(PressmarkRoutes.ARG_WORK_ID) { type = NavType.StringType }),
+        ) { entry ->
+            val workId = entry.arguments?.getString(PressmarkRoutes.ARG_WORK_ID).orEmpty()
+            RefinePressingRoute(
+                workId = workId,
                 onBack = { navController.popBackStack() },
             )
         }
