@@ -37,4 +37,14 @@ interface VariantDaoV2 {
         """
     )
     suspend fun getByKey(workId: String, pressingId: String, variantKey: String): VariantEntityV2?
+
+    @Query(
+        """
+        SELECT * FROM ${DbSchemaV2.Variant.TABLE}
+        WHERE ${DbSchemaV2.Variant.WORK_ID} = :workId
+          AND ${DbSchemaV2.Variant.VARIANT_KEY} = :variantKey
+        LIMIT 1
+        """
+    )
+    suspend fun getByWorkAndKey(workId: String, variantKey: String): VariantEntityV2?
 }

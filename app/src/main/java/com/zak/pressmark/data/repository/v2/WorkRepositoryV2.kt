@@ -286,6 +286,77 @@ class WorkRepositoryV2 @Inject constructor(
         return id
     }
 
+    suspend fun applyDiscogsPressing(
+        workId: String,
+        discogsReleaseId: Long,
+        label: String?,
+        catalogNo: String?,
+        country: String?,
+        year: Int?,
+    ): String {
+        val now = System.currentTimeMillis()
+        val releaseId = "release:${sha1("$workId|$label|$catalogNo|$country|$year")}"
+        val pressingId = "pressing:${sha1("$releaseId|$discogsReleaseId|$catalogNo")}"
+
+        db.withTransaction {
+            val existingRelease = releaseDao.getById(releaseId)
+            releaseDao.upsert(
+                ReleaseEntityV2(
+                    id = releaseId,
+                    workId = workId,
+                    label = label,
+                    labelNormalized = normalizeOrNull(label),
+                    catalogNo = catalogNo,
+                    catalogNoNormalized = normalizeOrNull(catalogNo),
+                    country = country,
+                    format = null,
+                    releaseYear = year,
+                    releaseType = null,
+                    createdAt = existingRelease?.createdAt ?: now,
+                    updatedAt = now,
+                )
+            )
+
+            val existingPressing = pressingDao.getById(pressingId)
+            pressingDao.upsert(
+                PressingEntityV2(
+                    id = pressingId,
+                    releaseId = releaseId,
+                    barcode = null,
+                    barcodeNormalized = null,
+                    runoutsJson = existingPressing?.runoutsJson ?: "[]",
+                    pressingPlant = existingPressing?.pressingPlant,
+                    label = label,
+                    catalogNo = catalogNo,
+                    country = country,
+                    format = null,
+                    releaseYear = year,
+                    discogsReleaseId = discogsReleaseId,
+                    musicBrainzReleaseId = existingPressing?.musicBrainzReleaseId,
+                    createdAt = existingPressing?.createdAt ?: now,
+                    updatedAt = now,
+                )
+            )
+
+            val existingVariant = variantDao.getByWorkAndKey(workId, "default")
+            val variantId = existingVariant?.id ?: "variant:${sha1("$workId|$pressingId|default")}"
+            variantDao.upsert(
+                VariantEntityV2(
+                    id = variantId,
+                    workId = workId,
+                    pressingId = pressingId,
+                    variantKey = "default",
+                    notes = existingVariant?.notes,
+                    rating = existingVariant?.rating,
+                    addedAt = existingVariant?.addedAt ?: now,
+                    lastPlayedAt = existingVariant?.lastPlayedAt,
+                )
+            )
+        }
+
+        return pressingId
+    }
+
     fun observeAllWorks() = workDao.observeAll()
 
     fun observeWork(workId: String) = workDao.observeById(workId)
