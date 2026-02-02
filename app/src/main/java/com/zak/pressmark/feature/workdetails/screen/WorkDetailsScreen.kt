@@ -52,6 +52,7 @@ fun WorkDetailsScreen(
     styles: List<String>,
     discogsMasterId: Long?,
     onBack: () -> Unit,
+    onRefinePressing: () -> Unit,
     onDeleteConfirmed: () -> Unit,
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
@@ -161,7 +162,7 @@ fun WorkDetailsScreen(
 
             Button(
                 shape = RoundedCornerShape(4.dp),
-                onClick = { showDeleteConfirm = true },
+                onClick = onRefinePressing,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),

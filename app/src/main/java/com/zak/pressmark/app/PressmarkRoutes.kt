@@ -12,4 +12,9 @@ object PressmarkRoutes {
     const val WORK_DETAILS_PATTERN = "$WORK_DETAILS/{$ARG_WORK_ID}"
 
     fun workDetails(workId: String): String = "$WORK_DETAILS/$workId"
+
+    const val REFINE_PRESSING = "refine_pressing"
+    const val REFINE_PRESSING_PATTERN = "$REFINE_PRESSING/{$ARG_WORK_ID}"
+
+    fun refinePressing(workId: String): String = "$REFINE_PRESSING/$workId"
 }
