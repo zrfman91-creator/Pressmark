@@ -27,7 +27,9 @@ data class RefinePressingUiState(
     val workId: String = "",
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
+    val successMessage: String? = null,
     val candidates: List<PressingCandidateUi> = emptyList(),
+    val applyingReleaseId: Long? = null,
 )
 
 @HiltViewModel
@@ -51,19 +53,25 @@ class RefinePressingViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
                 errorMessage = "Service error. Try again.",
+                successMessage = null,
                 candidates = emptyList(),
             )
             return
         }
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                errorMessage = null,
+                successMessage = null,
+            )
             try {
                 val work = workRepositoryV2.getWork(workId)
                 if (work == null) {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         errorMessage = "Work not found.",
+                        successMessage = null,
                         candidates = emptyList(),
                     )
                     return@launch
@@ -89,6 +97,7 @@ class RefinePressingViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     errorMessage = null,
+                    successMessage = null,
                     candidates = candidates,
                 )
             } catch (t: Throwable) {
@@ -96,7 +105,43 @@ class RefinePressingViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     errorMessage = mapUserSafeError(t),
+                    successMessage = null,
                     candidates = emptyList(),
+                )
+            }
+        }
+    }
+
+    fun applyCandidate(candidate: PressingCandidateUi) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                applyingReleaseId = candidate.discogsReleaseId,
+                errorMessage = null,
+                successMessage = null,
+            )
+            try {
+                val release = discogsApi.getRelease(candidate.discogsReleaseId)
+                val label = release.labels?.firstOrNull()?.name
+                val catalogNo = release.labels?.firstOrNull()?.catalogNo
+
+                workRepositoryV2.applyDiscogsPressing(
+                    workId = workId,
+                    discogsReleaseId = candidate.discogsReleaseId,
+                    label = label,
+                    catalogNo = catalogNo,
+                    country = release.country,
+                    year = release.year,
+                )
+
+                _uiState.value = _uiState.value.copy(
+                    applyingReleaseId = null,
+                    successMessage = "Pressing saved.",
+                )
+            } catch (t: Throwable) {
+                Log.e("RefinePressingViewModel", "Failed to apply Discogs pressing.", t)
+                _uiState.value = _uiState.value.copy(
+                    applyingReleaseId = null,
+                    errorMessage = mapUserSafeError(t),
                 )
             }
         }
