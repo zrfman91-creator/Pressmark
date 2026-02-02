@@ -1,3 +1,4 @@
+// FILE: app/src/main/java/com/zak/pressmark/feature/workdetails/route/WorkDetailsRoute.kt
 package com.zak.pressmark.feature.workdetails.route
 
 import androidx.compose.runtime.Composable
@@ -24,6 +25,15 @@ fun WorkDetailsRoute(
         genres = state.genres,
         styles = state.styles,
         discogsMasterId = state.discogsMasterId,
+
+        // Selected pressing refinement details
+        selectedPressingLabel = state.selectedPressingLabel,
+        selectedPressingCatalogNo = state.selectedPressingCatalogNo,
+        selectedPressingCountry = state.selectedPressingCountry,
+        selectedPressingYear = state.selectedPressingYear,
+        selectedPressingFormat = state.selectedPressingFormat,
+        selectedDiscogsReleaseId = state.selectedDiscogsReleaseId,
+
         onBack = onBack,
         onRefinePressing = { onRefinePressing(state.workId) },
         onDeleteConfirmed = {

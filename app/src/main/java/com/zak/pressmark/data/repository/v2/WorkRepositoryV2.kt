@@ -2,32 +2,34 @@
 package com.zak.pressmark.data.repository.v2
 
 import androidx.room.withTransaction
+import androidx.sqlite.db.SimpleSQLiteQuery
+import com.zak.pressmark.core.util.ArtistNameFormatter
+import com.zak.pressmark.data.local.dao.v2.NamedHeading
 import com.zak.pressmark.data.local.dao.v2.PressingDaoV2
 import com.zak.pressmark.data.local.dao.v2.ReleaseDaoV2
+import com.zak.pressmark.data.local.dao.v2.SelectedPressingDetailsRow
 import com.zak.pressmark.data.local.dao.v2.VariantDaoV2
-import com.zak.pressmark.data.local.dao.v2.WorkGenreStyleDaoV2
 import com.zak.pressmark.data.local.dao.v2.WorkDaoV2
+import com.zak.pressmark.data.local.dao.v2.WorkGenreStyleDaoV2
 import com.zak.pressmark.data.local.db.v2.AppDatabaseV2
 import com.zak.pressmark.data.local.db.v2.DbSchemaV2
-import com.zak.pressmark.data.local.dao.v2.NamedHeading
+import com.zak.pressmark.data.local.entity.v2.GenreEntityV2
 import com.zak.pressmark.data.local.entity.v2.PressingEntityV2
 import com.zak.pressmark.data.local.entity.v2.ReleaseEntityV2
+import com.zak.pressmark.data.local.entity.v2.StyleEntityV2
 import com.zak.pressmark.data.local.entity.v2.VariantEntityV2
 import com.zak.pressmark.data.local.entity.v2.WorkEntityV2
-import com.zak.pressmark.data.local.entity.v2.GenreEntityV2
-import com.zak.pressmark.data.local.entity.v2.StyleEntityV2
 import com.zak.pressmark.data.local.entity.v2.WorkGenreCrossRefEntityV2
 import com.zak.pressmark.data.local.entity.v2.WorkStyleCrossRefEntityV2
 import com.zak.pressmark.data.prefs.LibrarySortKey
 import com.zak.pressmark.data.prefs.LibrarySortSpec
 import com.zak.pressmark.data.prefs.SortDirection
-import com.zak.pressmark.core.util.ArtistNameFormatter
-import androidx.sqlite.db.SimpleSQLiteQuery
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.security.MessageDigest
 import javax.inject.Inject
 import javax.inject.Singleton
+
 
 @Singleton
 class WorkRepositoryV2 @Inject constructor(
@@ -38,6 +40,16 @@ class WorkRepositoryV2 @Inject constructor(
     private val variantDao: VariantDaoV2,
     private val workGenreStyleDao: WorkGenreStyleDaoV2,
 ) {
+
+    data class SelectedPressingDetails(
+        val discogsReleaseId: Long?,
+        val label: String?,
+        val catalogNo: String?,
+        val country: String?,
+        val year: Int?,
+        val format: String?,
+    )
+
 
     sealed class UpsertResult {
         data class Created(val workId: String) : UpsertResult()
@@ -360,6 +372,22 @@ class WorkRepositoryV2 @Inject constructor(
     fun observeAllWorks() = workDao.observeAll()
 
     fun observeWork(workId: String) = workDao.observeById(workId)
+
+    fun observeSelectedPressingDetails(workId: String): Flow<SelectedPressingDetails?> =
+        variantDao.observeSelectedPressingDetails(workId).map { row: SelectedPressingDetailsRow? ->
+            row?.let {
+                SelectedPressingDetails(
+                    discogsReleaseId = it.discogsReleaseId,
+                    label = it.label,
+                    catalogNo = it.catalogNo,
+                    country = it.country,
+                    year = it.year,
+                    format = it.format,
+                )
+            }
+        }
+
+
 
     fun observeAllWorksSorted(sortSpec: LibrarySortSpec) = when (sortSpec.key) {
         LibrarySortKey.TITLE -> if (sortSpec.direction == SortDirection.ASC) {

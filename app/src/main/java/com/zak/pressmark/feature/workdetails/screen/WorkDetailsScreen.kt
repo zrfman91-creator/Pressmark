@@ -1,6 +1,6 @@
+// FILE: app/src/main/java/com/zak/pressmark/feature/workdetails/screen/WorkDetailsScreen.kt
 package com.zak.pressmark.feature.workdetails.screen
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +25,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -51,6 +52,15 @@ fun WorkDetailsScreen(
     genres: List<String>,
     styles: List<String>,
     discogsMasterId: Long?,
+
+    // Selected pressing refinement details
+    selectedPressingLabel: String?,
+    selectedPressingCatalogNo: String?,
+    selectedPressingCountry: String?,
+    selectedPressingYear: Int?,
+    selectedPressingFormat: String?,
+    selectedDiscogsReleaseId: Long?,
+
     onBack: () -> Unit,
     onRefinePressing: () -> Unit,
     onDeleteConfirmed: () -> Unit,
@@ -139,9 +149,8 @@ fun WorkDetailsScreen(
                 text = artistYearLine,
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-
-            Spacer(modifier = Modifier.height(12.dp))
 
             if (genres.isNotEmpty()) {
                 Text("Genres: ${genres.joinToString(", ")}")
@@ -158,21 +167,73 @@ fun WorkDetailsScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            // --- Selected pressing refinement section ---
+            val hasPressingDetails =
+                !selectedPressingLabel.isNullOrBlank() ||
+                        !selectedPressingCatalogNo.isNullOrBlank() ||
+                        !selectedPressingCountry.isNullOrBlank() ||
+                        selectedPressingYear != null ||
+                        !selectedPressingFormat.isNullOrBlank() ||
+                        selectedDiscogsReleaseId != null
 
-            Button(
-                shape = RoundedCornerShape(4.dp),
+            if (hasPressingDetails) {
+                Spacer(modifier = Modifier.height(18.dp))
+                Text(
+                    text = "Pressing",
+                    style = MaterialTheme.typography.titleMedium,
+                )
+
+                val line1 = buildString {
+                    selectedPressingLabel?.takeIf { it.isNotBlank() }?.let { append(it) }
+                    selectedPressingCatalogNo?.takeIf { it.isNotBlank() }?.let {
+                        if (isNotEmpty()) append(" \u00B7 ")
+                        append(it)
+                    }
+                }
+                if (line1.isNotBlank()) {
+                    Text(text = line1)
+                }
+
+                val line2 = buildString {
+                    selectedPressingCountry?.takeIf { it.isNotBlank() }?.let { append(it) }
+                    selectedPressingYear?.let {
+                        if (isNotEmpty()) append(" \u00B7 ")
+                        append(it.toString())
+                    }
+                    selectedPressingFormat?.takeIf { it.isNotBlank() }?.let {
+                        if (isNotEmpty()) append(" \u00B7 ")
+                        append(it)
+                    }
+                }
+                if (line2.isNotBlank()) {
+                    Text(text = line2, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+
+                selectedDiscogsReleaseId?.let { id ->
+                    Text(
+                        text = "Discogs release: $id",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            OutlinedButton(
                 onClick = onRefinePressing,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Text("Refine pressing")
             }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+
+
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(
-                shape = RoundedCornerShape(4.dp),
                 onClick = { showDeleteConfirm = true },
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -183,53 +244,25 @@ fun WorkDetailsScreen(
 
     if (showDeleteConfirm) {
         AlertDialog(
-            shape = RoundedCornerShape(4.dp),
             onDismissRequest = { showDeleteConfirm = false },
-            title = {
-                Text(
-                    modifier = Modifier.fillMaxWidth(),
-                    text = "Remove “$title”",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    textAlign = TextAlign.Center
-                )
-                    },
-            text = {
-                Text(
-                    modifier = Modifier.fillMaxWidth(),
-                    text = "This will remove it from your library.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    textAlign = TextAlign.Center
-                )
-                   },
-            containerColor = MaterialTheme.colorScheme.surface,
+            title = { Text("Remove “$title”?") },
+            text = { Text("This will remove it from your library.") },
             confirmButton = {
                 Button(
-                    shape = RoundedCornerShape(4.dp),
                     onClick = {
                         onDeleteConfirmed()
                         showDeleteConfirm = false
                     },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.75f),
+                        containerColor = MaterialTheme.colorScheme.error,
                         contentColor = MaterialTheme.colorScheme.onError,
                     ),
                 ) {
-                    Text("Remove")
+                    Text("Delete")
                 }
             },
             dismissButton = {
-                OutlinedButton (
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        contentColor = MaterialTheme.colorScheme.onSurface,
-                    ),
-                    shape = RoundedCornerShape(4.dp),
-                    onClick = { showDeleteConfirm = false })
-
-                { Text("Cancel") }
+                TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
             },
         )
     }
