@@ -19,8 +19,6 @@ import java.io.IOException
 data class PressingCandidateUi(
     val discogsReleaseId: Long,
     val title: String,
-    val label: String?,
-    val catalogNo: String?,
     val year: Int?,
     val country: String?,
 )
@@ -30,7 +28,6 @@ data class RefinePressingUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val candidates: List<PressingCandidateUi> = emptyList(),
-    val selectedReleaseId: Long? = null,
 )
 
 @HiltViewModel
@@ -80,16 +77,12 @@ class RefinePressingViewModel @Inject constructor(
                     page = 1,
                 ).results
 
-                val candidates = results.take(5).mapNotNull { result ->
-                    val release = runCatching { discogsApi.getRelease(result.id) }.getOrNull()
-                    val labelInfo = release?.labels?.firstOrNull()
+                val candidates = results.map { result ->
                     PressingCandidateUi(
                         discogsReleaseId = result.id,
                         title = result.title,
-                        label = labelInfo?.name?.trim()?.takeIf { it.isNotBlank() },
-                        catalogNo = labelInfo?.catalogNo?.trim()?.takeIf { it.isNotBlank() },
-                        year = release?.year ?: result.year,
-                        country = release?.country?.trim()?.takeIf { it.isNotBlank() },
+                        year = result.year,
+                        country = null,
                     )
                 }
 
@@ -97,7 +90,6 @@ class RefinePressingViewModel @Inject constructor(
                     isLoading = false,
                     errorMessage = null,
                     candidates = candidates,
-                    selectedReleaseId = candidates.firstOrNull()?.discogsReleaseId,
                 )
             } catch (t: Throwable) {
                 Log.e("RefinePressingViewModel", "Failed to fetch Discogs matches.", t)
@@ -105,41 +97,6 @@ class RefinePressingViewModel @Inject constructor(
                     isLoading = false,
                     errorMessage = mapUserSafeError(t),
                     candidates = emptyList(),
-                    selectedReleaseId = null,
-                )
-            }
-        }
-    }
-
-    fun selectCandidate(releaseId: Long) {
-        _uiState.value = _uiState.value.copy(selectedReleaseId = releaseId)
-    }
-
-    fun confirmSelection(): PressingCandidateUi? {
-        val selectedId = _uiState.value.selectedReleaseId ?: return null
-        return _uiState.value.candidates.firstOrNull { it.discogsReleaseId == selectedId }
-    }
-
-    fun confirmSelection(onDone: () -> Unit) {
-        val selected = confirmSelection() ?: return
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
-            try {
-                workRepositoryV2.applyDiscogsPressing(
-                    workId = workId,
-                    discogsReleaseId = selected.discogsReleaseId,
-                    label = selected.label,
-                    catalogNo = selected.catalogNo,
-                    country = selected.country,
-                    year = selected.year,
-                )
-                _uiState.value = _uiState.value.copy(isLoading = false)
-                onDone()
-            } catch (t: Throwable) {
-                Log.e("RefinePressingViewModel", "Failed to save pressing selection.", t)
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    errorMessage = mapUserSafeError(t),
                 )
             }
         }

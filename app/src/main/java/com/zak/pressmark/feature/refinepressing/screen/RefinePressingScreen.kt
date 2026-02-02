@@ -3,43 +3,25 @@ package com.zak.pressmark.feature.refinepressing.screen
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.zak.pressmark.core.ui.InlineStatusCard
-import com.zak.pressmark.feature.refinepressing.vm.PressingCandidateUi
-import com.zak.pressmark.feature.refinepressing.vm.RefinePressingUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RefinePressingScreen(
-    state: RefinePressingUiState,
-    onRetry: () -> Unit,
-    onSelectCandidate: (Long) -> Unit,
-    onConfirm: () -> Unit,
-    onSkip: () -> Unit,
+    workId: String,
     onBack: () -> Unit,
 ) {
     Scaffold(
@@ -70,111 +52,13 @@ fun RefinePressingScreen(
             verticalArrangement = Arrangement.Top,
         ) {
             Text(
-                text = "Find the best pressing match.",
+                text = "Pressing refinement coming soon.",
                 style = MaterialTheme.typography.bodyLarge,
             )
-
-            if (state.isLoading) {
-                CircularProgressIndicator(modifier = Modifier.padding(top = 16.dp))
-                return@Column
-            }
-
-            state.errorMessage?.let { message ->
-                InlineStatusCard(
-                    message = message,
-                    actionLabel = "Retry",
-                    onAction = onRetry,
-                )
-                return@Column
-            }
-
-            if (state.candidates.isEmpty()) {
-                InlineStatusCard(message = "No matches yet. Try again.")
-                Button(
-                    onClick = onRetry,
-                    modifier = Modifier.padding(top = 12.dp),
-                ) {
-                    Text("Search Discogs")
-                }
-                return@Column
-            }
-
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                items(state.candidates, key = { it.discogsReleaseId }) { candidate ->
-                    PressingCandidateRow(
-                        candidate = candidate,
-                        isSelected = candidate.discogsReleaseId == state.selectedReleaseId,
-                        onClick = { onSelectCandidate(candidate.discogsReleaseId) },
-                    )
-                }
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                OutlinedButton(
-                    onClick = onSkip,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Text("Skip for now")
-                }
-                Button(
-                    onClick = onConfirm,
-                    enabled = state.selectedReleaseId != null,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Text("Use this pressing")
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun PressingCandidateRow(
-    candidate: PressingCandidateUi,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        Text(
-            text = candidate.title,
-            style = MaterialTheme.typography.bodyLarge,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        val labelLine = listOfNotNull(candidate.label, candidate.catalogNo).joinToString(" \u00B7 ")
-        if (labelLine.isNotBlank()) {
             Text(
-                text = labelLine,
-                style = MaterialTheme.typography.bodyMedium,
+                text = "Work ID: $workId",
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        val subtitle = listOfNotNull(candidate.year?.toString(), candidate.country).joinToString(" \u00B7 ")
-        if (subtitle.isNotBlank()) {
-            Text(
-                text = subtitle,
-                style = if (isSelected) MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold) else MaterialTheme.typography.bodyMedium,
-                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
             )
         }
     }

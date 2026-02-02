@@ -87,8 +87,10 @@ fun PressmarkNavHost(
         composable(
             route = PressmarkRoutes.REFINE_PRESSING_PATTERN,
             arguments = listOf(navArgument(PressmarkRoutes.ARG_WORK_ID) { type = NavType.StringType }),
-        ) {
+        ) { entry ->
+            val workId = entry.arguments?.getString(PressmarkRoutes.ARG_WORK_ID).orEmpty()
             RefinePressingRoute(
+                workId = workId,
                 onBack = { navController.popBackStack() },
             )
         }
