@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.zak.pressmark.BuildConfig
 import com.zak.pressmark.app.PressmarkRoutes
 import com.zak.pressmark.data.remote.discogs.DiscogsApiService
+import com.zak.pressmark.data.remote.discogs.DiscogsFormat
 import com.zak.pressmark.data.repository.v2.WorkRepositoryV2
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -21,6 +22,10 @@ data class PressingCandidateUi(
     val title: String,
     val year: Int?,
     val country: String?,
+    val label: String?,
+    val catalogNo: String?,
+    val formatSummary: String?,
+    val artworkUrl: String?,
 )
 
 data class RefinePressingUiState(
@@ -86,11 +91,23 @@ class RefinePressingViewModel @Inject constructor(
                 ).results
 
                 val candidates = results.map { result ->
+                    val release = runCatching { discogsApi.getRelease(result.id) }.getOrNull()
+                    val label = release?.labels?.firstOrNull()
+                    val formatSummary = formatSummary(release?.formats?.firstOrNull())
+                    val artworkUrl = result.coverImage
+                        ?: result.thumb
+                        ?: release?.images?.firstOrNull()?.uri150
+                        ?: release?.images?.firstOrNull()?.uri
+
                     PressingCandidateUi(
                         discogsReleaseId = result.id,
                         title = result.title,
-                        year = result.year,
-                        country = null,
+                        year = release?.year ?: result.year,
+                        country = release?.country,
+                        label = label?.name,
+                        catalogNo = label?.catalogNo,
+                        formatSummary = formatSummary,
+                        artworkUrl = artworkUrl,
                     )
                 }
 
@@ -153,5 +170,17 @@ class RefinePressingViewModel @Inject constructor(
             is HttpException -> "Service error. Try again."
             else -> "Service error. Try again."
         }
+    }
+
+    private fun formatSummary(format: DiscogsFormat?): String? {
+        val formatName = format?.name?.takeIf { it.isNotBlank() }
+        val descriptions = format?.descriptions
+            ?.filter { it.isNotBlank() }
+            ?.joinToString(" · ")
+            ?.takeIf { it.isNotBlank() }
+
+        return listOfNotNull(formatName, descriptions)
+            .joinToString(" · ")
+            .takeIf { it.isNotBlank() }
     }
 }
