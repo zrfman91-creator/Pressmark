@@ -10,6 +10,7 @@ import com.zak.pressmark.feature.workdetails.vm.WorkDetailsViewModel
 @Composable
 fun WorkDetailsRoute(
     onBack: () -> Unit,
+    onRefinePressing: (String) -> Unit,
     vm: WorkDetailsViewModel = hiltViewModel(),
 ) {
     val state by vm.uiState.collectAsState()
@@ -24,6 +25,7 @@ fun WorkDetailsRoute(
         styles = state.styles,
         discogsMasterId = state.discogsMasterId,
         onBack = onBack,
+        onRefinePressing = { onRefinePressing(state.workId) },
         onDeleteConfirmed = {
             vm.deleteWork()
             onBack()
