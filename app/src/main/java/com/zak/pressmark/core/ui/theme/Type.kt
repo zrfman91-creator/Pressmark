@@ -63,7 +63,7 @@ val AppTypography = M3Typography(
     bodySmall = TextStyle(                  // "Find a Pressing" button text
         fontFamily = anaheim,
         fontWeight = FontWeight.Normal,
-        fontSize = 12.sp,
+        fontSize = 10.sp,
         lineHeight = 16.sp,
     ),
 )

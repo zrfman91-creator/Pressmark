@@ -35,6 +35,9 @@ object PressmarkColors {
     val onSurfaceVariantPC    = Color(0xFF807A73)
     val outlinePC             = Color(0xFF26211F)
     val outlineVariantPC      = Color(0xFF806E66)
+    val onErrorContainerPC    = Color(0xFF403733)
+    val errorContainerPC      = Color(0xFF403736)
+
 
 
 

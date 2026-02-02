@@ -28,12 +28,15 @@ import androidx.compose.material3.adaptive.navigationsuite.ExperimentalMaterial3
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -46,7 +49,7 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.zak.pressmark.R
-import com.zak.pressmark.feature.ingest.barcode.ui.ManualEntryOverlay
+import com.zak.pressmark.feature.ingest.screen.ManualEntryOverlay
 import com.zak.pressmark.feature.ingest.vm.IngestUiState
 import com.zak.pressmark.feature.ingest.vm.IngestViewModel
 import com.zak.pressmark.feature.library.ui.LibrarySearchBar
@@ -84,8 +87,20 @@ private sealed interface TopLevelDestination {
     ) : TopLevelDestination
 }
 
+/**
+ * Global, top-level actions that can be triggered from anywhere inside the nav scaffold
+ * (e.g., Empty State CTAs) without duplicating navigation logic.
+ */
+@Immutable
+data class PressmarkGlobalActions(
+    val onAddAlbums: () -> Unit,
+)
 
-
+val LocalPressmarkGlobalActions = staticCompositionLocalOf {
+    PressmarkGlobalActions(
+        onAddAlbums = {},
+    )
+}
 
 @OptIn(ExperimentalMaterial3AdaptiveNavigationSuiteApi::class)
 @Composable
@@ -124,7 +139,8 @@ fun PressmarkNavSuiteScaffold(
         }
     }
 
-    val actionLabel = if (isScannerDestination) "Manual Entry" else "Search"   // Library search & manual barcode entry icon/logic swap on destination change.
+    val actionLabel =
+        if (isScannerDestination) "Manual Entry" else "Search"   // Library search & manual barcode entry icon/logic swap on destination change.
     val actionSelected = { if (isScannerDestination) manualEntryExpanded else searchExpanded }
     val actionIcon = if (isScannerDestination) Icons.Outlined.KeyboardAlt else Icons.Outlined.Search
     val onActionClick: () -> Unit = {
@@ -164,13 +180,25 @@ fun PressmarkNavSuiteScaffold(
 
     val navContainer = MaterialTheme.colorScheme.surfaceVariant
 
+    // Single, canonical entrypoint for starting ingest ("Add Albums").
+    // Use this for the nav item and any other UI entrypoints (e.g., Empty State CTA).
+    val onAddAlbums: () -> Unit = {
+        ingestSheetOpen = false
+        ingestMode = IngestMode.CAMERA
+        ingestVm?.setManualEntryExpanded(false)
+        navController.navigate(PressmarkRoutes.BARCODE_SCANNER) {
+            popUpTo(navController.graph.startDestinationId) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+
     val destinations: List<TopLevelDestination> = remember(searchExpanded, manualEntryExpanded, isScannerDestination) {
         listOf(
             TopLevelDestination.Vector(
                 route = PressmarkRoutes.LIBRARY,
                 label = "Library",
                 icon = Icons.Outlined.LibraryMusic,
-
             ),
             TopLevelDestination.Drawable(
                 route = PressmarkRoutes.BARCODE_SCANNER,
@@ -213,16 +241,7 @@ fun PressmarkNavSuiteScaffold(
 
                     is TopLevelDestination.Drawable -> {
                         val selected = currentDestination.isTopLevelSelected(destination.route)
-                        val handleScanClick = {
-                            ingestSheetOpen = false
-                            ingestMode = IngestMode.CAMERA
-                            ingestVm?.setManualEntryExpanded(false)
-                            navController.navigate(PressmarkRoutes.BARCODE_SCANNER) {
-                                popUpTo(navController.graph.startDestinationId) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        }
+                        val handleScanClick = onAddAlbums
                         item(
                             icon = {
                                 Icon(
@@ -245,12 +264,7 @@ fun PressmarkNavSuiteScaffold(
 
                     is TopLevelDestination.Action -> {
                         item(
-                            icon = {
-                                Icon(
-                                    destination.icon,
-                                    contentDescription = destination.label
-                                )
-                            },
+                            icon = { Icon(destination.icon, contentDescription = destination.label) },
                             label = { Text(destination.label) },
                             selected = destination.selected(),
                             onClick = destination.onClick,
@@ -261,94 +275,99 @@ fun PressmarkNavSuiteScaffold(
             }
         },
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            content()
+        CompositionLocalProvider(
+            LocalPressmarkGlobalActions provides PressmarkGlobalActions(
+                onAddAlbums = onAddAlbums,
+            ),
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                content()
 
-            LibrarySearchBar(
-                modifier = Modifier.fillMaxSize(),
-                query = searchQuery,
-                onQueryChange = { searchQuery = it },
-                onClear = { searchQuery = "" },
-                expanded = searchExpanded,
-                onExpandedChange = { searchExpanded = it },
-                placeholder = "Search library\u2026",
-                expandedKeyboardGap = 2.dp,
-            )
+                LibrarySearchBar(
+                    modifier = Modifier.fillMaxSize(),
+                    query = searchQuery,
+                    onQueryChange = { searchQuery = it },
+                    onClear = { searchQuery = "" },
+                    expanded = searchExpanded,
+                    onExpandedChange = { searchExpanded = it },
+                    placeholder = "Search library\u2026",
+                    expandedKeyboardGap = 2.dp,
+                )
 
-            ManualEntryOverlay(
-                modifier = Modifier.fillMaxSize(),
-                expanded = manualEntryExpanded && isScannerDestination,
+                ManualEntryOverlay(
+                    modifier = Modifier.fillMaxSize(),
+                    expanded = manualEntryExpanded && isScannerDestination,
 
-                barcode = ingestState.barcode,
-                onBarcodeChange = { ingestVm?.onBarcodeChanged(it) },
+                    barcode = ingestState.barcode,
+                    onBarcodeChange = { ingestVm?.onBarcodeChanged(it) },
 
-                artist = ingestState.artist,
-                onArtistChange = { ingestVm?.onArtistChanged(it) },
+                    artist = ingestState.artist,
+                    onArtistChange = { ingestVm?.onArtistChanged(it) },
 
-                title = ingestState.title,
-                onTitleChange = { ingestVm?.onTitleChanged(it) },
+                    title = ingestState.title,
+                    onTitleChange = { ingestVm?.onTitleChanged(it) },
 
-                year = ingestState.year,
-                onYearChange = { ingestVm?.onYearChanged(it) },
+                    year = ingestState.year,
+                    onYearChange = { ingestVm?.onYearChanged(it) },
 
-                onDismiss = {
-                    if (ingestVm != null) {
-                        ingestVm.setManualEntryExpanded(false)
-                    }
-                },
+                    onDismiss = {
+                        if (ingestVm != null) {
+                            ingestVm.setManualEntryExpanded(false)
+                        }
+                    },
 
-                onSubmit = { inputs ->
-                    ingestVm?.submitManualInputs(inputs)
-                    ingestVm?.setManualEntryExpanded(false)
-                },
+                    onSubmit = { inputs ->
+                        ingestVm?.submitManualInputs(inputs)
+                        ingestVm?.setManualEntryExpanded(false)
+                    },
+                )
 
-            )
-
-            if (ingestSheetOpen) {
-                ModalBottomSheet(
-                    onDismissRequest = { ingestSheetOpen = false },
-                ) {
-                    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                        Text(
-                            text = "Ingest mode",
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(bottom = 8.dp),
-                        )
-                        ListItem(
-                            headlineContent = { Text("Barcode (camera)") },
-                            modifier = Modifier.clickable {
-                                ingestMode = IngestMode.CAMERA
-                                ingestSheetOpen = false
-                                ingestVm?.setManualEntryExpanded(false)
-                                navController.navigate(PressmarkRoutes.BARCODE_SCANNER) {
-                                    popUpTo(navController.graph.startDestinationId) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                        )
-                        ListItem(
-                            headlineContent = { Text("Barcode (manual)") },
-                            modifier = Modifier.clickable {
-                                ingestMode = IngestMode.MANUAL
-                                ingestSheetOpen = false
-                                ingestVm?.setManualEntryExpanded(true)
-                                navController.navigate(PressmarkRoutes.BARCODE_SCANNER) {
-                                    popUpTo(navController.graph.startDestinationId) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                        )
-                        ListItem(
-                            headlineContent = { Text("Cover OCR (coming soon)") },
-                            modifier = Modifier.alpha(0.5f),
-                        )
-                        ListItem(
-                            headlineContent = { Text("Label OCR (coming soon)") },
-                            modifier = Modifier.alpha(0.5f),
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
+                if (ingestSheetOpen) {
+                    ModalBottomSheet(
+                        onDismissRequest = { ingestSheetOpen = false },
+                    ) {
+                        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                            Text(
+                                text = "Ingest mode",
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.padding(bottom = 8.dp),
+                            )
+                            ListItem(
+                                headlineContent = { Text("Barcode (camera)") },
+                                modifier = Modifier.clickable {
+                                    ingestMode = IngestMode.CAMERA
+                                    ingestSheetOpen = false
+                                    ingestVm?.setManualEntryExpanded(false)
+                                    navController.navigate(PressmarkRoutes.BARCODE_SCANNER) {
+                                        popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                },
+                            )
+                            ListItem(
+                                headlineContent = { Text("Barcode (manual)") },
+                                modifier = Modifier.clickable {
+                                    ingestMode = IngestMode.MANUAL
+                                    ingestSheetOpen = false
+                                    ingestVm?.setManualEntryExpanded(true)
+                                    navController.navigate(PressmarkRoutes.BARCODE_SCANNER) {
+                                        popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                },
+                            )
+                            ListItem(
+                                headlineContent = { Text("Cover OCR (coming soon)") },
+                                modifier = Modifier.alpha(0.5f),
+                            )
+                            ListItem(
+                                headlineContent = { Text("Label OCR (coming soon)") },
+                                modifier = Modifier.alpha(0.5f),
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
                     }
                 }
             }

@@ -68,7 +68,10 @@ fun LibraryScreen(
         contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top),
         topBar = {
             TopAppBar(
-                title = { Text( text = "Library", style = MaterialTheme.typography.displayLarge) },
+                title = {
+                    Text(
+                        text = "Library",
+                        style = MaterialTheme.typography.displayLarge) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary,

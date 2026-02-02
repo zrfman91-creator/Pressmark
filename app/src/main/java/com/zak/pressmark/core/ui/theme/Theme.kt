@@ -52,8 +52,8 @@ private val CorporateLightColorScheme: ColorScheme = lightColorScheme(
     // Error
     error =                PressmarkColors.Error,
     onError =              Color(0xFFFFFFFF),
-    errorContainer =       PressmarkColors.ErrorContainer,
-    onErrorContainer =     PressmarkColors.OnErrorContainer,
+    errorContainer =       PressmarkColors.errorContainerPC,
+    onErrorContainer =     PressmarkColors.onErrorContainerPC,
 )
 
 private val CorporateDarkColorScheme: ColorScheme = darkColorScheme(

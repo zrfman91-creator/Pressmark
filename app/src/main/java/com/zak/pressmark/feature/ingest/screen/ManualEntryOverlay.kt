@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalMaterial3Api::class)
 
-package com.zak.pressmark.feature.ingest.barcode.ui
+package com.zak.pressmark.feature.ingest.screen
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.clickable
@@ -39,11 +39,11 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-
 data class ManualIngestInputs(
     val barcode: String,
     val artist: String,
     val title: String,
+    val year: String,
 )
 
 @Composable
@@ -86,11 +86,9 @@ fun ManualEntryOverlay(
         unfocusedContainerColor = MaterialTheme.colorScheme.surface,
         disabledContainerColor = MaterialTheme.colorScheme.surface,
         errorContainerColor = MaterialTheme.colorScheme.surface,
-        // borders:
         focusedBorderColor = MaterialTheme.colorScheme.primary,
         unfocusedBorderColor = MaterialTheme.colorScheme.outline,
         errorBorderColor = MaterialTheme.colorScheme.error,
-        // text / cursor:
         cursorColor = MaterialTheme.colorScheme.primary,
     )
 
@@ -163,14 +161,14 @@ fun ManualEntryOverlay(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(top = 0.dp),
-                                    contentAlignment = Alignment.Center
+                                    contentAlignment = Alignment.Center,
                                 ) {
                                     Text("OR\u2026")
                                 }
-                            }
-
+                            },
                         )
                     }
+
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -186,6 +184,7 @@ fun ManualEntryOverlay(
                             colors = fieldColors,
                         )
                     }
+
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -201,6 +200,7 @@ fun ManualEntryOverlay(
                             colors = fieldColors,
                         )
                     }
+
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -209,14 +209,13 @@ fun ManualEntryOverlay(
                     ) {
                         OutlinedTextField(
                             value = year,
-                            onValueChange = onYearChange,
+                            onValueChange = { onYearChange(it.filter(Char::isDigit)) },
                             modifier = Modifier.weight(1f),
                             placeholder = { Text("Year") },
                             singleLine = true,
                             colors = fieldColors,
                         )
                     }
-
 
                     Row(
                         modifier = Modifier
@@ -235,6 +234,7 @@ fun ManualEntryOverlay(
                                         barcode = barcode,
                                         artist = artist,
                                         title = title,
+                                        year = year,
                                     ),
                                 )
                             },

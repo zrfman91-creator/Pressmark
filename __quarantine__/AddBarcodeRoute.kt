@@ -1,5 +1,5 @@
-// FILE: app/src/main/java/com/zak/pressmark/feature/ingest/barcode/route/AddBarcodeRoute.kt
-package com.zak.pressmark.feature.ingest.barcode.route
+// FILE: app/src/main/java/com/zak/pressmark/feature/ingest/route/AddBarcodeRoute.kt
+package com.zak.pressmark.feature.ingest.route
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement

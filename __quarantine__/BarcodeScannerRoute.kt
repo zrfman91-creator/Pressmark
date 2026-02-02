@@ -1,8 +1,7 @@
-// FILE: app/src/main/java/com/zak/pressmark/feature/ingest/barcode/scan/BarcodeScannerRoute.kt
-package com.zak.pressmark.feature.ingest.barcode.scan
+// FILE: app/src/main/java/com/zak/pressmark/feature/ingest/screen/BarcodeScannerRoute.kt
+package com.zak.pressmark.feature.ingest.screen
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -10,12 +9,6 @@ import android.os.SystemClock
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.ImageAnalysis
-import androidx.camera.core.ImageProxy
-import androidx.camera.core.Preview
-import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,16 +27,17 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -51,31 +45,27 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.google.mlkit.vision.barcode.BarcodeScanning
-import com.google.mlkit.vision.common.InputImage
-import com.zak.pressmark.core.analytics.UxEventLogger
 import com.zak.pressmark.core.ui.InlineStatusCard
-import com.zak.pressmark.feature.ingest.barcode.ui.ManualIngestInputs
+import com.zak.pressmark.feature.ingest.scan.CameraPreview
+import com.zak.pressmark.feature.ingest.scan.DefaultReticle
+import com.zak.pressmark.feature.ingest.scan.MlKitBarcodeAnalyzer
+import com.zak.pressmark.feature.ingest.scan.ReticleOverlay
 import com.zak.pressmark.feature.ingest.vm.IngestViewModel
-import dagger.hilt.EntryPoint
-import dagger.hilt.InstallIn
-import dagger.hilt.android.EntryPointAccessors
-import dagger.hilt.components.SingletonComponent
-import java.util.concurrent.Executors
-import java.util.concurrent.atomic.AtomicBoolean
 
-
+/**
+ * Legacy scanner route kept for compatibility.
+ *
+ * Current single-flow implementation is IngestRoute/IngestScreen.
+ * If this file is still referenced by navigation or tests, it must compile.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BarcodeScannerRoute(
     onBarcodeDetected: (String) -> Unit,
     onCancel: () -> Unit,
     onManualEntry: () -> Unit,
-    onManualSubmit: (ManualIngestInputs) -> Unit,
     manualEntryExpanded: Boolean,
 ) {
     val vm: IngestViewModel = hiltViewModel()
@@ -90,6 +80,7 @@ fun BarcodeScannerRoute(
     var torchAvailable by remember { mutableStateOf(false) }
     val startTimeMs = remember { SystemClock.elapsedRealtime() }
     val analytics = rememberAnalyticsLogger(context)
+
     val handleCancel = {
         analytics.logEvent("pm_barcode_scan_fail", mapOf("reason" to "user_cancel"))
         onCancel()
@@ -110,9 +101,7 @@ fun BarcodeScannerRoute(
         }
     }
 
-    val lastDetected = remember { mutableStateOf<String?>(null) }
-    val lastDetectedAt = remember { mutableLongStateOf(0L) }
-
+    // NOTE: legacy cleanup behavior; in the unified flow this should be owned by IngestRoute.
     DisposableEffect(Unit) {
         onDispose {
             vm.setManualEntryExpanded(false)
@@ -123,12 +112,22 @@ fun BarcodeScannerRoute(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Scan barcode") },
+                title = {
+                    Text(
+                        text = "Add to library",
+                        style = MaterialTheme.typography.displayLarge,
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                ),
                 navigationIcon = {
                     IconButton(onClick = handleCancel) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onPrimary,
                         )
                     }
                 },
@@ -179,27 +178,35 @@ fun BarcodeScannerRoute(
                     .fillMaxSize()
                     .padding(padding),
             ) {
-                BarcodeScannerCamera(
+                // Analyzer now uses stability+cooldown+reticle gating (no oneShot parameter).
+                val analyzer = remember(manualEntryExpanded, onBarcodeDetected) {
+                    MlKitBarcodeAnalyzer(
+                        isEnabled = { !manualEntryExpanded },
+                        requiredConsecutiveFrames = 25,
+                        cooldownMs = 900L,
+                        requireInReticle = true,
+                        reticle = DefaultReticle,
+                        onBarcodeDetected = { barcode ->
+                            analytics.logEvent(
+                                "pm_barcode_scan_success",
+                                mapOf(
+                                    "format" to barcodeFormatLabel(barcode),
+                                    "duration_ms" to (SystemClock.elapsedRealtime() - startTimeMs),
+                                ),
+                            )
+                            onBarcodeDetected(barcode)
+                        },
+                    )
+                }
+
+                CameraPreview(
+                    modifier = Modifier.fillMaxSize(),
                     torchEnabled = torchEnabled,
                     onTorchAvailable = { torchAvailable = it },
-                    onBarcodeDetected = { barcode ->
-                        if (manualEntryExpanded) return@BarcodeScannerCamera
-                        val now = System.currentTimeMillis()
-                        val lastCode = lastDetected.value
-                        val lastTime = lastDetectedAt.longValue
-                        if (lastCode == barcode && now - lastTime < DEBOUNCE_MS) return@BarcodeScannerCamera
-                        lastDetected.value = barcode
-                        lastDetectedAt.longValue = now
-                        analytics.logEvent(
-                            "pm_barcode_scan_success",
-                            mapOf(
-                                "format" to barcodeFormatLabel(barcode),
-                                "duration_ms" to (SystemClock.elapsedRealtime() - startTimeMs),
-                            ),
-                        )
-                        onBarcodeDetected(barcode)
-                    },
+                    analyzer = analyzer,
                 )
+
+                ReticleOverlay(modifier = Modifier.fillMaxSize())
 
                 if (torchAvailable) {
                     Surface(
@@ -229,124 +236,11 @@ fun BarcodeScannerRoute(
                         .padding(16.dp),
                     horizontalArrangement = Arrangement.Center,
                 ) {
-                    Text("Align the barcode within the frame")
+                    Text("Align the barcode within the box")
                 }
             }
         }
     }
-}
-
-private const val DEBOUNCE_MS = 2000L
-
-@SuppressLint("UnsafeOptInUsageError")
-@Composable
-private fun BarcodeScannerCamera(
-    torchEnabled: Boolean,
-    onTorchAvailable: (Boolean) -> Unit,
-    onBarcodeDetected: (String) -> Unit,
-) {
-    val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-
-    val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
-    val previewView = remember { PreviewView(context) }
-    val analysisExecutor = remember { Executors.newSingleThreadExecutor() }
-
-    val hasDetected = remember { AtomicBoolean(false) }
-    var camera by remember { mutableStateOf<androidx.camera.core.Camera?>(null) }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            runCatching { analysisExecutor.shutdown() }
-        }
-    }
-
-    AndroidView(
-        modifier = Modifier.fillMaxSize(),
-        factory = { previewView },
-    ) { view ->
-        val cameraProvider = cameraProviderFuture.get()
-
-        val preview = Preview.Builder().build().also {
-            it.surfaceProvider = view.surfaceProvider
-        }
-
-        val barcodeScanner = BarcodeScanning.getClient()
-
-        val imageAnalysis = ImageAnalysis.Builder()
-            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-            .build()
-
-        imageAnalysis.setAnalyzer(analysisExecutor) { imageProxy ->
-            analyzeImageProxy(
-                imageProxy = imageProxy,
-                barcodeScanner = barcodeScanner,
-                hasDetected = hasDetected,
-                onBarcodeDetected = onBarcodeDetected,
-            )
-        }
-
-        val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-
-        val boundCamera = runCatching {
-            cameraProvider.unbindAll()
-            cameraProvider.bindToLifecycle(
-                lifecycleOwner,
-                cameraSelector,
-                preview,
-                imageAnalysis,
-            )
-        }.getOrNull()
-
-        camera = boundCamera
-        onTorchAvailable(boundCamera?.cameraInfo?.hasFlashUnit() == true)
-    }
-
-    LaunchedEffect(torchEnabled, camera) {
-        val currentCamera = camera ?: return@LaunchedEffect
-        if (currentCamera.cameraInfo.hasFlashUnit()) {
-            currentCamera.cameraControl.enableTorch(torchEnabled)
-        }
-    }
-}
-
-@SuppressLint("UnsafeOptInUsageError")
-private fun analyzeImageProxy(
-    imageProxy: ImageProxy,
-    barcodeScanner: com.google.mlkit.vision.barcode.BarcodeScanner,
-    hasDetected: AtomicBoolean,
-    onBarcodeDetected: (String) -> Unit,
-) {
-    val mediaImage = imageProxy.image
-    if (mediaImage == null) {
-        imageProxy.close()
-        return
-    }
-
-    val inputImage = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-
-    barcodeScanner.process(inputImage)
-        .addOnSuccessListener { barcodes ->
-            if (hasDetected.get()) return@addOnSuccessListener
-
-            val raw = barcodes
-                .firstOrNull { !it.rawValue.isNullOrBlank() }
-                ?.rawValue
-                ?.trim()
-
-            if (!raw.isNullOrBlank()) {
-                val digitsOnly = raw.filter(Char::isDigit).ifBlank { raw }
-                if (hasDetected.compareAndSet(false, true)) {
-                    onBarcodeDetected(digitsOnly)
-                }
-            }
-        }
-        .addOnFailureListener {
-            // ignore; user can keep scanning
-        }
-        .addOnCompleteListener {
-            imageProxy.close()
-        }
 }
 
 private fun barcodeFormatLabel(barcode: String): String {
@@ -359,15 +253,15 @@ private fun barcodeFormatLabel(barcode: String): String {
     }
 }
 
-@EntryPoint
-@InstallIn(SingletonComponent::class)
+@dagger.hilt.EntryPoint
+@dagger.hilt.InstallIn(dagger.hilt.components.SingletonComponent::class)
 interface AnalyticsEntryPoint {
-    fun uxEventLogger(): UxEventLogger
+    fun uxEventLogger(): com.zak.pressmark.core.analytics.UxEventLogger
 }
 
 @Composable
-private fun rememberAnalyticsLogger(context: android.content.Context): UxEventLogger {
+private fun rememberAnalyticsLogger(context: android.content.Context): com.zak.pressmark.core.analytics.UxEventLogger {
     return remember(context) {
-        EntryPointAccessors.fromApplication(context, AnalyticsEntryPoint::class.java).uxEventLogger()
+        dagger.hilt.android.EntryPointAccessors.fromApplication(context, AnalyticsEntryPoint::class.java).uxEventLogger()
     }
 }

@@ -28,7 +28,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -48,6 +47,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.zak.pressmark.app.LocalPressmarkGlobalActions
 import com.zak.pressmark.data.prefs.LibraryGroupKey
 import com.zak.pressmark.data.prefs.LibrarySortKey
 import com.zak.pressmark.data.prefs.LibrarySortSpec
@@ -112,9 +112,8 @@ fun LibraryContent(
         if (filteredItems.isEmpty()) {
             EmptyState(
                 isSearching = searchQuery.isNotBlank(),
-                onAddBarcode = onAddBarcode,
-                onAddManual = onAddManual,
             )
+
         } else {
             LazyColumn(
                 modifier = Modifier
@@ -187,15 +186,15 @@ private fun LibraryControlsRow(
 @Composable
 private fun EmptyState(
     isSearching: Boolean,
-    onAddBarcode: () -> Unit,
-    onAddManual: () -> Unit,
 ) {
+    val actions = LocalPressmarkGlobalActions.current
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(4.dp))
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(4.dp)),
-       shadowElevation = 1.dp,
+        shadowElevation = 1.dp,
     ) {
         Column(
             modifier = Modifier.padding(18.dp),
@@ -218,23 +217,15 @@ private fun EmptyState(
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     shape = RoundedCornerShape(4.dp),
-                    onClick = onAddBarcode,
+                    onClick = actions.onAddAlbums,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Scan barcode")
-                }
-                OutlinedButton(
-                    shape = RoundedCornerShape(4.dp),
-                    onClick = onAddManual,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text("Add manually")
+                    Text("Add albums")
                 }
             }
         }
     }
 }
-
 private fun sortOptions(): List<LibrarySortSpec> = listOf(
     LibrarySortSpec(LibrarySortKey.TITLE, SortDirection.ASC),
     LibrarySortSpec(LibrarySortKey.TITLE, SortDirection.DESC),

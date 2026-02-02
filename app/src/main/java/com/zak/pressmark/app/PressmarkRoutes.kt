@@ -5,7 +5,6 @@ object PressmarkRoutes {
     const val LIBRARY = "library"
 
     const val ADD_WORK = "add_work"
-    const val ADD_BARCODE = "add_barcode"
     const val BARCODE_SCANNER = "barcode_scanner"
 
     const val WORK_DETAILS = "work_details"

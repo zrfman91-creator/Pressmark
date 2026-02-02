@@ -12,7 +12,7 @@ import com.zak.pressmark.data.prefs.ScannerPreferences
 import com.zak.pressmark.data.remote.discogs.DiscogsApiService
 import com.zak.pressmark.data.remote.discogs.DiscogsClient
 import com.zak.pressmark.data.repository.v2.WorkRepositoryV2
-import com.zak.pressmark.feature.ingest.barcode.ui.ManualIngestInputs
+import com.zak.pressmark.feature.ingest.screen.ManualIngestInputs
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -82,6 +82,9 @@ data class IngestUiState(
     // Results
     val masterCandidate: BarcodeMasterCandidateUi? = null,   // barcode path
     val results: List<DiscogsCandidateUi> = emptyList(),     // text path
+
+    // Selection
+    val selectedDiscogsCandidate: DiscogsCandidateUi? = null,
 
     // Preferences
     val autoReopenScanner: Boolean = false,
@@ -176,6 +179,7 @@ class IngestViewModel @Inject constructor(
         val barcode = inputs.barcode.trim()
         val artist = inputs.artist.trim()
         val title = inputs.title.trim()
+        val year = inputs.year.trim()
 
         if (barcode.isNotBlank()) {
             logIngestStart(IngestMethod.BARCODE)
@@ -188,6 +192,7 @@ class IngestViewModel @Inject constructor(
             logIngestStart(IngestMethod.DISCOGS_TEXT)
             onArtistChanged(artist)
             onTitleChanged(title)
+            onYearChanged(year)
             searchDiscogs()
             return
         }
@@ -225,8 +230,8 @@ class IngestViewModel @Inject constructor(
                     val titleCandidates = anchors.titleCandidates
                     val artistCandidates = anchors.artistCandidates
 
-                    val newTitle = if (state.title.isBlank()) titleCandidates.firstOrNull().orEmpty() else state.title
-                    val newArtist = if (state.artist.isBlank()) artistCandidates.firstOrNull().orEmpty() else state.artist
+                    val newTitle = state.title.ifBlank { titleCandidates.firstOrNull().orEmpty() }
+                    val newArtist = state.artist.ifBlank { artistCandidates.firstOrNull().orEmpty() }
 
                     state.copy(
                         title = newTitle,
@@ -502,6 +507,7 @@ class IngestViewModel @Inject constructor(
                     errorMessage = null,
                     infoMessage = null,
                     results = emptyList(),
+                    selectedDiscogsCandidate = null,
                     masterCandidate = null,
                 )
             }
@@ -526,22 +532,33 @@ class IngestViewModel @Inject constructor(
                     return@launch
                 }
 
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        results = candidates.map { c ->
-                            DiscogsCandidateUi(
-                                masterId = c.masterId,
-                                displayTitle = c.displayTitle,
-                                subtitle = c.subtitle,
-                                year = c.year,
-                                thumbUrl = c.thumbUrl,
-                                coverUrl = c.coverUrl,
-                                genres = c.genres,
-                                styles = c.styles,
-                            )
-                        },
+                val uiCandidates = candidates.map { c ->
+                    DiscogsCandidateUi(
+                        masterId = c.masterId,
+                        displayTitle = c.displayTitle,
+                        subtitle = c.subtitle,
+                        year = c.year,
+                        thumbUrl = c.thumbUrl,
+                        coverUrl = c.coverUrl,
+                        genres = c.genres,
+                        styles = c.styles,
                     )
+                }
+
+                _uiState.update {
+                    if (uiCandidates.size == 1) {
+                        it.copy(
+                            isLoading = false,
+                            results = emptyList(),
+                            selectedDiscogsCandidate = uiCandidates.first(),
+                        )
+                    } else {
+                        it.copy(
+                            isLoading = false,
+                            results = uiCandidates,
+                            selectedDiscogsCandidate = null,
+                        )
+                    }
                 }
                 uxEventLogger.logEvent("pm_discogs_lookup_result", mapOf("result" to "success", "http_code" to 200))
             } catch (t: Throwable) {
@@ -554,6 +571,47 @@ class IngestViewModel @Inject constructor(
                     )
                 }
             }
+        }
+    }
+
+
+    fun selectDiscogsCandidate(candidate: DiscogsCandidateUi) {
+        _uiState.update {
+            it.copy(
+                selectedDiscogsCandidate = candidate,
+                errorMessage = null,
+                infoMessage = null,
+            )
+        }
+    }
+
+    fun dismissDiscogsResults() {
+        _uiState.update {
+            it.copy(
+                results = emptyList(),
+                selectedDiscogsCandidate = null,
+                errorMessage = null,
+                infoMessage = null,
+            )
+        }
+    }
+
+    fun dismissDiscogsConfirm() {
+        _uiState.update {
+            it.copy(
+                selectedDiscogsCandidate = null,
+                errorMessage = null,
+                infoMessage = null,
+            )
+        }
+    }
+    fun dismissLookupDialog() {
+        _uiState.update {
+            it.copy(
+                masterCandidate = null,
+                errorMessage = null,
+                infoMessage = null,
+            )
         }
     }
 
