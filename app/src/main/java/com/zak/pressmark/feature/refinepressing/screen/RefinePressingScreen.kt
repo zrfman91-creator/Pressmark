@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -29,7 +30,10 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.zak.pressmark.feature.refinepressing.vm.PressingCandidateUi
 import com.zak.pressmark.feature.refinepressing.vm.RefinePressingUiState
 
@@ -146,29 +150,57 @@ private fun PressingCandidateCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                text = candidate.title,
-                style = MaterialTheme.typography.titleMedium,
-            )
-            val subtitle = buildString {
-                candidate.year?.let { append(it) }
-                if (!candidate.country.isNullOrBlank()) {
-                    if (isNotEmpty()) append(" · ")
-                    append(candidate.country)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                val artworkUrl = candidate.artworkUrl
+                if (!artworkUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = artworkUrl,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                    )
+                }
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        text = candidate.title,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    val subtitle = buildString {
+                        candidate.year?.let { append(it) }
+                        if (!candidate.country.isNullOrBlank()) {
+                            if (isNotEmpty()) append(" · ")
+                            append(candidate.country)
+                        }
+                    }
+                    if (subtitle.isNotBlank()) {
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Text(
+                        text = "Discogs release #${candidate.discogsReleaseId}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
-            if (subtitle.isNotBlank()) {
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Text(
-                text = "Discogs release #${candidate.discogsReleaseId}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
             Button(
                 onClick = { onApplyCandidate(candidate) },
                 enabled = !isApplying,
