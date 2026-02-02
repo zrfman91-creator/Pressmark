@@ -22,6 +22,7 @@ data class DiscogsRelease(
 
     // Used by DiscogsReleaseMapper
     @SerializedName("formats") val formats: List<DiscogsFormat>? = null,
+    @SerializedName("labels") val labels: List<DiscogsLabel>? = null,
     @SerializedName("country") val country: String? = null,
     @SerializedName("notes") val notes: String? = null,
 
@@ -45,6 +46,11 @@ data class DiscogsImage(
 data class DiscogsFormat(
     @SerializedName("name") val name: String? = null,
     @SerializedName("descriptions") val descriptions: List<String>? = null,
+)
+
+data class DiscogsLabel(
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("catno") val catalogNo: String? = null,
 )
 
 // ------------------------ Master ------------------------
