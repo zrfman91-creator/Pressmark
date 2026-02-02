@@ -19,8 +19,6 @@ import java.io.IOException
 data class PressingCandidateUi(
     val discogsReleaseId: Long,
     val title: String,
-    val label: String?,
-    val catalogNo: String?,
     val year: Int?,
     val country: String?,
 )
@@ -79,16 +77,12 @@ class RefinePressingViewModel @Inject constructor(
                     page = 1,
                 ).results
 
-                val candidates = results.take(5).mapNotNull { result ->
-                    val release = runCatching { discogsApi.getRelease(result.id) }.getOrNull()
-                    val labelInfo = release?.labels?.firstOrNull()
+                val candidates = results.map { result ->
                     PressingCandidateUi(
                         discogsReleaseId = result.id,
                         title = result.title,
-                        label = labelInfo?.name?.trim()?.takeIf { it.isNotBlank() },
-                        catalogNo = labelInfo?.catalogNo?.trim()?.takeIf { it.isNotBlank() },
-                        year = release?.year ?: result.year,
-                        country = release?.country?.trim()?.takeIf { it.isNotBlank() },
+                        year = result.year,
+                        country = null,
                     )
                 }
 
