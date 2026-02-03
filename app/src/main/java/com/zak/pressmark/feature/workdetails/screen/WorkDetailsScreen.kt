@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -22,7 +23,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -40,12 +40,19 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.zak.pressmark.feature.workdetails.components.AboutThisAlbumSection
+import com.zak.pressmark.feature.workdetails.ui.PressingManager
+import com.zak.pressmark.feature.workdetails.ui.PressingUi
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkDetailsScreen(
     isMissing: Boolean,
-    artworkUri: String?,
+
+    // Split artwork channels:
+    masterArtworkUri: String?,
+    selectedPressingArtworkUri: String?,
+
     title: String,
     artistLine: String,
     year: Int?,
@@ -67,6 +74,9 @@ fun WorkDetailsScreen(
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
+    // ✅ OWNED WHEN AVAILABLE, else master
+    val headerArtworkUri: String? = selectedPressingArtworkUri ?: masterArtworkUri
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -80,6 +90,15 @@ fun WorkDetailsScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.Filled.Menu,
+                            contentDescription = "Menu",
                             tint = MaterialTheme.colorScheme.onPrimary,
                         )
                     }
@@ -99,7 +118,8 @@ fun WorkDetailsScreen(
                 return@Column
             }
 
-            if (!artworkUri.isNullOrBlank()) {
+            // Header artwork (owned when available)
+            if (!headerArtworkUri.isNullOrBlank()) {
                 Card(
                     modifier = Modifier
                         .align(Alignment.CenterHorizontally)
@@ -107,7 +127,7 @@ fun WorkDetailsScreen(
                         .clip(RoundedCornerShape(4.dp)),
                 ) {
                     AsyncImage(
-                        model = artworkUri,
+                        model = headerArtworkUri,
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
@@ -135,12 +155,13 @@ fun WorkDetailsScreen(
                 textAlign = TextAlign.Center,
             )
 
-            // artist · year
+            // Subtitle: artist · (pressingYear if present else masterYear)
+            val displayYear: Int? = (selectedPressingYear ?: year)?.takeIf { it > 0 }
             val artistYearLine = buildString {
                 append(artistLine)
-                if (year != null) {
+                displayYear?.let {
                     append(" \u00B7 ")
-                    append(year.toString())
+                    append(it)
                 }
             }
 
@@ -152,22 +173,12 @@ fun WorkDetailsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            if (genres.isNotEmpty()) {
-                Text("Genres: ${genres.joinToString(", ")}")
-            }
-            if (styles.isNotEmpty()) {
-                Text("Styles: ${styles.joinToString(", ")}")
-            }
+            if (genres.isNotEmpty()) Text("Genres: ${genres.joinToString(", ")}")
+            if (styles.isNotEmpty()) Text("Styles: ${styles.joinToString(", ")}")
 
-            discogsMasterId?.let { masterId ->
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Discogs master: $masterId",
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
+            Spacer(modifier = Modifier.height(24.dp))
 
-            // --- Selected pressing refinement section ---
+            // Minimal "selected pressing" UI list for PressingManager
             val hasPressingDetails =
                 !selectedPressingLabel.isNullOrBlank() ||
                         !selectedPressingCatalogNo.isNullOrBlank() ||
@@ -176,60 +187,50 @@ fun WorkDetailsScreen(
                         !selectedPressingFormat.isNullOrBlank() ||
                         selectedDiscogsReleaseId != null
 
-            if (hasPressingDetails) {
-                Spacer(modifier = Modifier.height(18.dp))
-                Text(
-                    text = "Pressing",
-                    style = MaterialTheme.typography.titleMedium,
-                )
-
-                val line1 = buildString {
-                    selectedPressingLabel?.takeIf { it.isNotBlank() }?.let { append(it) }
-                    selectedPressingCatalogNo?.takeIf { it.isNotBlank() }?.let {
-                        if (isNotEmpty()) append(" \u00B7 ")
-                        append(it)
-                    }
-                }
-                if (line1.isNotBlank()) {
-                    Text(text = line1)
-                }
-
-                val line2 = buildString {
-                    selectedPressingCountry?.takeIf { it.isNotBlank() }?.let { append(it) }
-                    selectedPressingYear?.let {
-                        if (isNotEmpty()) append(" \u00B7 ")
-                        append(it.toString())
-                    }
-                    selectedPressingFormat?.takeIf { it.isNotBlank() }?.let {
-                        if (isNotEmpty()) append(" \u00B7 ")
-                        append(it)
-                    }
-                }
-                if (line2.isNotBlank()) {
-                    Text(text = line2, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-
-                selectedDiscogsReleaseId?.let { id ->
-                    Text(
-                        text = "Discogs release: $id",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+            val pressingsUi: List<PressingUi> =
+                if (hasPressingDetails) {
+                    listOf(
+                        PressingUi(
+                            id = selectedDiscogsReleaseId?.toString() ?: "selected",
+                            title = buildString {
+                                selectedPressingYear?.let { append(it).append(" ") }
+                                selectedPressingLabel?.takeIf { it.isNotBlank() }?.let {
+                                    if (isNotEmpty()) append("• ")
+                                    append(it).append(" ")
+                                }
+                                selectedPressingCatalogNo?.takeIf { it.isNotBlank() }?.let {
+                                    if (isNotEmpty()) append("• ")
+                                    append(it)
+                                }
+                                if (isEmpty()) append("Selected pressing")
+                            },
+                            year = selectedPressingYear,
+                            label = selectedPressingLabel,
+                            catalogNo = selectedPressingCatalogNo
+                        )
                     )
+                } else {
+                    emptyList()
                 }
-            }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            AboutThisAlbumSection(
+                title = title,
+                artist = artistLine,
+                masterYear = year,
+                genres = genres,
+                styles = styles,
+                discogsMasterId = discogsMasterId,
+                masterArtworkUri = masterArtworkUri
+            )
 
-            OutlinedButton(
-                onClick = onRefinePressing,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("Refine pressing")
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-
+            PressingManager(
+                pressings = pressingsUi,
+                selectedPressingId = pressingsUi.firstOrNull()?.id,
+                onSelectPressing = { /* TODO: wire when multiple pressings exist */ },
+                onRefinePressing = onRefinePressing,
+                onAddAdditionalPressing = onRefinePressing,
+                modifier = Modifier.fillMaxWidth()
+            )
 
             Spacer(modifier = Modifier.height(24.dp))
 

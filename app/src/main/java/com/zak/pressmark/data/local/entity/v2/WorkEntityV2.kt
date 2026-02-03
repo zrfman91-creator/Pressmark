@@ -46,6 +46,7 @@ data class WorkEntityV2(
     @ColumnInfo(name = DbSchemaV2.Work.STYLES_JSON) val stylesJson: String = "[]",
 
     @ColumnInfo(name = DbSchemaV2.Work.PRIMARY_ARTWORK_URI) val primaryArtworkUri: String? = null,
+    @ColumnInfo(name = DbSchemaV2.Work.MASTER_ARTWORK_URI) val masterArtworkUri: String? = null,
 
     // External anchors (nullable, provider-specific)
     @ColumnInfo(name = DbSchemaV2.Work.DISCOGS_MASTER_ID) val discogsMasterId: Long? = null,

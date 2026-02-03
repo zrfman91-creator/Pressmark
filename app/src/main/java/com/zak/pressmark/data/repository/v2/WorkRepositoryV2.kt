@@ -7,7 +7,6 @@ import com.zak.pressmark.core.util.ArtistNameFormatter
 import com.zak.pressmark.data.local.dao.v2.NamedHeading
 import com.zak.pressmark.data.local.dao.v2.PressingDaoV2
 import com.zak.pressmark.data.local.dao.v2.ReleaseDaoV2
-import com.zak.pressmark.data.local.dao.v2.SelectedPressingDetailsRow
 import com.zak.pressmark.data.local.dao.v2.VariantDaoV2
 import com.zak.pressmark.data.local.dao.v2.WorkDaoV2
 import com.zak.pressmark.data.local.dao.v2.WorkGenreStyleDaoV2
@@ -30,7 +29,6 @@ import java.security.MessageDigest
 import javax.inject.Inject
 import javax.inject.Singleton
 
-
 @Singleton
 class WorkRepositoryV2 @Inject constructor(
     private val db: AppDatabaseV2,
@@ -40,16 +38,6 @@ class WorkRepositoryV2 @Inject constructor(
     private val variantDao: VariantDaoV2,
     private val workGenreStyleDao: WorkGenreStyleDaoV2,
 ) {
-
-    data class SelectedPressingDetails(
-        val discogsReleaseId: Long?,
-        val label: String?,
-        val catalogNo: String?,
-        val country: String?,
-        val year: Int?,
-        val format: String?,
-    )
-
 
     sealed class UpsertResult {
         data class Created(val workId: String) : UpsertResult()
@@ -62,6 +50,7 @@ class WorkRepositoryV2 @Inject constructor(
         artistLine: String,
         year: Int?,
         primaryArtworkUri: String? = null,
+        masterArtworkUri: String? = null,
     ): String {
         val now = System.currentTimeMillis()
         val workId = "work:${sha1("$title|$artistLine|$year")}"
@@ -216,6 +205,7 @@ class WorkRepositoryV2 @Inject constructor(
         country: String?,
         format: String?,
         year: Int?,
+        artworkUrl: String? = null,
     ): String {
         val id = "release:${sha1("$workId|$label|$catalogNo|$country|$format|$year")}"
         val now = System.currentTimeMillis()
@@ -248,6 +238,7 @@ class WorkRepositoryV2 @Inject constructor(
         country: String?,
         format: String?,
         year: Int?,
+        artworkUrl: String? = null,
     ): String {
         val id = "pressing:${sha1("$releaseId|$barcode|$catalogNo")}"
         val now = System.currentTimeMillis()
@@ -305,6 +296,7 @@ class WorkRepositoryV2 @Inject constructor(
         catalogNo: String?,
         country: String?,
         year: Int?,
+        artworkUrl: String? = null,
     ): String {
         val now = System.currentTimeMillis()
         val releaseId = "release:${sha1("$workId|$label|$catalogNo|$country|$year")}"
@@ -362,9 +354,23 @@ class WorkRepositoryV2 @Inject constructor(
                     rating = existingVariant?.rating,
                     addedAt = existingVariant?.addedAt ?: now,
                     lastPlayedAt = existingVariant?.lastPlayedAt,
-                )
+                ),
             )
-        }
+
+                // Prefer the chosen pressing's artwork as the canonical artwork for this Work.
+                // This keeps Library + Details consistent without requiring extra joins.
+                if (!artworkUrl.isNullOrBlank()) {
+                    val existingWork = workDao.getById(workId)
+                    if (existingWork != null && existingWork.primaryArtworkUri != artworkUrl) {
+                        workDao.upsert(
+                            existingWork.copy(
+                                primaryArtworkUri = artworkUrl,
+                                updatedAt = now,
+                            )
+                        )
+                    }
+                }
+            }
 
         return pressingId
     }
@@ -372,22 +378,6 @@ class WorkRepositoryV2 @Inject constructor(
     fun observeAllWorks() = workDao.observeAll()
 
     fun observeWork(workId: String) = workDao.observeById(workId)
-
-    fun observeSelectedPressingDetails(workId: String): Flow<SelectedPressingDetails?> =
-        variantDao.observeSelectedPressingDetails(workId).map { row: SelectedPressingDetailsRow? ->
-            row?.let {
-                SelectedPressingDetails(
-                    discogsReleaseId = it.discogsReleaseId,
-                    label = it.label,
-                    catalogNo = it.catalogNo,
-                    country = it.country,
-                    year = it.year,
-                    format = it.format,
-                )
-            }
-        }
-
-
 
     fun observeAllWorksSorted(sortSpec: LibrarySortSpec) = when (sortSpec.key) {
         LibrarySortKey.TITLE -> if (sortSpec.direction == SortDirection.ASC) {
@@ -408,6 +398,20 @@ class WorkRepositoryV2 @Inject constructor(
         }
     }
 
+    fun observeSelectedPressingDetails(workId: String): Flow<SelectedPressingDetails?> =
+        variantDao.observeSelectedPressingDetails(workId).map { row ->
+            row?.let {
+                SelectedPressingDetails(
+                    discogsReleaseId = it.discogsReleaseId,
+                    label = it.label,
+                    catalogNo = it.catalogNo,
+                    country = it.country,
+                    year = it.year,
+                    format = it.format,
+                    artworkUri = it.artworkUri,
+                )
+            }
+        }
     fun observeArtistHeadings(): Flow<List<String>> =
         workDao.observeArtistHeadings().map { headings -> headings.map { it.label } }
 

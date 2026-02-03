@@ -16,6 +16,7 @@ data class SelectedPressingDetailsRow(
     val country: String?,
     val year: Int?,
     val format: String?,
+    val artworkUri: String?,
 )
 
 @Dao

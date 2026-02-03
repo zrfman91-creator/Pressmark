@@ -2,9 +2,9 @@
 package com.zak.pressmark.feature.workdetails.route
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.zak.pressmark.feature.workdetails.screen.WorkDetailsScreen
 import com.zak.pressmark.feature.workdetails.vm.WorkDetailsViewModel
 
@@ -14,11 +14,11 @@ fun WorkDetailsRoute(
     onRefinePressing: (String) -> Unit,
     vm: WorkDetailsViewModel = hiltViewModel(),
 ) {
-    val state by vm.uiState.collectAsState()
+    val state by vm.uiState.collectAsStateWithLifecycle()
 
     WorkDetailsScreen(
         isMissing = state.isMissing,
-        artworkUri = state.artworkUri,
+        masterArtworkUri = state.masterArtworkUri,
         title = state.title,
         artistLine = state.artistLine,
         year = state.year,
@@ -26,19 +26,16 @@ fun WorkDetailsRoute(
         styles = state.styles,
         discogsMasterId = state.discogsMasterId,
 
-        // Selected pressing refinement details
         selectedPressingLabel = state.selectedPressingLabel,
         selectedPressingCatalogNo = state.selectedPressingCatalogNo,
         selectedPressingCountry = state.selectedPressingCountry,
         selectedPressingYear = state.selectedPressingYear,
         selectedPressingFormat = state.selectedPressingFormat,
         selectedDiscogsReleaseId = state.selectedDiscogsReleaseId,
+        selectedPressingArtworkUri = state.selectedPressingArtworkUri,
 
         onBack = onBack,
         onRefinePressing = { onRefinePressing(state.workId) },
-        onDeleteConfirmed = {
-            vm.deleteWork()
-            onBack()
-        },
+        onDeleteConfirmed = { vm.deleteWork() ; onBack() },
     )
 }

@@ -21,7 +21,13 @@ data class WorkDetailsUiState(
     val year: Int? = null,
     val genres: List<String> = emptyList(),
     val styles: List<String> = emptyList(),
-    val artworkUri: String? = null,
+
+    // Canonical/master artwork (Discogs master / work artwork).
+    val masterArtworkUri: String? = null,
+
+    // Owned/selected pressing artwork (Discogs release artwork).
+    val selectedPressingArtworkUri: String? = null,
+
     val discogsMasterId: Long? = null,
     val isMissing: Boolean = false,
 
@@ -47,7 +53,7 @@ class WorkDetailsViewModel @Inject constructor(
     val uiState = _uiState.asStateFlow()
 
     init {
-        // Base work info.
+        // Base work info (MASTER/CANONICAL).
         viewModelScope.launch {
             workRepositoryV2.observeWork(workId).collect { work ->
                 if (work == null) {
@@ -61,7 +67,7 @@ class WorkDetailsViewModel @Inject constructor(
                             year = work.year,
                             genres = parseJsonList(work.genresJson),
                             styles = parseJsonList(work.stylesJson),
-                            artworkUri = work.primaryArtworkUri,
+                            masterArtworkUri = work.primaryArtworkUri,
                             discogsMasterId = work.discogsMasterId,
                             isMissing = false,
                         )
@@ -70,7 +76,7 @@ class WorkDetailsViewModel @Inject constructor(
             }
         }
 
-        // Chosen pressing refinement (default variant).
+        // Selected pressing refinement details (OWNED/SELECTED).
         viewModelScope.launch {
             workRepositoryV2.observeSelectedPressingDetails(workId).collect { details ->
                 _uiState.update {
@@ -81,6 +87,7 @@ class WorkDetailsViewModel @Inject constructor(
                         selectedPressingYear = details?.year,
                         selectedPressingFormat = details?.format,
                         selectedDiscogsReleaseId = details?.discogsReleaseId,
+                        selectedPressingArtworkUri = details?.artworkUri,
                     )
                 }
             }
