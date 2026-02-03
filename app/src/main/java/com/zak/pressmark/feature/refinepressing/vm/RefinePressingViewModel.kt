@@ -4,12 +4,12 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.zak.pressmark.BuildConfig
 import com.zak.pressmark.app.PressmarkRoutes
 import com.zak.pressmark.data.remote.discogs.DiscogsApiService
-import com.zak.pressmark.data.remote.discogs.DiscogsFormat
 import com.zak.pressmark.data.repository.v2.WorkRepositoryV2
+import com.zak.pressmark.domain.artwork.ArtworkResolver
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -31,7 +31,6 @@ data class PressingCandidateUi(
 )
 
 data class RefinePressingUiState(
-    val workId: String = "",
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val successMessage: String? = null,
@@ -39,42 +38,47 @@ data class RefinePressingUiState(
     val applyingReleaseId: Long? = null,
 )
 
+sealed interface RefinePressingEvent {
+    data object Applied : RefinePressingEvent
+}
+
 @HiltViewModel
 class RefinePressingViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val workRepositoryV2: WorkRepositoryV2,
     private val discogsApi: DiscogsApiService,
+    private val workRepositoryV2: WorkRepositoryV2,
+    private val artworkResolver: ArtworkResolver,
 ) : ViewModel() {
 
     private val workId: String = checkNotNull(savedStateHandle[PressmarkRoutes.ARG_WORK_ID])
 
-    private val _uiState = MutableStateFlow(RefinePressingUiState(workId = workId, isLoading = true))
+    private val _uiState = MutableStateFlow(RefinePressingUiState(isLoading = true))
     val uiState = _uiState.asStateFlow()
 
-    private val _events = MutableSharedFlow<RefinePressingEvent>()
+    private val _events = MutableSharedFlow<RefinePressingEvent>(
+        replay = 0,
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
     val events = _events.asSharedFlow()
 
     init {
-        refresh()
+        fetchCandidates()
     }
 
-    fun refresh() {
-        if (BuildConfig.DISCOGS_TOKEN.isBlank()) {
-            _uiState.value = _uiState.value.copy(
-                isLoading = false,
-                errorMessage = "Service error. Try again.",
-                successMessage = null,
-                candidates = emptyList(),
-            )
-            return
-        }
+    fun retry() {
+        fetchCandidates()
+    }
 
+    private fun fetchCandidates() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 isLoading = true,
                 errorMessage = null,
                 successMessage = null,
+                candidates = emptyList(),
             )
+
             try {
                 val work = workRepositoryV2.getWork(workId)
                 if (work == null) {
@@ -87,8 +91,8 @@ class RefinePressingViewModel @Inject constructor(
                     return@launch
                 }
 
+                // Option A: fast candidate list. Do NOT hydrate each candidate with getRelease().
                 val results = discogsApi.searchReleases(
-                    type = "release",
                     artist = work.artistLine,
                     releaseTitle = work.title,
                     perPage = 10,
@@ -96,22 +100,17 @@ class RefinePressingViewModel @Inject constructor(
                 ).results
 
                 val candidates = results.map { result ->
-                    val release = runCatching { discogsApi.getRelease(result.id) }.getOrNull()
-                    val label = release?.labels?.firstOrNull()
-                    val formatSummary = formatSummary(release?.formats?.firstOrNull())
-                    val artworkUrl = result.coverImage
-                        ?: result.thumb
-                        ?: release?.images?.firstOrNull()?.uri150
-                        ?: release?.images?.firstOrNull()?.uri
+                    // Keep list lightweight: only what search already returns.
+                    val artworkUrl = result.coverImage ?: result.thumb
 
                     PressingCandidateUi(
                         discogsReleaseId = result.id,
                         title = result.title,
-                        year = release?.year ?: result.year,
-                        country = release?.country,
-                        label = label?.name,
-                        catalogNo = label?.catalogNo,
-                        formatSummary = formatSummary,
+                        year = result.year,
+                        country = null,
+                        label = null,
+                        catalogNo = null,
+                        formatSummary = null,
                         artworkUrl = artworkUrl,
                     )
                 }
@@ -142,9 +141,20 @@ class RefinePressingViewModel @Inject constructor(
                 successMessage = null,
             )
             try {
+                // Only hydrate on user action (one call).
                 val release = discogsApi.getRelease(candidate.discogsReleaseId)
+
                 val label = release.labels?.firstOrNull()?.name
                 val catalogNo = release.labels?.firstOrNull()?.catalogNo
+
+                // Prefer full primary release image when persisting pressing art (via resolver).
+                val persistedArt = artworkResolver
+                    .resolveDiscogsReleaseArt(
+                        releaseId = candidate.discogsReleaseId,
+                        fallbackUrl = candidate.artworkUrl,
+                    )
+                    ?.url
+                    ?: candidate.artworkUrl
 
                 workRepositoryV2.applyDiscogsPressing(
                     workId = workId,
@@ -153,7 +163,7 @@ class RefinePressingViewModel @Inject constructor(
                     catalogNo = catalogNo,
                     country = release.country,
                     year = release.year,
-                    artworkUrl = candidate.artworkUrl,
+                    artworkUrl = persistedArt,
                 )
 
                 _uiState.value = _uiState.value.copy(
@@ -178,20 +188,4 @@ class RefinePressingViewModel @Inject constructor(
             else -> "Service error. Try again."
         }
     }
-
-    private fun formatSummary(format: DiscogsFormat?): String? {
-        val formatName = format?.name?.takeIf { it.isNotBlank() }
-        val descriptions = format?.descriptions
-            ?.filter { it.isNotBlank() }
-            ?.joinToString(" · ")
-            ?.takeIf { it.isNotBlank() }
-
-        return listOfNotNull(formatName, descriptions)
-            .joinToString(" · ")
-            .takeIf { it.isNotBlank() }
-    }
-}
-
-sealed interface RefinePressingEvent {
-    data object Applied : RefinePressingEvent
 }

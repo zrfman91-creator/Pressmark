@@ -46,6 +46,11 @@ data class WorkEntityV2(
     @ColumnInfo(name = DbSchemaV2.Work.STYLES_JSON) val stylesJson: String = "[]",
 
     @ColumnInfo(name = DbSchemaV2.Work.PRIMARY_ARTWORK_URI) val primaryArtworkUri: String? = null,
+
+    /**
+     * Restored to fix compile errors from stale consumers (e.g., WorkDetailsViewModel).
+     * You can deprecate + migrate later, but keeping the field unblocks the build cleanly.
+     */
     @ColumnInfo(name = DbSchemaV2.Work.MASTER_ARTWORK_URI) val masterArtworkUri: String? = null,
 
     // External anchors (nullable, provider-specific)

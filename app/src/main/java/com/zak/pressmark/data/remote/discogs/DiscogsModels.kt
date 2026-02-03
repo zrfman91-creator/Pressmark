@@ -1,16 +1,31 @@
-// FILE: app/src/main/java/com/zak/pressmark/data/remote/discogs/DiscogsModels.kt
 package com.zak.pressmark.data.remote.discogs
 
 import com.google.gson.annotations.SerializedName
 
 /**
- * Minimal models required to satisfy:
- * - /database/search (search)
- * - /releases/{id} (barcode -> release details)
- * - /masters/{id} (manual -> master details)
+ * Discogs detail payload models.
  *
- * Expand later as needed.
+ * Keep these models Gson-friendly and close to API shape.
+ * Put normalization + selection logic in mappers/extensions.
  */
+
+// ------------------------ Common ------------------------
+
+data class DiscogsArtist(
+    @SerializedName("name") val name: String? = null,
+)
+
+data class DiscogsImage(
+    @SerializedName("uri") val uri: String? = null,
+    @SerializedName("uri150") val uri150: String? = null,
+    @SerializedName("type") val type: String? = null, // "primary" | "secondary"
+)
+
+data class DiscogsTrack(
+    @SerializedName("position") val position: String? = null,
+    @SerializedName("title") val title: String? = null,
+    @SerializedName("duration") val duration: String? = null,
+)
 
 // ------------------------ Release ------------------------
 
@@ -31,16 +46,7 @@ data class DiscogsRelease(
 
     @SerializedName("artists") val artists: List<DiscogsArtist>? = null,
     @SerializedName("images") val images: List<DiscogsImage>? = null,
-)
-
-data class DiscogsArtist(
-    @SerializedName("name") val name: String? = null,
-)
-
-data class DiscogsImage(
-    @SerializedName("uri") val uri: String? = null,
-    @SerializedName("uri150") val uri150: String? = null,
-    @SerializedName("type") val type: String? = null,
+    @SerializedName("tracklist") val tracklist: List<DiscogsTrack>? = null,
 )
 
 data class DiscogsFormat(
@@ -62,6 +68,8 @@ data class DiscogsMaster(
     @SerializedName("genres") val genres: List<String>? = null,
     @SerializedName("styles") val styles: List<String>? = null,
     @SerializedName("images") val images: List<DiscogsImage>? = null,
+    @SerializedName("artists") val artists: List<DiscogsArtist>? = null,
+    @SerializedName("tracklist") val tracklist: List<DiscogsTrack>? = null,
 )
 
 // ------------------------ Marketplace stats (optional) ------------------------

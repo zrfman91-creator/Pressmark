@@ -621,8 +621,8 @@ class ReleaseRepository(
         val releaseImage = release.images
             ?.firstOrNull { it.type.equals("primary", ignoreCase = true) }
             ?: release.images?.firstOrNull()
-        val coverUrl = releaseImage?.uri?.trim()?.takeIf { it.isNotBlank() }
-        val thumbUrl = releaseImage?.uri150?.trim()?.takeIf { it.isNotBlank() }
+        val thumbUrl = release.images.primaryThumbUrl()
+        val fullUrl = release.images.primaryFullUrl()
 
         val confidence = confidenceScore(
             title = title,

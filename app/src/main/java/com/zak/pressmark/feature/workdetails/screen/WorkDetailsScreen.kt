@@ -1,4 +1,3 @@
-// FILE: app/src/main/java/com/zak/pressmark/feature/workdetails/screen/WorkDetailsScreen.kt
 package com.zak.pressmark.feature.workdetails.screen
 
 import androidx.compose.foundation.background
@@ -49,7 +48,7 @@ import com.zak.pressmark.feature.workdetails.ui.PressingUi
 fun WorkDetailsScreen(
     isMissing: Boolean,
 
-    // Split artwork channels:
+    // ✅ Split
     masterArtworkUri: String?,
     selectedPressingArtworkUri: String?,
 
@@ -74,7 +73,7 @@ fun WorkDetailsScreen(
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
-    // ✅ OWNED WHEN AVAILABLE, else master
+    // ✅ OWNED WHEN AVAILABLE for the header
     val headerArtworkUri: String? = selectedPressingArtworkUri ?: masterArtworkUri
 
     Scaffold(
@@ -118,7 +117,7 @@ fun WorkDetailsScreen(
                 return@Column
             }
 
-            // Header artwork (owned when available)
+            // Header artwork (owned-first)
             if (!headerArtworkUri.isNullOrBlank()) {
                 Card(
                     modifier = Modifier
@@ -147,7 +146,6 @@ fun WorkDetailsScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Title
             Text(
                 modifier = Modifier.fillMaxWidth(),
                 text = title,
@@ -155,7 +153,6 @@ fun WorkDetailsScreen(
                 textAlign = TextAlign.Center,
             )
 
-            // Subtitle: artist · (pressingYear if present else masterYear)
             val displayYear: Int? = (selectedPressingYear ?: year)?.takeIf { it > 0 }
             val artistYearLine = buildString {
                 append(artistLine)
@@ -178,7 +175,6 @@ fun WorkDetailsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Minimal "selected pressing" UI list for PressingManager
             val hasPressingDetails =
                 !selectedPressingLabel.isNullOrBlank() ||
                         !selectedPressingCatalogNo.isNullOrBlank() ||
@@ -209,10 +205,9 @@ fun WorkDetailsScreen(
                             catalogNo = selectedPressingCatalogNo
                         )
                     )
-                } else {
-                    emptyList()
-                }
+                } else emptyList()
 
+            // ✅ About section must show MASTER artwork only
             AboutThisAlbumSection(
                 title = title,
                 artist = artistLine,
@@ -220,13 +215,14 @@ fun WorkDetailsScreen(
                 genres = genres,
                 styles = styles,
                 discogsMasterId = discogsMasterId,
-                masterArtworkUri = masterArtworkUri
+                masterArtworkUri = masterArtworkUri,
+                modifier = Modifier.padding(top = 8.dp),
             )
 
             PressingManager(
                 pressings = pressingsUi,
                 selectedPressingId = pressingsUi.firstOrNull()?.id,
-                onSelectPressing = { /* TODO: wire when multiple pressings exist */ },
+                onSelectPressing = { /* TODO */ },
                 onRefinePressing = onRefinePressing,
                 onAddAdditionalPressing = onRefinePressing,
                 modifier = Modifier.fillMaxWidth()
@@ -237,9 +233,7 @@ fun WorkDetailsScreen(
             Button(
                 onClick = { showDeleteConfirm = true },
                 modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("Delete")
-            }
+            ) { Text("Delete") }
         }
     }
 
@@ -258,13 +252,9 @@ fun WorkDetailsScreen(
                         containerColor = MaterialTheme.colorScheme.error,
                         contentColor = MaterialTheme.colorScheme.onError,
                     ),
-                ) {
-                    Text("Delete")
-                }
+                ) { Text("Delete") }
             },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
-            },
+            dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") } },
         )
     }
 }

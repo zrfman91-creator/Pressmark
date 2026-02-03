@@ -16,7 +16,7 @@ data class DiscogsMasterCandidate(
 
 @Singleton
 class DiscogsClient @Inject constructor(
-    private val api: DiscogsApi,
+    private val api: DiscogsApiService,
 ) {
     suspend fun searchMasters(
         artist: String,
@@ -24,7 +24,7 @@ class DiscogsClient @Inject constructor(
         year: Int?,
         limit: Int,
     ): List<DiscogsMasterCandidate> {
-        val resp = api.search(
+        val resp = api.searchMasters(
             artist = artist,
             releaseTitle = title,
             year = year,
@@ -34,7 +34,7 @@ class DiscogsClient @Inject constructor(
 
         return resp.results.map { r ->
             DiscogsMasterCandidate(
-                masterId = r.id,
+                masterId = r.masterId ?: r.id,
                 displayTitle = r.title,
                 subtitle = buildSubtitle(r.genre, r.style),
                 year = r.year,
@@ -46,8 +46,11 @@ class DiscogsClient @Inject constructor(
         }
     }
 
-    suspend fun getMaster(masterId: Long): DiscogsMasterResponse =
+    suspend fun getMaster(masterId: Long): DiscogsMaster =
         api.getMaster(masterId)
+
+    suspend fun getRelease(releaseId: Long): DiscogsRelease =
+        api.getRelease(releaseId)
 
     private fun buildSubtitle(genres: List<String>?, styles: List<String>?): String? {
         val g = genres.orEmpty().joinToString(" • ").takeIf { it.isNotBlank() }

@@ -1,6 +1,5 @@
 package com.zak.pressmark.feature.ingest.vm
 
-import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,11 +9,9 @@ import com.zak.pressmark.core.util.ocr.OcrHint
 import com.zak.pressmark.core.util.ocr.OcrService
 import com.zak.pressmark.data.prefs.ScannerPreferences
 import com.zak.pressmark.data.remote.discogs.DiscogsApiService
-import com.zak.pressmark.data.remote.discogs.DiscogsClient
+import com.zak.pressmark.data.remote.discogs.primaryFullUrl
 import com.zak.pressmark.data.repository.v2.WorkRepositoryV2
-import com.zak.pressmark.feature.ingest.screen.ManualIngestInputs
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -23,22 +20,6 @@ import retrofit2.HttpException
 import java.io.IOException
 import javax.inject.Inject
 
-/**
- * Consolidated ingest VM:
- * - Barcode -> release search -> release fetch -> master search -> single master candidate
- * - Manual text -> master search -> list of candidates
- * - Manual add
- * - OCR anchors -> populate artist/title candidates (optional)
- *
- * NOTE:
- * This file intentionally preserves the core behaviors from:
- * - AddBarcodeViewModel
- * - AddWorkViewModel
- *
- * Next steps (later files):
- * - Wire routes to THIS VM
- * - Remove old VMs
- */
 data class BarcodeMasterCandidateUi(
     val masterId: Long,
     val displayTitle: String,
@@ -51,7 +32,7 @@ data class BarcodeMasterCandidateUi(
 
 data class DiscogsCandidateUi(
     val masterId: Long,
-    val displayTitle: String,
+    val title: String,        // display title (often "Artist - Title")
     val subtitle: String?,
     val year: Int?,
     val thumbUrl: String?,
@@ -61,32 +42,27 @@ data class DiscogsCandidateUi(
 )
 
 data class IngestUiState(
-    // Inputs (overlay)
     val barcode: String = "",
     val artist: String = "",
     val title: String = "",
     val year: String = "",
+    val method: IngestMethod = IngestMethod.BARCODE,
 
-    // OCR evidence + candidates
-    val evidenceUris: List<String> = emptyList(),
-    val ocrTitleCandidates: List<String> = emptyList(),
-    val ocrArtistCandidates: List<String> = emptyList(),
-    val isOcrProcessing: Boolean = false,
-    val ocrMessage: String? = null,
-
-    // UI state
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val infoMessage: String? = null,
 
-    // Results
-    val masterCandidate: BarcodeMasterCandidateUi? = null,   // barcode path
-    val results: List<DiscogsCandidateUi> = emptyList(),     // text path
+    // Barcode flow
+    val masterCandidate: BarcodeMasterCandidateUi? = null,
 
-    // Selection
-    val selectedDiscogsCandidate: DiscogsCandidateUi? = null,
+    // Manual Discogs text flow
+    val results: List<DiscogsCandidateUi> = emptyList(),
 
-    // Preferences
+    // OCR flow (UI can be added later; keep state minimal + stable)
+    val ocrCaptureSource: OcrCaptureSource = OcrCaptureSource.COVER,
+    val ocrHint: OcrHint? = null,
+
+    // Scanner pref
     val autoReopenScanner: Boolean = false,
 
     // Scanner overlay
@@ -102,11 +78,13 @@ enum class OcrCaptureSource(val label: String) {
 
 @HiltViewModel
 class IngestViewModel @Inject constructor(
-    // Barcode path uses DiscogsApiService today
+    /**
+     * ✅ Single Discogs stack:
+     * - OkHttp configured in NetworkModule
+     * - DiscogsApiService provided in DiscogsModule
+     * - No secondary Discogs client / duplicate wiring here
+     */
     private val discogsApi: DiscogsApiService,
-    // Text path uses DiscogsClient today
-    private val discogsClient: DiscogsClient,
-
     private val workRepositoryV2: WorkRepositoryV2,
     private val scannerPreferences: ScannerPreferences,
     private val ocrService: OcrService,
@@ -125,7 +103,7 @@ class IngestViewModel @Inject constructor(
     }
 
     // ----------------------------
-    // Input events
+    // UI → State setters
     // ----------------------------
 
     fun onBarcodeChanged(value: String) {
@@ -149,151 +127,55 @@ class IngestViewModel @Inject constructor(
     }
 
     fun onYearChanged(value: String) {
-        val cleaned = value.filter { it.isDigit() }
-        _uiState.update { it.copy(year = cleaned, errorMessage = null, infoMessage = null) }
+        _uiState.update { it.copy(year = value, errorMessage = null, infoMessage = null) }
     }
 
-    fun applyTitleCandidate(value: String) {
-        _uiState.update { it.copy(title = value) }
+    fun onMethodChanged(method: IngestMethod) {
+        _uiState.update {
+            it.copy(
+                method = method,
+                errorMessage = null,
+                infoMessage = null,
+                results = emptyList(),
+                masterCandidate = null,
+            )
+        }
     }
 
-    fun applyArtistCandidate(value: String) {
-        _uiState.update { it.copy(artist = value) }
-    }
-
-    fun setManualEntryExpanded(expanded: Boolean) {
+    fun onManualEntryExpandedChanged(expanded: Boolean) {
         _uiState.update { it.copy(manualEntryExpanded = expanded) }
     }
 
+    /**
+     * Canonical “reset” used by routes/scaffold.
+     * Keeps autoReopenScanner value intact.
+     */
+    fun resetTransientState() {
+        val autoReopen = _uiState.value.autoReopenScanner
+        _uiState.value = IngestUiState(autoReopenScanner = autoReopen)
+    }
+
     fun clearManualInputs() {
-        _uiState.update {
-            it.copy(
-                barcode = "",
-                artist = "",
-                title = "",
-            )
-        }
+        _uiState.update { it.copy(artist = "", title = "", year = "", errorMessage = null, infoMessage = null, results = emptyList()) }
     }
 
-    fun submitManualInputs(inputs: ManualIngestInputs) {
-        val barcode = inputs.barcode.trim()
-        val artist = inputs.artist.trim()
-        val title = inputs.title.trim()
-        val year = inputs.year.trim()
-
-        if (barcode.isNotBlank()) {
-            logIngestStart(IngestMethod.BARCODE)
-            onBarcodeChanged(barcode)
-            searchByBarcode()
-            return
-        }
-
-        if (artist.isNotBlank() || title.isNotBlank()) {
-            logIngestStart(IngestMethod.DISCOGS_TEXT)
-            onArtistChanged(artist)
-            onTitleChanged(title)
-            onYearChanged(year)
-            searchDiscogs()
-            return
-        }
-
-        _uiState.update {
-            it.copy(
-                errorMessage = "Enter a barcode or artist/title.",
-                infoMessage = null,
-            )
-        }
+    fun clearBarcodeCandidate() {
+        _uiState.update { it.copy(masterCandidate = null, errorMessage = null, infoMessage = null) }
     }
 
     // ----------------------------
-    // OCR (from AddWorkViewModel)
+    // Barcode lookup → candidate master
     // ----------------------------
 
-    fun onOcrImageCaptured(uri: Uri, source: OcrCaptureSource) {
-        val state = _uiState.value
-        _uiState.value = state.copy(
-            isOcrProcessing = true,
-            ocrMessage = "Processing ${source.label}...",
-            errorMessage = null,
-            infoMessage = null,
-        )
-
-        viewModelScope.launch(Dispatchers.IO) {
-            val hint = OcrHint(
-                fallbackTitle = state.title.takeIf { it.isNotBlank() },
-                fallbackArtist = state.artist.takeIf { it.isNotBlank() },
-            )
-
-            val result = ocrService.extractAnchors(uri, hint)
-            val updated = result.fold(
-                onSuccess = { anchors ->
-                    val titleCandidates = anchors.titleCandidates
-                    val artistCandidates = anchors.artistCandidates
-
-                    val newTitle = state.title.ifBlank { titleCandidates.firstOrNull().orEmpty() }
-                    val newArtist = state.artist.ifBlank { artistCandidates.firstOrNull().orEmpty() }
-
-                    state.copy(
-                        title = newTitle,
-                        artist = newArtist,
-                        evidenceUris = state.evidenceUris + uri.toString(),
-                        ocrTitleCandidates = titleCandidates,
-                        ocrArtistCandidates = artistCandidates,
-                        isOcrProcessing = false,
-                        ocrMessage = "OCR complete.",
-                    )
-                },
-                onFailure = { error ->
-                    state.copy(
-                        isOcrProcessing = false,
-                        ocrMessage = error.message ?: "OCR failed.",
-                    )
-                },
-            )
-            _uiState.value = updated
-        }
-    }
-
-    // ----------------------------
-    // Unified logging + prefs
-    // ----------------------------
-
-    fun setAutoReopen(enabled: Boolean) {
-        viewModelScope.launch {
-            scannerPreferences.setAutoReopenScanner(enabled)
-        }
-    }
-
-    fun logIngestStart(method: IngestMethod) {
-        val methodValue = when (method) {
-            IngestMethod.BARCODE -> "barcode"
-            IngestMethod.DISCOGS_TEXT -> "discogs"
-            IngestMethod.MANUAL -> "manual"
-        }
-        uxEventLogger.logEvent("pm_ingest_start", mapOf("method" to methodValue))
-    }
-
-    // ----------------------------
-    // Barcode lookup (from AddBarcodeViewModel)
-    // ----------------------------
-
-    fun searchByBarcode() {
+    fun lookupBarcode(barcode: String) {
         if (BuildConfig.DISCOGS_TOKEN.isBlank()) {
             Log.w("IngestViewModel", "Discogs token missing; returning user-safe error.")
             _uiState.update { it.copy(errorMessage = "Service error. Try again.", masterCandidate = null) }
             return
         }
 
-        val barcode = _uiState.value.barcode.trim()
-        if (barcode.length < 8) {
-            _uiState.update {
-                it.copy(
-                    errorMessage = "Barcode looks too short. Enter the full UPC/EAN and try again.",
-                    masterCandidate = null,
-                )
-            }
-            return
-        }
+        val cleaned = barcode.filter(Char::isDigit)
+        if (cleaned.isBlank()) return
 
         viewModelScope.launch {
             _uiState.update {
@@ -303,13 +185,13 @@ class IngestViewModel @Inject constructor(
                     infoMessage = null,
                     masterCandidate = null,
                     results = emptyList(),
+                    method = IngestMethod.BARCODE,
                 )
             }
 
             try {
                 val releaseSearch = discogsApi.searchReleases(
-                    type = "release",
-                    barcode = barcode,
+                    barcode = cleaned,
                     perPage = 10,
                     page = 1,
                 )
@@ -327,7 +209,7 @@ class IngestViewModel @Inject constructor(
                     return@launch
                 }
 
-                // Try candidates until we can fetch a valid release (handles Discogs 404s for stale IDs).
+                // Resolve a real release (Discogs can return stale IDs that 404)
                 val resolvedRelease = run {
                     var lastError: Throwable? = null
                     for (candidate in candidates.take(10)) {
@@ -361,15 +243,15 @@ class IngestViewModel @Inject constructor(
                     ?: parseArtistFromSearchTitle(bestSearchTitle)
                     ?: "Unknown Artist"
 
-                val releaseTitle = (resolvedRelease.title ?: parseTitleFromSearchTitle(bestSearchTitle)).trim()
+                val releaseTitle = (resolvedRelease.title ?: parseTitleFromSearchTitle(bestSearchTitle))!!.trim()
                 if (releaseTitle.isBlank()) {
                     throw IllegalStateException("Could not resolve a release title for this barcode.")
                 }
 
-                val masterSearch = discogsApi.searchReleases(
-                    type = "master",
+                val masterSearch = discogsApi.searchMasters(
                     artist = artistLine,
                     releaseTitle = releaseTitle,
+                    year = resolvedRelease.year,
                     perPage = 10,
                     page = 1,
                 )
@@ -426,9 +308,7 @@ class IngestViewModel @Inject constructor(
             try {
                 val master = discogsApi.getMaster(candidate.masterId)
 
-                val artwork = master.images
-                    ?.firstOrNull { it.uri?.isNotBlank() == true }
-                    ?.uri
+                val artwork = master.images.primaryFullUrl()
                     ?: candidate.coverUrl
                     ?: candidate.thumbUrl
 
@@ -486,7 +366,7 @@ class IngestViewModel @Inject constructor(
     }
 
     // ----------------------------
-    // Manual text search (from AddWorkViewModel)
+    // Manual text search (Discogs-only) + add
     // ----------------------------
 
     fun searchDiscogs() {
@@ -507,132 +387,68 @@ class IngestViewModel @Inject constructor(
                     errorMessage = null,
                     infoMessage = null,
                     results = emptyList(),
-                    selectedDiscogsCandidate = null,
                     masterCandidate = null,
+                    method = IngestMethod.DISCOGS_TEXT,
                 )
             }
 
             try {
-                val candidates = discogsClient.searchMasters(
+                val masterSearch = discogsApi.searchMasters(
                     artist = artist,
-                    title = title,
+                    releaseTitle = title,
                     year = year,
-                    limit = 10,
+                    perPage = 10,
+                    page = 1,
                 )
 
-                if (candidates.isEmpty()) {
-                    uxEventLogger.logEvent("pm_discogs_lookup_result", mapOf("result" to "empty", "http_code" to 200))
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            errorMessage = "No match found. Try manual entry.",
-                            results = emptyList(),
-                        )
-                    }
-                    return@launch
-                }
-
-                val uiCandidates = candidates.map { c ->
-                    DiscogsCandidateUi(
-                        masterId = c.masterId,
-                        displayTitle = c.displayTitle,
-                        subtitle = c.subtitle,
-                        year = c.year,
-                        thumbUrl = c.thumbUrl,
-                        coverUrl = c.coverUrl,
-                        genres = c.genres,
-                        styles = c.styles,
-                    )
-                }
-
-                _uiState.update {
-                    if (uiCandidates.size == 1) {
-                        it.copy(
-                            isLoading = false,
-                            results = emptyList(),
-                            selectedDiscogsCandidate = uiCandidates.first(),
-                        )
-                    } else {
-                        it.copy(
-                            isLoading = false,
-                            results = uiCandidates,
-                            selectedDiscogsCandidate = null,
-                        )
-                    }
-                }
-                uxEventLogger.logEvent("pm_discogs_lookup_result", mapOf("result" to "success", "http_code" to 200))
-            } catch (t: Throwable) {
-                logDiscogsLookupFailure(t)
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = mapUserSafeError(t),
-                        results = emptyList(),
+                        results = masterSearch.results.map { m ->
+                            DiscogsCandidateUi(
+                                masterId = m.id,
+                                title = m.title,
+                                subtitle = null,
+                                year = m.year,
+                                thumbUrl = m.thumb,
+                                coverUrl = m.coverImage,
+                                genres = emptyList(),
+                                styles = emptyList(),
+                            )
+                        },
                     )
                 }
+            } catch (t: Throwable) {
+                Log.e("IngestViewModel", "Discogs master search failed.", t)
+                _uiState.update { it.copy(isLoading = false, errorMessage = mapUserSafeError(t)) }
             }
         }
     }
 
-
-    fun selectDiscogsCandidate(candidate: DiscogsCandidateUi) {
-        _uiState.update {
-            it.copy(
-                selectedDiscogsCandidate = candidate,
-                errorMessage = null,
-                infoMessage = null,
-            )
-        }
-    }
-
-    fun dismissDiscogsResults() {
-        _uiState.update {
-            it.copy(
-                results = emptyList(),
-                selectedDiscogsCandidate = null,
-                errorMessage = null,
-                infoMessage = null,
-            )
-        }
-    }
-
-    fun dismissDiscogsConfirm() {
-        _uiState.update {
-            it.copy(
-                selectedDiscogsCandidate = null,
-                errorMessage = null,
-                infoMessage = null,
-            )
-        }
-    }
-    fun dismissLookupDialog() {
-        _uiState.update {
-            it.copy(
-                masterCandidate = null,
-                errorMessage = null,
-                infoMessage = null,
-            )
-        }
-    }
-
-    fun addToLibrary(
+    fun addDiscogsCandidateToLibrary(
         candidate: DiscogsCandidateUi,
-        onAdded: (String) -> Unit,
+        onAdded: (workId: String, autoReopen: Boolean) -> Unit,
     ) {
-        val (artist, title) = parseArtistTitle(candidate.displayTitle)
-        val year = candidate.year
-
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null, infoMessage = null) }
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+
             try {
+                val master = discogsApi.getMaster(candidate.masterId)
+
+                val artwork = master.images.primaryFullUrl()
+                    ?: candidate.coverUrl
+                    ?: candidate.thumbUrl
+
+                val (artistLine, releaseTitle) = splitArtistTitle(candidate.title)
+
                 val result = workRepositoryV2.upsertDiscogsMasterWork(
-                    discogsMasterId = candidate.masterId,
-                    title = title,
-                    artistLine = artist,
-                    year = year,
-                    primaryArtworkUri = candidate.coverUrl ?: candidate.thumbUrl,
-                    genres = candidate.genres,
-                    styles = candidate.styles,
+                    discogsMasterId = master.id,
+                    title = master.title.ifBlank { releaseTitle },
+                    artistLine = artistLine,
+                    year = master.year ?: candidate.year,
+                    primaryArtworkUri = artwork,
+                    genres = master.genres.orEmpty(),
+                    styles = master.styles.orEmpty(),
                 )
 
                 val info = when (result) {
@@ -641,13 +457,11 @@ class IngestViewModel @Inject constructor(
                     is WorkRepositoryV2.UpsertResult.PossibleDuplicate -> "Possible duplicate — added anyway."
                 }
 
-                val dedupe = when (result) {
-                    is WorkRepositoryV2.UpsertResult.Created -> "created"
-                    is WorkRepositoryV2.UpsertResult.UpdatedExisting -> "updated"
-                    is WorkRepositoryV2.UpsertResult.PossibleDuplicate -> "duplicate"
-                }
-
-                uxEventLogger.logEvent("pm_work_add_success", mapOf("method" to "discogs", "dedupe" to dedupe))
+                val autoReopen = _uiState.value.autoReopenScanner
+                _uiState.value = IngestUiState(
+                    infoMessage = info,
+                    autoReopenScanner = autoReopen,
+                )
 
                 val workId = when (result) {
                     is WorkRepositoryV2.UpsertResult.Created -> result.workId
@@ -655,84 +469,10 @@ class IngestViewModel @Inject constructor(
                     is WorkRepositoryV2.UpsertResult.PossibleDuplicate -> result.existingWorkId.orEmpty()
                 }
 
-                _uiState.update { it.copy(isLoading = false, infoMessage = info) }
-                if (workId.isNotBlank()) {
-                    onAdded(workId)
-                }
+                if (workId.isNotBlank()) onAdded(workId, autoReopen)
             } catch (t: Throwable) {
-                Log.e("IngestViewModel", "Failed to add Discogs work.", t)
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = mapUserSafeError(t),
-                    )
-                }
-            }
-        }
-    }
-
-    fun addManualWork(onAdded: (String) -> Unit) {
-        val artist = _uiState.value.artist.trim()
-        val title = _uiState.value.title.trim()
-        val year = _uiState.value.year.toIntOrNull()
-
-        if (artist.isBlank() || title.isBlank()) {
-            _uiState.update {
-                it.copy(
-                    errorMessage = "Artist and title are required.",
-                    infoMessage = null,
-                )
-            }
-            return
-        }
-
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null, infoMessage = null) }
-            try {
-                val result = workRepositoryV2.upsertManualWork(
-                    title = title,
-                    artistLine = artist,
-                    year = year,
-                )
-
-                val info = when (result) {
-                    is WorkRepositoryV2.UpsertResult.Created -> "Added to library."
-                    is WorkRepositoryV2.UpsertResult.UpdatedExisting -> "Already in library — updated details."
-                    is WorkRepositoryV2.UpsertResult.PossibleDuplicate -> result.reason
-                }
-
-                val dedupe = when (result) {
-                    is WorkRepositoryV2.UpsertResult.Created -> "created"
-                    is WorkRepositoryV2.UpsertResult.UpdatedExisting -> "updated"
-                    is WorkRepositoryV2.UpsertResult.PossibleDuplicate -> "duplicate"
-                }
-
-                uxEventLogger.logEvent("pm_work_add_success", mapOf("method" to "manual", "dedupe" to dedupe))
-
-                val workId = when (result) {
-                    is WorkRepositoryV2.UpsertResult.Created -> result.workId
-                    is WorkRepositoryV2.UpsertResult.UpdatedExisting -> result.workId
-                    is WorkRepositoryV2.UpsertResult.PossibleDuplicate -> result.existingWorkId.orEmpty()
-                }
-
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        infoMessage = info,
-                        results = emptyList(),
-                    )
-                }
-                if (workId.isNotBlank()) {
-                    onAdded(workId)
-                }
-            } catch (t: Throwable) {
-                Log.e("IngestViewModel", "Failed to add manual work.", t)
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = mapUserSafeError(t),
-                    )
-                }
+                Log.e("IngestViewModel", "Failed to add Discogs master to library.", t)
+                _uiState.update { it.copy(isLoading = false, errorMessage = mapUserSafeError(t)) }
             }
         }
     }
@@ -741,53 +481,52 @@ class IngestViewModel @Inject constructor(
     // Helpers
     // ----------------------------
 
-    private fun parseArtistFromSearchTitle(searchTitle: String): String? {
-        val parts = searchTitle.split(" - ", limit = 2)
-        return parts.getOrNull(0)?.trim()?.ifBlank { null }
-    }
-
-    private fun parseTitleFromSearchTitle(searchTitle: String): String {
-        val parts = searchTitle.split(" - ", limit = 2)
-        return parts.getOrNull(1)?.trim() ?: searchTitle.trim()
-    }
-
-    private fun parseArtistTitle(discogsTitle: String): Pair<String, String> {
-        val parts = discogsTitle.split(" - ", limit = 2)
+    private fun splitArtistTitle(text: String): Pair<String, String> {
+        // Common Discogs master string is "Artist - Title"
+        val parts = text.split(" - ", limit = 2)
         return if (parts.size == 2) {
-            parts[0].trim() to parts[1].trim()
+            parts[0].trim().ifBlank { "Unknown Artist" } to parts[1].trim().ifBlank { text.trim() }
         } else {
-            _uiState.value.artist.trim() to _uiState.value.title.trim()
+            "Unknown Artist" to text.trim()
         }
+    }
+
+    private fun parseArtistFromSearchTitle(searchTitle: String?): String? {
+        if (searchTitle.isNullOrBlank()) return null
+        val parts = searchTitle.split(" - ", limit = 2)
+        return parts.firstOrNull()?.trim()?.takeIf { it.isNotBlank() }
+    }
+
+    private fun parseTitleFromSearchTitle(searchTitle: String?): String? {
+        if (searchTitle.isNullOrBlank()) return null
+        val parts = searchTitle.split(" - ", limit = 2)
+        return parts.getOrNull(1)?.trim()?.takeIf { it.isNotBlank() }
+    }
+
+    private fun logDiscogsLookupFailure(t: Throwable) {
+        val httpCode = (t as? HttpException)?.code()
+        uxEventLogger.logEvent(
+            "pm_discogs_lookup_result",
+            buildMap {
+                put("result", "failure")
+                if (httpCode != null) put("http_code", httpCode)
+                put("error", t::class.java.simpleName)
+            },
+        )
+        Log.e("IngestViewModel", "Discogs barcode lookup failed.", t)
     }
 
     private fun mapUserSafeError(t: Throwable): String {
         return when (t) {
-            is IOException -> "No connection. Try again."
-            is HttpException -> "Service error. Try again."
-            else -> "Service error. Try again."
-        }
-    }
-
-    private fun logDiscogsLookupFailure(t: Throwable) {
-        when (t) {
-            is HttpException -> {
-                uxEventLogger.logEvent(
-                    "pm_discogs_lookup_result",
-                    mapOf("result" to "http_error", "http_code" to t.code()),
-                )
+            is HttpException -> when (t.code()) {
+                401, 403 -> "Service auth error. Try again later."
+                404 -> "Not found. Try manual entry."
+                429 -> "Rate limited. Try again in a moment."
+                in 500..599 -> "Service is having trouble. Try again."
+                else -> "Request failed. Try again."
             }
-            is IOException -> {
-                uxEventLogger.logEvent(
-                    "pm_discogs_lookup_result",
-                    mapOf("result" to "network_error", "http_code" to null),
-                )
-            }
-            else -> {
-                uxEventLogger.logEvent(
-                    "pm_discogs_lookup_result",
-                    mapOf("result" to "unknown_error", "http_code" to null),
-                )
-            }
+            is IOException -> "Network error. Check connection."
+            else -> "Something went wrong. Try again."
         }
     }
 }

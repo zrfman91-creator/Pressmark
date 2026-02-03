@@ -4,7 +4,6 @@ package com.zak.pressmark.data.local.dao.v2
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
-import androidx.room.Query
 import com.zak.pressmark.data.local.db.v2.DbSchemaV2
 import com.zak.pressmark.data.local.entity.v2.ReleaseEntityV2
 import kotlinx.coroutines.flow.Flow
@@ -18,15 +17,19 @@ interface ReleaseDaoV2 {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(releases: List<ReleaseEntityV2>)
 
-    @Query("SELECT * FROM ${DbSchemaV2.Release.TABLE} WHERE ${DbSchemaV2.Release.WORK_ID} = :workId")
+    @androidx.room.Query("SELECT * FROM ${DbSchemaV2.Release.TABLE} WHERE ${DbSchemaV2.Release.WORK_ID} = :workId")
     suspend fun getByWorkId(workId: String): List<ReleaseEntityV2>
 
-    @Query("DELETE FROM ${DbSchemaV2.Release.TABLE} WHERE ${DbSchemaV2.Release.WORK_ID} = :workId")
+    @androidx.room.Query("DELETE FROM ${DbSchemaV2.Release.TABLE} WHERE ${DbSchemaV2.Release.WORK_ID} = :workId")
     suspend fun deleteByWorkId(workId: String)
 
-    @Query("SELECT * FROM ${DbSchemaV2.Release.TABLE} WHERE ${DbSchemaV2.Release.ID} = :releaseId LIMIT 1")
+    @androidx.room.Query("SELECT * FROM ${DbSchemaV2.Release.TABLE} WHERE ${DbSchemaV2.Release.ID} = :releaseId LIMIT 1")
     suspend fun getById(releaseId: String): ReleaseEntityV2?
 
-    @Query("SELECT * FROM ${DbSchemaV2.Release.TABLE} WHERE ${DbSchemaV2.Release.WORK_ID} = :workId ORDER BY ${DbSchemaV2.Release.RELEASE_YEAR} DESC")
+    @androidx.room.Query(
+        "SELECT * FROM ${DbSchemaV2.Release.TABLE} " +
+                "WHERE ${DbSchemaV2.Release.WORK_ID} = :workId " +
+                "ORDER BY ${DbSchemaV2.Release.RELEASE_YEAR} DESC"
+    )
     fun observeByWorkId(workId: String): Flow<List<ReleaseEntityV2>>
 }

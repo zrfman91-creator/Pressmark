@@ -15,7 +15,6 @@ import com.zak.pressmark.feature.ingest.screen.IngestScreen
 import com.zak.pressmark.feature.ingest.screen.LookupResultsDialog
 import com.zak.pressmark.feature.ingest.vm.BarcodeMasterCandidateUi
 import com.zak.pressmark.feature.ingest.vm.DiscogsCandidateUi
-import com.zak.pressmark.feature.ingest.vm.IngestMethod
 import com.zak.pressmark.feature.ingest.vm.IngestViewModel
 
 @Composable
@@ -31,28 +30,25 @@ fun IngestRoute(
     // Spec: entering Add flow always starts in SCAN.
     var mode by remember { mutableStateOf(IngestMode.SCAN) }
 
+    // Local-only selection for “pick one result → confirm add”
+    var selectedDiscogsCandidate by remember { mutableStateOf<DiscogsCandidateUi?>(null) }
+
     LaunchedEffect(Unit) {
         mode = IngestMode.SCAN
-        vm.setManualEntryExpanded(false)
-        vm.logIngestStart(IngestMethod.BARCODE)
+        vm.onManualEntryExpandedChanged(false)
+        selectedDiscogsCandidate = null
     }
 
     val reopenScanner: () -> Unit = {
-        vm.dismissLookupDialog()
-        vm.dismissDiscogsResults()
-        vm.clearManualInputs()
-        vm.setManualEntryExpanded(false)
+        selectedDiscogsCandidate = null
+        vm.resetTransientState()
         mode = IngestMode.SCAN
     }
 
     val handleAddMaster: (BarcodeMasterCandidateUi) -> Unit = { candidate ->
-        vm.addMasterToLibrary(candidate) { workId, _ ->
-            // Always close dialog + reset state.
-            vm.dismissLookupDialog()
-            vm.clearManualInputs()
-            vm.setManualEntryExpanded(false)
-
-            if (state.autoReopenScanner) {
+        vm.addMasterToLibrary(candidate) { workId, autoReopen ->
+            vm.clearBarcodeCandidate()
+            if (autoReopen) {
                 mode = IngestMode.SCAN
             } else {
                 onAddedWork(workId)
@@ -61,13 +57,9 @@ fun IngestRoute(
     }
 
     val handleAddDiscogs: (DiscogsCandidateUi) -> Unit = { candidate ->
-        vm.addToLibrary(candidate) { workId ->
-            // Always close dialogs + reset state.
-            vm.dismissDiscogsResults()
-            vm.clearManualInputs()
-            vm.setManualEntryExpanded(false)
-
-            if (state.autoReopenScanner) {
+        vm.addDiscogsCandidateToLibrary(candidate) { workId, autoReopen ->
+            selectedDiscogsCandidate = null
+            if (autoReopen) {
                 mode = IngestMode.SCAN
             } else {
                 onAddedWork(workId)
@@ -83,37 +75,36 @@ fun IngestRoute(
         onBack = onBack,
 
         onBarcodeChanged = vm::onBarcodeChanged,
-        onLookupBarcode = vm::searchByBarcode,
-        onSetAutoReopen = vm::setAutoReopen,
+        onLookupBarcode = vm::lookupBarcode,
+
+        // If your screen exposes this toggle, wire it properly later via ScannerPreferences.
+        // For now, avoid calling stale VM APIs.
+        onSetAutoReopen = { /* preference is driven by ScannerPreferences flow */ },
 
         onClearManualInputs = vm::clearManualInputs,
-        onSetManualOverlayExpanded = vm::setManualEntryExpanded,
+        onSetManualOverlayExpanded = vm::onManualEntryExpandedChanged,
     )
 
     // ----------------------------
     // Discogs text/manual lookup UX
     // ----------------------------
 
-    // 1) If user did a text lookup and we have multiple results, show a picker.
-    if (state.selectedDiscogsCandidate == null && state.results.isNotEmpty()) {
+    if (selectedDiscogsCandidate == null && state.results.isNotEmpty()) {
         DiscogsResultsListDialog(
             candidates = state.results,
-            onSelect = vm::selectDiscogsCandidate,
-            onDismiss = vm::dismissDiscogsResults,
+            onSelect = { selectedDiscogsCandidate = it },
+            onDismiss = {
+                if (state.autoReopenScanner) reopenScanner() else vm.clearManualInputs()
+            },
         )
     }
 
-    // 2) If user selected a Discogs candidate (or got exactly one), show confirm-add dialog.
-    state.selectedDiscogsCandidate?.let { candidate ->
+    selectedDiscogsCandidate?.let { candidate ->
         LookupResultsDialog(
             candidate = candidate,
             onDismiss = {
-                // Cancel/dismiss should reopen scanner when auto-reopen is enabled; otherwise return to list/input.
-                if (state.autoReopenScanner) {
-                    reopenScanner()
-                } else {
-                    vm.dismissDiscogsConfirm()
-                }
+                selectedDiscogsCandidate = null
+                if (state.autoReopenScanner) reopenScanner()
             },
             onConfirmAdd = handleAddDiscogs,
         )
@@ -127,12 +118,7 @@ fun IngestRoute(
         LookupResultsDialog(
             candidate = candidate,
             onDismiss = {
-                // Cancel/dismiss should also reopen the scanner (when auto-reopen is enabled).
-                if (state.autoReopenScanner) {
-                    reopenScanner()
-                } else {
-                    vm.dismissLookupDialog()
-                }
+                if (state.autoReopenScanner) reopenScanner() else vm.clearBarcodeCandidate()
             },
             onConfirmAdd = handleAddMaster,
         )

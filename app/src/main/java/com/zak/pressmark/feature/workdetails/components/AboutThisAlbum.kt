@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 
 package com.zak.pressmark.feature.workdetails.components
 
@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -22,10 +21,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 
-/**
- * "About this album" = master-level (canonical) details only.
- * This section may show master artwork, but must never imply "owned" (that's handled by Your Pressing).
- */
 @Composable
 fun AboutThisAlbumSection(
     modifier: Modifier = Modifier,
@@ -53,7 +48,6 @@ fun AboutThisAlbumSection(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Master artwork (canonical)
             if (!masterArtworkUri.isNullOrBlank()) {
                 AsyncImage(
                     model = masterArtworkUri,
@@ -75,7 +69,6 @@ fun AboutThisAlbumSection(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-
                 Text(
                     text = artist,
                     style = MaterialTheme.typography.bodyLarge,
@@ -83,21 +76,17 @@ fun AboutThisAlbumSection(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                // Never show "null" or empty junk — either show year or show nothing.
-                masterYear
-                    ?.takeIf { it > 0 }
-                    ?.let { yearValue ->
-                        Text(
-                            text = yearValue.toString(),
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
+                masterYear?.takeIf { it > 0 }?.let { y ->
+                    Text(text = y.toString(), style = MaterialTheme.typography.bodyLarge)
+                }
 
-                // Keep Genres and Styles separate (as requested)
-                AboutThisAlbumTags(
-                    genres = genres,
-                    styles = styles,
-                )
+                val genresLine = genres.map { it.trim() }.filter { it.isNotBlank() }.distinct()
+                    .joinToString(", ").ifBlank { "—" }
+                val stylesLine = styles.map { it.trim() }.filter { it.isNotBlank() }.distinct()
+                    .joinToString(", ").ifBlank { "—" }
+
+                Text("Genres: $genresLine", style = MaterialTheme.typography.bodyLarge)
+                Text("Styles: $stylesLine", style = MaterialTheme.typography.bodyLarge)
             }
         }
 
@@ -110,44 +99,5 @@ fun AboutThisAlbumSection(
         }
 
         Spacer(Modifier.height(2.dp))
-    }
-}
-
-/**
- * Genres and Styles are intentionally separate (no consolidation).
- */
-@Composable
-fun AboutThisAlbumTags(
-    genres: List<String>,
-    styles: List<String>,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(2.dp)
-    ) {
-        val genresLine = genres
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
-            .distinct()
-            .joinToString(", ")
-            .ifBlank { "—" }
-
-        val stylesLine = styles
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
-            .distinct()
-            .joinToString(", ")
-            .ifBlank { "—" }
-
-        Text(
-            text = "Genres: $genresLine",
-            style = MaterialTheme.typography.bodyLarge
-        )
-
-        Text(
-            text = "Styles: $stylesLine",
-            style = MaterialTheme.typography.bodyLarge
-        )
     }
 }

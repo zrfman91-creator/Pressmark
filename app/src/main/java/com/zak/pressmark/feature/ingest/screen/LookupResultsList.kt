@@ -105,7 +105,7 @@ private fun DiscogsCandidateRow(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = item.displayTitle,
+                    text = item.title,
                     style = MaterialTheme.typography.bodyLarge,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

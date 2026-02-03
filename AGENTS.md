@@ -9,20 +9,21 @@ You are working in the Pressmark Android app (Kotlin, Jetpack Compose, Room).
 - app/ = navigation and wiring only
 
 ## Rules
-- Prefer small, focused edits
-- Do NOT change Gradle files unless explicitly asked
-- Do NOT change Room schema unless explicitly asked
+- Prefer correctness and professionalism overall
+- Large refactors are acceptable if they are defensible.
+- Gradle file changes are acceptable with sound logic & explanation
+- Room schema changes are acceptable with sound logic & explanation
 - Database wipes are acceptable during early development
 - Keep code professional and readable
 - Follow existing patterns and naming
-
+- Read the repository again if a follow up question/task is executed to avoid merge conflicts
+- Keep package/file bloat to a minimum; Don't create a file to create a file; integrate into existing files if it is logical to do so
 ## Workflow
-- Make a plan first
+- Make a plan first, and explain why the changes are necessary and potential risk outcomes
 - List files you will touch
-- Apply minimal diffs
-- Summarize what changed and how to verify
+- Summarize what changed and explain why those changes were made
 
 ## UI
 - Use Material3
-- Keep layouts simple and consistent
+- Avoid changing existing UI components unless explicitly asked
 - Avoid unnecessary recomposition

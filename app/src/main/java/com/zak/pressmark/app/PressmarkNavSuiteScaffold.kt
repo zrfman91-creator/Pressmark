@@ -55,15 +55,6 @@ import com.zak.pressmark.feature.ingest.vm.IngestViewModel
 import com.zak.pressmark.feature.library.ui.LibrarySearchBar
 import kotlinx.coroutines.flow.MutableStateFlow
 
-/**
- * Pressmark adaptive navigation shell + a global "Search" action.
- *
- * Key detail:
- * - We REUSE your existing FAB-style LibrarySearchBar so the IME/padding behavior matches exactly.
- * - Because NavigationSuiteScaffold already owns the bottom navigation/rail layout, we pass
- *   scaffoldBottomPadding = 0.dp so you don't double-account for system nav bars.
- */
-
 private sealed interface TopLevelDestination {
     val label: String
 
@@ -87,10 +78,6 @@ private sealed interface TopLevelDestination {
     ) : TopLevelDestination
 }
 
-/**
- * Global, top-level actions that can be triggered from anywhere inside the nav scaffold
- * (e.g., Empty State CTAs) without duplicating navigation logic.
- */
 @Immutable
 data class PressmarkGlobalActions(
     val onAddAlbums: () -> Unit,
@@ -117,7 +104,8 @@ fun PressmarkNavSuiteScaffold(
     var ingestSheetOpen by rememberSaveable { mutableStateOf(false) }
     var ingestMode by rememberSaveable { mutableStateOf(IngestMode.CAMERA) }
 
-    val isScannerDestination = currentDestination?.hierarchy?.any { it.route == PressmarkRoutes.BARCODE_SCANNER } == true
+    val isScannerDestination =
+        currentDestination?.hierarchy?.any { it.route == PressmarkRoutes.BARCODE_SCANNER } == true
     val scanIconInteraction = remember { MutableInteractionSource() }
 
     val ingestVm = if (isScannerDestination && backStackEntry != null) {
@@ -125,6 +113,7 @@ fun PressmarkNavSuiteScaffold(
     } else {
         null
     }
+
     val fallbackStateFlow = remember { MutableStateFlow(IngestUiState()) }
     val ingestState by (ingestVm?.uiState ?: fallbackStateFlow).collectAsStateWithLifecycle()
     val manualEntryExpanded = isScannerDestination && ingestState.manualEntryExpanded
@@ -132,22 +121,20 @@ fun PressmarkNavSuiteScaffold(
     LaunchedEffect(isScannerDestination, ingestMode) {
         if (!isScannerDestination) {
             ingestSheetOpen = false
-        } else if (ingestMode == IngestMode.MANUAL) {
-            ingestVm?.setManualEntryExpanded(true)
-        } else if (ingestMode == IngestMode.CAMERA) {
-            ingestVm?.setManualEntryExpanded(false)
+        } else {
+            ingestVm?.onManualEntryExpandedChanged(ingestMode == IngestMode.MANUAL)
         }
     }
 
     val actionLabel =
-        if (isScannerDestination) "Manual Entry" else "Search"   // Library search & manual barcode entry icon/logic swap on destination change.
+        if (isScannerDestination) "Manual Entry" else "Search"
     val actionSelected = { if (isScannerDestination) manualEntryExpanded else searchExpanded }
     val actionIcon = if (isScannerDestination) Icons.Outlined.KeyboardAlt else Icons.Outlined.Search
     val onActionClick: () -> Unit = {
         if (isScannerDestination) {
             ingestMode = IngestMode.MANUAL
             ingestSheetOpen = false
-            ingestVm?.setManualEntryExpanded(true)
+            ingestVm?.onManualEntryExpandedChanged(true)
         } else {
             searchExpanded = !searchExpanded
         }
@@ -176,16 +163,14 @@ fun PressmarkNavSuiteScaffold(
             unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
             unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
         ),
-    )  // Navigation scaffold color selections
+    )
 
     val navContainer = MaterialTheme.colorScheme.surfaceVariant
 
-    // Single, canonical entrypoint for starting ingest ("Add Albums").
-    // Use this for the nav item and any other UI entrypoints (e.g., Empty State CTA).
     val onAddAlbums: () -> Unit = {
         ingestSheetOpen = false
         ingestMode = IngestMode.CAMERA
-        ingestVm?.setManualEntryExpanded(false)
+        ingestVm?.onManualEntryExpandedChanged(false)
         navController.navigate(PressmarkRoutes.BARCODE_SCANNER) {
             popUpTo(navController.graph.startDestinationId) { saveState = true }
             launchSingleTop = true
@@ -216,8 +201,8 @@ fun PressmarkNavSuiteScaffold(
 
     NavigationSuiteScaffold(
         navigationSuiteColors = NavigationSuiteDefaults.colors(
-            navigationBarContainerColor = navContainer,          // <- bar BG
-            navigationBarContentColor = MaterialTheme.colorScheme.onSurface,         // <- default content tint
+            navigationBarContainerColor = navContainer,
+            navigationBarContentColor = MaterialTheme.colorScheme.onSurface,
         ),
         navigationSuiteItems = {
             destinations.forEach { destination ->
@@ -310,15 +295,12 @@ fun PressmarkNavSuiteScaffold(
                     year = ingestState.year,
                     onYearChange = { ingestVm?.onYearChanged(it) },
 
-                    onDismiss = {
-                        if (ingestVm != null) {
-                            ingestVm.setManualEntryExpanded(false)
-                        }
-                    },
+                    onDismiss = { ingestVm?.onManualEntryExpandedChanged(false) },
 
-                    onSubmit = { inputs ->
-                        ingestVm?.submitManualInputs(inputs)
-                        ingestVm?.setManualEntryExpanded(false)
+                    // Avoid stale submit API. Use canonical barcode lookup based on VM state.
+                    onSubmit = {
+                        ingestVm?.lookupBarcode(ingestState.barcode)
+                        ingestVm?.onManualEntryExpandedChanged(false)
                     },
                 )
 
@@ -337,7 +319,7 @@ fun PressmarkNavSuiteScaffold(
                                 modifier = Modifier.clickable {
                                     ingestMode = IngestMode.CAMERA
                                     ingestSheetOpen = false
-                                    ingestVm?.setManualEntryExpanded(false)
+                                    ingestVm?.onManualEntryExpandedChanged(false)
                                     navController.navigate(PressmarkRoutes.BARCODE_SCANNER) {
                                         popUpTo(navController.graph.startDestinationId) { saveState = true }
                                         launchSingleTop = true
@@ -350,7 +332,7 @@ fun PressmarkNavSuiteScaffold(
                                 modifier = Modifier.clickable {
                                     ingestMode = IngestMode.MANUAL
                                     ingestSheetOpen = false
-                                    ingestVm?.setManualEntryExpanded(true)
+                                    ingestVm?.onManualEntryExpandedChanged(true)
                                     navController.navigate(PressmarkRoutes.BARCODE_SCANNER) {
                                         popUpTo(navController.graph.startDestinationId) { saveState = true }
                                         launchSingleTop = true

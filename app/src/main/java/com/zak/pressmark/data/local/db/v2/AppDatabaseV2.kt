@@ -5,16 +5,16 @@ import androidx.room.RoomDatabase
 import com.zak.pressmark.data.local.dao.v2.PressingDaoV2
 import com.zak.pressmark.data.local.dao.v2.ReleaseDaoV2
 import com.zak.pressmark.data.local.dao.v2.VariantDaoV2
-import com.zak.pressmark.data.local.dao.v2.WorkGenreStyleDaoV2
 import com.zak.pressmark.data.local.dao.v2.WorkDaoV2
+import com.zak.pressmark.data.local.dao.v2.WorkGenreStyleDaoV2
 import com.zak.pressmark.data.local.entity.v2.GenreEntityV2
 import com.zak.pressmark.data.local.entity.v2.PressingEntityV2
 import com.zak.pressmark.data.local.entity.v2.ReleaseEntityV2
 import com.zak.pressmark.data.local.entity.v2.StyleEntityV2
 import com.zak.pressmark.data.local.entity.v2.VariantEntityV2
+import com.zak.pressmark.data.local.entity.v2.WorkEntityV2
 import com.zak.pressmark.data.local.entity.v2.WorkGenreCrossRefEntityV2
 import com.zak.pressmark.data.local.entity.v2.WorkStyleCrossRefEntityV2
-import com.zak.pressmark.data.local.entity.v2.WorkEntityV2
 
 @Database(
     entities = [
@@ -27,7 +27,7 @@ import com.zak.pressmark.data.local.entity.v2.WorkEntityV2
         WorkGenreCrossRefEntityV2::class,
         WorkStyleCrossRefEntityV2::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 // @TypeConverters(RoomConvertersV2::class)

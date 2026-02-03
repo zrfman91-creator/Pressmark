@@ -1,4 +1,3 @@
-// FILE: app/src/main/java/com/zak/pressmark/feature/workdetails/vm/WorkDetailsViewModel.kt
 package com.zak.pressmark.feature.workdetails.vm
 
 import androidx.lifecycle.SavedStateHandle
@@ -22,16 +21,19 @@ data class WorkDetailsUiState(
     val genres: List<String> = emptyList(),
     val styles: List<String> = emptyList(),
 
-    // Canonical/master artwork (Discogs master / work artwork).
+    // ✅ MASTER only (About section)
     val masterArtworkUri: String? = null,
 
-    // Owned/selected pressing artwork (Discogs release artwork).
+    // ✅ OWNED/selected pressing artwork (preferred for header)
     val selectedPressingArtworkUri: String? = null,
+
+    // ✅ Back-compat / single “what should header show?” slot if you still use it elsewhere
+    val artworkUri: String? = null,
 
     val discogsMasterId: Long? = null,
     val isMissing: Boolean = false,
 
-    // Chosen refinement (Variant: default) -> Pressing/Release details
+    // Selected pressing details
     val selectedPressingLabel: String? = null,
     val selectedPressingCatalogNo: String? = null,
     val selectedPressingCountry: String? = null,
@@ -53,22 +55,30 @@ class WorkDetailsViewModel @Inject constructor(
     val uiState = _uiState.asStateFlow()
 
     init {
-        // Base work info (MASTER/CANONICAL).
+        // Base work info (MASTER + general work fields)
         viewModelScope.launch {
             workRepositoryV2.observeWork(workId).collect { work ->
                 if (work == null) {
                     _uiState.update { it.copy(isMissing = true) }
                 } else {
-                    _uiState.update {
-                        it.copy(
+                    _uiState.update { current ->
+                        val masterArt = work.primaryArtworkUri
+                        val ownedArt = current.selectedPressingArtworkUri
+                        val headerArt = ownedArt ?: masterArt
+
+                        current.copy(
                             workId = work.id,
                             title = work.title,
                             artistLine = work.artistLine,
                             year = work.year,
                             genres = parseJsonList(work.genresJson),
                             styles = parseJsonList(work.stylesJson),
-                            masterArtworkUri = work.masterArtworkUri,
-                            selectedPressingArtworkUri = work.primaryArtworkUri,
+
+                            masterArtworkUri = masterArt,
+
+                            // keep the legacy single slot populated as “header art”
+                            artworkUri = headerArt,
+
                             discogsMasterId = work.discogsMasterId,
                             isMissing = false,
                         )
@@ -77,18 +87,26 @@ class WorkDetailsViewModel @Inject constructor(
             }
         }
 
-        // Selected pressing refinement details (OWNED/SELECTED).
+        // Selected pressing refinement (OWNED fields)
         viewModelScope.launch {
             workRepositoryV2.observeSelectedPressingDetails(workId).collect { details ->
-                _uiState.update {
-                    it.copy(
+                _uiState.update { current ->
+                    val ownedArt = details?.artworkUri
+                    val masterArt = current.masterArtworkUri
+                    val headerArt = ownedArt ?: masterArt
+
+                    current.copy(
                         selectedPressingLabel = details?.label,
                         selectedPressingCatalogNo = details?.catalogNo,
                         selectedPressingCountry = details?.country,
                         selectedPressingYear = details?.year,
                         selectedPressingFormat = details?.format,
                         selectedDiscogsReleaseId = details?.discogsReleaseId,
-                        selectedPressingArtworkUri = details?.artworkUri,
+
+                        selectedPressingArtworkUri = ownedArt,
+
+                        // keep legacy single slot populated as “header art”
+                        artworkUri = headerArt,
                     )
                 }
             }

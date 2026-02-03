@@ -62,3 +62,20 @@ private fun normalizeReleaseType(styles: List<String>?, genres: List<String>?): 
         else -> null
     }
 }
+
+/**
+ * Shared artwork selection logic.
+ *
+ * IMPORTANT: Use these helpers everywhere instead of duplicating selection rules in UI layers.
+ */
+fun List<DiscogsImage>?.primaryFullUrl(): String? =
+    primaryImageOrNull()?.uri?.trim()?.takeIf { it.isNotBlank() }
+
+fun List<DiscogsImage>?.primaryThumbUrl(): String? =
+    primaryImageOrNull()?.uri150?.trim()?.takeIf { it.isNotBlank() } ?: primaryFullUrl()
+
+private fun List<DiscogsImage>?.primaryImageOrNull(): DiscogsImage? {
+    val list = this.orEmpty()
+    return list.firstOrNull { (it.type ?: "").equals("primary", ignoreCase = true) }
+        ?: list.firstOrNull()
+}
