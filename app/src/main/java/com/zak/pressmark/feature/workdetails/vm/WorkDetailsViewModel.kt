@@ -67,7 +67,8 @@ class WorkDetailsViewModel @Inject constructor(
                             year = work.year,
                             genres = parseJsonList(work.genresJson),
                             styles = parseJsonList(work.stylesJson),
-                            masterArtworkUri = work.primaryArtworkUri,
+                            masterArtworkUri = work.masterArtworkUri,
+                            selectedPressingArtworkUri = work.primaryArtworkUri,
                             discogsMasterId = work.discogsMasterId,
                             isMissing = false,
                         )
