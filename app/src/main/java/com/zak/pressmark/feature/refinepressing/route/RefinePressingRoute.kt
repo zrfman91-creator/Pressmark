@@ -28,7 +28,7 @@ fun RefinePressingRoute(
     RefinePressingScreen(
         state = state.value,
         onBack = onBack,
-        onRefresh = vm::refresh,
+        onRefresh = vm::retry,
         onApplyCandidate = vm::applyCandidate,
     )
 }
