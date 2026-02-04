@@ -43,10 +43,16 @@ object DbSchemaV2 {
 
         // These are used in VariantDao join/projection
         const val LABEL = "label"
+        const val LABEL_NORMALIZED = "label_normalized"
         const val CATALOG_NO = "catalog_no"
+        const val CATALOG_NO_NORMALIZED = "catalog_no_normalized"
         const val COUNTRY = "country"
         const val RELEASE_YEAR = "release_year"
         const val FORMAT = "format"
+        const val RELEASE_TYPE = "release_type"
+
+        const val CREATED_AT = "created_at"
+        const val UPDATED_AT = "updated_at"
     }
 
     object Pressing {
@@ -56,11 +62,15 @@ object DbSchemaV2 {
         const val RELEASE_ID = "release_id"
 
         // Used for barcode lookup and joins
+        const val BARCODE = "barcode"
         const val BARCODE_NORMALIZED = "barcode_normalized"
+        const val RUNOUTS_JSON = "runouts_json"
+        const val PRESSING_PLANT = "pressing_plant"
         const val UPDATED_AT = "updated_at"
 
         // Used in VariantDao join/projection (safe to keep even if nullable)
         const val DISCOGS_RELEASE_ID = "discogs_release_id"
+        const val MUSICBRAINZ_RELEASE_ID = "musicbrainz_release_id"
         const val LABEL = "label"
         const val CATALOG_NO = "catalog_no"
         const val COUNTRY = "country"
@@ -70,6 +80,8 @@ object DbSchemaV2 {
         // Some screens/queries may use these
         const val FORMAT_SUMMARY = "format_summary"
         const val ARTWORK_URI = "artwork_uri"
+
+        const val CREATED_AT = "created_at"
     }
 
     object Variant {
@@ -81,7 +93,11 @@ object DbSchemaV2 {
         // Used for stable identity of a refinement choice
         const val VARIANT_KEY = "variant_key"
 
+        const val NOTES = "notes"
+        const val RATING = "rating"
+
         const val ADDED_AT = "added_at"
+        const val LAST_PLAYED_AT = "last_played_at"
 
         // If you later reintroduce “selected” semantics, keep this column name stable:
         const val IS_SELECTED = "is_selected"

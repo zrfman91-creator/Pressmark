@@ -72,7 +72,8 @@ interface VariantDaoV2 {
           COALESCE(p.${DbSchemaV2.Pressing.CATALOG_NO}, r.${DbSchemaV2.Release.CATALOG_NO}) AS catalogNo,
           COALESCE(p.${DbSchemaV2.Pressing.COUNTRY}, r.${DbSchemaV2.Release.COUNTRY}) AS country,
           COALESCE(p.${DbSchemaV2.Pressing.RELEASE_YEAR}, r.${DbSchemaV2.Release.RELEASE_YEAR}) AS year,
-          COALESCE(p.${DbSchemaV2.Pressing.FORMAT}, r.${DbSchemaV2.Release.FORMAT}) AS format
+          COALESCE(p.${DbSchemaV2.Pressing.FORMAT}, r.${DbSchemaV2.Release.FORMAT}) AS format,
+          p.${DbSchemaV2.Pressing.ARTWORK_URI} AS artworkUri
         FROM ${DbSchemaV2.Variant.TABLE} v
         INNER JOIN ${DbSchemaV2.Pressing.TABLE} p
           ON p.${DbSchemaV2.Pressing.ID} = v.${DbSchemaV2.Variant.PRESSING_ID}

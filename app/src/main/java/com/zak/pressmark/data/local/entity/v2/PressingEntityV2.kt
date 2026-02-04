@@ -46,6 +46,7 @@ data class PressingEntityV2(
     @ColumnInfo(name = DbSchemaV2.Pressing.COUNTRY) val country: String? = null,
     @ColumnInfo(name = DbSchemaV2.Pressing.FORMAT) val format: String? = null,
     @ColumnInfo(name = DbSchemaV2.Pressing.RELEASE_YEAR) val releaseYear: Int? = null,
+    @ColumnInfo(name = DbSchemaV2.Pressing.ARTWORK_URI) val artworkUri: String? = null,
 
     // Provider anchors
     @ColumnInfo(name = DbSchemaV2.Pressing.DISCOGS_RELEASE_ID) val discogsReleaseId: Long? = null,
