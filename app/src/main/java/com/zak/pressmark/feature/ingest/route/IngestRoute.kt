@@ -75,7 +75,7 @@ fun IngestRoute(
         onBack = onBack,
 
         onBarcodeChanged = vm::onBarcodeChanged,
-        onLookupBarcode = vm::lookupBarcode,
+        onLookupBarcode = { vm.lookupBarcode(state.barcode) },
 
         // If your screen exposes this toggle, wire it properly later via ScannerPreferences.
         // For now, avoid calling stale VM APIs.
